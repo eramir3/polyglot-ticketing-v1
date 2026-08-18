@@ -15,7 +15,8 @@ The intended architecture includes:
 - `identity`: NestJS service using Better Auth for authentication and user identity.
 - `api-gateway`: Kubernetes Gateway API based gateway and backend-for-frontend layer.
 - `concert-assistant`: Python RAG service for AI-powered concert questions.
-- `ticketing-user-app`: Next.js user interface.
+- `ticketing-user-app`: Next.js user interface. This is architectural context
+  only; this repository is not intended to contain frontend implementation code.
 
 ## Current Project Phase
 
@@ -33,7 +34,8 @@ The first concrete deliverables are:
 ## Planned Technology Stack
 
 - Monorepo: Nx.
-- User interface: Next.js.
+- User interface: Next.js, tracked as architecture context only. Do not create
+  frontend apps, components, routes, or UI code in this repository.
 - Identity service: NestJS, TypeScript, Better Auth, Postgres.
 - Expiration service: NestJS, TypeScript, BullMQ.
 - Ticketing, orders, and payments services: Go.

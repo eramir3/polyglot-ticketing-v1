@@ -6,15 +6,26 @@
   "private": true,
   "devDependencies": {
     "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
     "@nx/js": "23.1.1",
     "@nx/nest": "23.1.1",
     "@nx/workspace": "23.1.1",
+    "@swc/helpers": "~0.5.18",
+    "@types/node": "^22.0.0",
     "@types/pg": "^8.23.0",
-    "nx": "23.1.1"
+    "nx": "23.1.1",
+    "prettier": "~3.6.2",
+    "tslib": "^2.3.0",
+    "typescript": "~6.0.3"
   },
   "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
     "@thallesp/nestjs-better-auth": "^2.7.0",
     "better-auth": "^1.6.30",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0"
   }
 }
