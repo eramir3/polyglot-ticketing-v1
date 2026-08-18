@@ -1,0 +1,18 @@
+FROM node:24-alpine
+
+WORKDIR /app
+
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json ./
+COPY apps/api-gateway ./apps/api-gateway
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm nx build api-gateway
+
+ENV NODE_ENV=development
+ENV PORT=3000
+
+EXPOSE 3000
+
+CMD ["node", "dist/apps/api-gateway/src/main.js"]

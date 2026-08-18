@@ -1,4 +1,16 @@
 services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile.dev
+    image: api-gateway:dev
+    container_name: api-gateway
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+    ports:
+      - "3000:3000"
+
   identity:
     build:
       context: .
