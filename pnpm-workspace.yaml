@@ -1,3 +1,4 @@
 autoInstallPeers: true
 allowBuilds:
   nx: true
+  unrs-resolver: true

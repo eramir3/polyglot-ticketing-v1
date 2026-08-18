@@ -4,10 +4,17 @@
   "license": "MIT",
   "scripts": {},
   "private": true,
-  "dependencies": {},
   "devDependencies": {
+    "@nestjs/schematics": "^11.0.0",
     "@nx/js": "23.1.1",
+    "@nx/nest": "23.1.1",
     "@nx/workspace": "23.1.1",
+    "@types/pg": "^8.23.0",
     "nx": "23.1.1"
+  },
+  "dependencies": {
+    "@thallesp/nestjs-better-auth": "^2.7.0",
+    "better-auth": "^1.6.30",
+    "pg": "^8.23.0"
   }
 }
