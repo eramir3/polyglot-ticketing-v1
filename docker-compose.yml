@@ -1,0 +1,12 @@
+services:
+  identity:
+    build:
+      context: .
+      dockerfile: apps/identity/Dockerfile.dev
+    image: identity:dev
+    container_name: identity
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+    ports:
+      - "3001:3001"

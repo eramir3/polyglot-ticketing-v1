@@ -1,0 +1,18 @@
+FROM node:24-alpine
+
+WORKDIR /app
+
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json ./
+COPY apps/identity ./apps/identity
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm nx build identity
+
+ENV NODE_ENV=development
+ENV PORT=3001
+
+EXPOSE 3001
+
+CMD ["node", "dist/apps/identity/src/main.js"]
