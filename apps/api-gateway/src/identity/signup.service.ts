@@ -1,9 +1,10 @@
 import { status } from '@grpc/grpc-js';
 import {
   BadGatewayException,
+  BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
-  NotImplementedException,
   OnModuleInit,
 } from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
@@ -32,10 +33,14 @@ export class SignupService implements OnModuleInit {
     try {
       return await firstValueFrom(this.identityService.signUp(request));
     } catch (error: unknown) {
-      if (isGrpcStatusError(error) && error.code === status.UNIMPLEMENTED) {
-        throw new NotImplementedException(
-          'Identity signup is not configured yet'
-        );
+      if (isGrpcStatusError(error)) {
+        if (error.code === status.ALREADY_EXISTS) {
+          throw new ConflictException(error.details ?? 'Email already exists.');
+        }
+
+        if (error.code === status.INVALID_ARGUMENT) {
+          throw new BadRequestException(error.details ?? 'Invalid signup data.');
+        }
       }
 
       throw new BadGatewayException('Identity service signup request failed.');
@@ -43,7 +48,9 @@ export class SignupService implements OnModuleInit {
   }
 }
 
-function isGrpcStatusError(error: unknown): error is { code: number } {
+function isGrpcStatusError(
+  error: unknown
+): error is { code: number; details?: string } {
   return (
     typeof error === 'object' &&
     error !== null &&

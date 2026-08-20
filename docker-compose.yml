@@ -21,10 +21,51 @@ services:
     image: identity:dev
     container_name: identity
     environment:
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL must be set}
+      DATABASE_URL: postgresql://identity:${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD must be set}@identity-db:5432/identity-db
       NODE_ENV: development
       PORT: 3001
       GRPC_PORT: 50051
+    depends_on:
+      identity-db:
+        condition: service_healthy
+      identity-migrate:
+        condition: service_completed_successfully
     ports:
       - "3001:3001"
     expose:
       - "50051"
+
+  identity-migrate:
+    image: identity:dev
+    container_name: identity-migrate
+    command: ["node", "dist/apps/identity/src/migrate.js"]
+    environment:
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL must be set}
+      DATABASE_URL: postgresql://identity:${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD must be set}@identity-db:5432/identity-db
+    depends_on:
+      identity-db:
+        condition: service_healthy
+    restart: "no"
+
+  identity-db:
+    image: postgres:17-alpine
+    container_name: identity-db
+    environment:
+      POSTGRES_DB: identity-db
+      POSTGRES_PASSWORD: ${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD must be set}
+      POSTGRES_USER: identity
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U identity -d identity-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - '5432:5432'
+    volumes:
+      - identity-db-data:/var/lib/postgresql/data
+
+volumes:
+  identity-db-data:
