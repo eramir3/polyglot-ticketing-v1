@@ -8,8 +8,11 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
+      IDENTITY_GRPC_URL: identity:50051
     ports:
       - "3000:3000"
+    depends_on:
+      - identity
 
   identity:
     build:
@@ -20,5 +23,8 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3001
+      GRPC_PORT: 50051
     ports:
       - "3001:3001"
+    expose:
+      - "50051"

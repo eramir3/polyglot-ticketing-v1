@@ -19,8 +19,11 @@
     "typescript": "~6.0.3"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.14.4",
+    "@grpc/proto-loader": "^0.8.1",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
+    "@nestjs/microservices": "^11.2.1",
     "@nestjs/platform-express": "^11.0.0",
     "@thallesp/nestjs-better-auth": "^2.7.0",
     "better-auth": "^1.6.30",

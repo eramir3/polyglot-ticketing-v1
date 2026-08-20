@@ -5,3 +5,4 @@ allowBuilds:
   "@nestjs/core": false
   '@parcel/watcher': true
   less: false
+  protobufjs: false
