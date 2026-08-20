@@ -1,14 +1,13 @@
 import { status } from '@grpc/grpc-js';
-import {
-  BadGatewayException,
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  OnModuleInit,
-} from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { ApiError } from '../errors/api-error';
+import {
+  getGrpcErrorResponse,
+  httpStatusFromGrpcCode,
+  isGrpcStatusError,
+} from '../errors/grpc-error';
 import {
   IdentityGrpcService,
   SignUpRequest,
@@ -21,7 +20,7 @@ export class SignupService implements OnModuleInit {
   private identityService!: IdentityGrpcService;
 
   constructor(
-    @Inject(IDENTITY_GRPC_CLIENT) private readonly identityClient: ClientGrpc
+    @Inject(IDENTITY_GRPC_CLIENT) private readonly identityClient: ClientGrpc,
   ) {}
 
   onModuleInit(): void {
@@ -34,27 +33,30 @@ export class SignupService implements OnModuleInit {
       return await firstValueFrom(this.identityService.signUp(request));
     } catch (error: unknown) {
       if (isGrpcStatusError(error)) {
-        if (error.code === status.ALREADY_EXISTS) {
-          throw new ConflictException(error.details ?? 'Email already exists.');
+        const errorResponse = getGrpcErrorResponse(error);
+        if (errorResponse) {
+          throw new ApiError(
+            httpStatusFromGrpcCode(error.code),
+            errorResponse.errors,
+          );
         }
 
         if (error.code === status.INVALID_ARGUMENT) {
-          throw new BadRequestException(error.details ?? 'Invalid signup data.');
+          throw new ApiError(HttpStatus.BAD_REQUEST, [
+            {
+              code: 'INVALID_ARGUMENT',
+              message: 'Signup data is invalid.',
+            },
+          ]);
         }
       }
 
-      throw new BadGatewayException('Identity service signup request failed.');
+      throw new ApiError(HttpStatus.SERVICE_UNAVAILABLE, [
+        {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'A required service is unavailable.',
+        },
+      ]);
     }
   }
-}
-
-function isGrpcStatusError(
-  error: unknown
-): error is { code: number; details?: string } {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof error.code === 'number'
-  );
 }

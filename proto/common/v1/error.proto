@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package common.v1;
+
+// A client-safe application error. Error codes are stable public API values.
+message Error {
+  string message = 1;
+  string code = 2;
+  optional string field = 3;
+}
+
+message ErrorResponse {
+  repeated Error errors = 1;
+}
