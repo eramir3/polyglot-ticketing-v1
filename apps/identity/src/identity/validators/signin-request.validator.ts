@@ -1,9 +1,9 @@
-import { create } from '@bufbuild/protobuf';
 import { createValidator } from '@bufbuild/protovalidate';
-import { SignInRequestSchema } from '../../../../protogen/ts/identity/v1/identity_pb.js';
-import { ErrorItem } from '../errors/grpc-error';
-import { SignInRequest } from './identity.types';
-import { mapProtovalidateViolation } from './mappers/protovalidate-violation.mapper';
+import { create } from '@bufbuild/protobuf';
+import { SignInRequestSchema } from '../../../../../protogen/ts/identity/v1/identity_pb.js';
+import { ErrorItem } from '../../errors/grpc-error';
+import { SignInRequest } from '../identity.types';
+import { mapProtovalidateViolation } from '../mappers/protovalidate-violation.mapper';
 
 type SignInValidationResult =
   | { kind: 'valid' }

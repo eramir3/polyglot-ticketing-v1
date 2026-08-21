@@ -17,9 +17,9 @@ import { mapEmailVerificationError } from './mappers/email-verification-error.ma
 import { createSigninValidationInternalError } from './mappers/signin-errors';
 import { createSignupValidationInternalError } from './mappers/signup-errors';
 import { createAuthRequestHeaders } from './signin-request-headers';
-import { validateSignInRequest } from './signin-request.validator';
-import { validateSignUpRequest } from './signup-request.validator';
 import { extractSessionCookieValue } from './session-cookie';
+import { validateSignInRequest } from './validators/signin-request.validator';
+import { validateSignUpRequest } from './validators/signup-request.validator';
 
 @Injectable()
 export class IdentityService {
