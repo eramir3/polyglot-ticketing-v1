@@ -1,11 +1,9 @@
 import { join } from 'node:path';
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 import { IDENTITY_GRPC_CLIENT } from './identity.constants';
-import { SignupController } from './signup.controller';
-import { SignupService } from './signup.service';
-import { VerifyEmailController } from './verify-email.controller';
-import { VerifyEmailService } from './verify-email.service';
 
 @Module({
   imports: [
@@ -27,7 +25,7 @@ import { VerifyEmailService } from './verify-email.service';
       },
     ]),
   ],
-  controllers: [SignupController, VerifyEmailController],
-  providers: [SignupService, VerifyEmailService],
+  controllers: [AuthController],
+  providers: [AuthService],
 })
 export class IdentityModule {}
