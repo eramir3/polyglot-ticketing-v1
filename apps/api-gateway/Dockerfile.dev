@@ -4,7 +4,7 @@ WORKDIR /app
 
 RUN corepack enable
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json buf.yaml buf.gen.yaml buf.lock ./
 COPY apps/api-gateway ./apps/api-gateway
 COPY proto ./proto
 

@@ -24,13 +24,19 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL must be set}
       DATABASE_URL: postgresql://identity:${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD must be set}@identity-db:5432/identity-db
+      EMAIL_VERIFICATION_URL: ${EMAIL_VERIFICATION_URL:-http://localhost:3000/api/auth/verify-email}
       NODE_ENV: development
       GRPC_PORT: 50051
+      SMTP_FROM: ${SMTP_FROM:-no-reply@polyglot-ticketing.local}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
     depends_on:
       identity-db:
         condition: service_healthy
       identity-migrate:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
     expose:
       - '50051'
 
@@ -42,6 +48,9 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL must be set}
       DATABASE_URL: postgresql://identity:${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD must be set}@identity-db:5432/identity-db
+      SMTP_FROM: ${SMTP_FROM:-no-reply@polyglot-ticketing.local}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
     depends_on:
       identity-db:
         condition: service_healthy
@@ -63,6 +72,14 @@ services:
       - '5432:5432'
     volumes:
       - identity-db-data:/var/lib/postgresql/data
+
+  mailpit:
+    image: axllent/mailpit:v1.28
+    container_name: mailpit
+    ports:
+      - '8025:8025'
+    expose:
+      - '1025'
 
 volumes:
   identity-db-data:

@@ -19,6 +19,7 @@ Implemented endpoint:
 | Method | Path               | Behavior                                                             |
 | ------ | ------------------ | -------------------------------------------------------------------- |
 | `POST` | `/api/auth/signup` | Validates a signup request and forwards it to identity through gRPC. |
+| `GET`  | `/api/auth/verify-email?token=...` | Verifies an email token through identity gRPC.         |
 
 The gateway validates HTTP payloads with NestJS DTOs, exposes public HTTP
 errors, and translates structured gRPC errors returned by backend services.
@@ -30,10 +31,11 @@ GraphQL is planned but not implemented.
 `identity:50051` inside local Docker Compose and is not published as an HTTP
 service.
 
-Identity implements `identity.v1.IdentityService.SignUp`. It validates requests
-with Protovalidate and invokes Better Auth internally to create users. It owns
-`identity-db`, a Postgres database, and no other service may access that
-database directly.
+Identity implements `identity.v1.IdentityService.SignUp` and
+`identity.v1.IdentityService.VerifyEmail`. It validates requests with
+Protovalidate and invokes Better Auth internally to create users and verify
+email tokens. It owns `identity-db`, a Postgres database, and no other service
+may access that database directly.
 
 ## Signup Flow
 
@@ -41,13 +43,19 @@ database directly.
 2. The gateway validates the HTTP request with `SignUpDto`.
 3. The gateway calls `identity.v1.IdentityService.SignUp` over gRPC.
 4. Identity validates the generated protobuf message with Protovalidate.
-5. Identity delegates valid signup to Better Auth and returns `userId` and
-   `email`.
+5. Identity delegates valid signup to Better Auth, sends a verification email,
+   and returns `userId` and `email`.
 6. Identity maps validation and Better Auth failures to a structured gRPC
    error. The gateway maps it to the public HTTP error response.
 
 Gateway validation is an early client-facing guard. Identity protobuf
 validation is authoritative for every gRPC caller.
+
+Better Auth creates new users with an unverified email and sends a verification
+message through Mailpit in local development. A user opens the emailed gateway
+link, which forwards the token to `VerifyEmail` and returns JSON confirmation.
+Duplicate signups retain Better Auth's generic successful response and do not
+send another message.
 
 ## Service Communication
 
@@ -107,6 +115,8 @@ Required values are listed in `.env.example`:
 - `IDENTITY_DB_PASSWORD`
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL`
+- `EMAIL_VERIFICATION_URL`
+- `SMTP_FROM`
 
 Common commands:
 
@@ -123,6 +133,7 @@ Local ports:
 | API gateway       | `http://localhost:3000`              |
 | Identity gRPC     | `identity:50051` within Compose only |
 | Identity Postgres | `localhost:5432`                     |
+| Mailpit inbox     | `http://localhost:8025`              |
 
 ## Planned Services
 

@@ -1,10 +1,12 @@
 import { Pool } from 'pg';
+import { createEmailSender, createVerificationUrl } from './email.sender';
 
 export async function createIdentityAuthContext() {
   const pool = new Pool({
     connectionString: requiredEnvironmentVariable('DATABASE_URL'),
   });
   const { betterAuth } = await import('better-auth');
+  const emailSender = createEmailSender();
 
   return {
     auth: betterAuth({
@@ -13,6 +15,16 @@ export async function createIdentityAuthContext() {
       emailAndPassword: {
         autoSignIn: false,
         enabled: true,
+        requireEmailVerification: true,
+      },
+      emailVerification: {
+        sendOnSignUp: true,
+        sendVerificationEmail: async ({ user, token }) => {
+          await emailSender.sendVerificationEmail({
+            recipient: user.email,
+            verificationUrl: createVerificationUrl(token),
+          });
+        },
       },
       secret: requiredEnvironmentVariable('BETTER_AUTH_SECRET'),
     }),

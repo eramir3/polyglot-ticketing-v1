@@ -31,6 +31,7 @@ generation is introduced.
 | `INVALID_NAME`        | The `name` field is missing or invalid.                 |
 | `INVALID_EMAIL`       | The `email` field is missing or invalid.                |
 | `INVALID_PASSWORD`    | The `password` field is missing or invalid.             |
+| `INVALID_VERIFICATION_TOKEN` | An email verification token is invalid or expired. |
 | `ALREADY_EXISTS`      | The requested resource already exists.                  |
 | `UNAUTHENTICATED`     | Authentication is required or invalid.                  |
 | `FORBIDDEN`           | The caller lacks permission.                            |

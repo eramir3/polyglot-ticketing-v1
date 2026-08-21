@@ -3,8 +3,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IDENTITY_AUTH_CONTEXT } from '../auth/auth.constants';
 import { IdentityAuthContext } from '../auth/auth.factory';
 import { StructuredGrpcError } from '../errors/grpc-error';
-import { SignUpRequest, SignUpResponse } from './identity.types';
+import {
+  SignUpRequest,
+  SignUpResponse,
+  VerifyEmailRequest,
+  VerifyEmailResponse,
+} from './identity.types';
 import { mapBetterAuthError } from './mappers/better-auth-error.mapper';
+import { mapEmailVerificationError } from './mappers/email-verification-error.mapper';
 import { createSignupValidationInternalError } from './mappers/signup-errors';
 import { validateSignUpRequest } from './signup-request.validator';
 
@@ -41,6 +47,20 @@ export class IdentityService {
       };
     } catch (error: unknown) {
       throw mapBetterAuthError(error);
+    }
+  }
+
+  async verifyEmail(
+    request: VerifyEmailRequest,
+  ): Promise<VerifyEmailResponse> {
+    try {
+      await this.identityAuthContext.auth.api.verifyEmail({
+        query: { token: request.token },
+      });
+
+      return { verified: true };
+    } catch (error: unknown) {
+      throw mapEmailVerificationError(error);
     }
   }
 }

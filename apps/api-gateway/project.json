@@ -4,8 +4,17 @@
   "sourceRoot": "apps/api-gateway/src",
   "projectType": "application",
   "targets": {
+    "generate-proto": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/protogen/ts", "{workspaceRoot}/proto-deps"],
+      "options": {
+        "command": "pnpm proto:generate"
+      }
+    },
     "build": {
       "executor": "@nx/js:tsc",
+      "dependsOn": ["generate-proto"],
       "options": {
         "main": "apps/api-gateway/src/main.ts",
         "outputPath": "dist/apps/api-gateway",

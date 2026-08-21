@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file identity/v1/identity.proto.
  */
 export const file_identity_v1_identity: GenFile = /*@__PURE__*/
-  fileDesc("ChppZGVudGl0eS92MS9pZGVudGl0eS5wcm90bxILaWRlbnRpdHkudjEiYgoNU2lnblVwUmVxdWVzdBIbCgRuYW1lGAEgASgJQg26SApyCDIGLipcUy4qEhYKBWVtYWlsGAIgASgJQge6SARyAmABEhwKCHBhc3N3b3JkGAMgASgJQgq6SAdyBRAIGIABIjAKDlNpZ25VcFJlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSDQoFZW1haWwYAiABKAkyVAoPSWRlbnRpdHlTZXJ2aWNlEkEKBlNpZ25VcBIaLmlkZW50aXR5LnYxLlNpZ25VcFJlcXVlc3QaGy5pZGVudGl0eS52MS5TaWduVXBSZXNwb25zZWIGcHJvdG8z", [file_buf_validate_validate]);
+  fileDesc("ChppZGVudGl0eS92MS9pZGVudGl0eS5wcm90bxILaWRlbnRpdHkudjEiYgoNU2lnblVwUmVxdWVzdBIbCgRuYW1lGAEgASgJQg26SApyCDIGLipcUy4qEhYKBWVtYWlsGAIgASgJQge6SARyAmABEhwKCHBhc3N3b3JkGAMgASgJQgq6SAdyBRAIGIABIjAKDlNpZ25VcFJlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSDQoFZW1haWwYAiABKAkiLAoSVmVyaWZ5RW1haWxSZXF1ZXN0EhYKBXRva2VuGAEgASgJQge6SARyAhABIicKE1ZlcmlmeUVtYWlsUmVzcG9uc2USEAoIdmVyaWZpZWQYASABKAgypgEKD0lkZW50aXR5U2VydmljZRJBCgZTaWduVXASGi5pZGVudGl0eS52MS5TaWduVXBSZXF1ZXN0GhsuaWRlbnRpdHkudjEuU2lnblVwUmVzcG9uc2USUAoLVmVyaWZ5RW1haWwSHy5pZGVudGl0eS52MS5WZXJpZnlFbWFpbFJlcXVlc3QaIC5pZGVudGl0eS52MS5WZXJpZnlFbWFpbFJlc3BvbnNlYgZwcm90bzM", [file_buf_validate_validate]);
 
 /**
  * @generated from message identity.v1.SignUpRequest
@@ -63,6 +63,40 @@ export const SignUpResponseSchema: GenMessage<SignUpResponse> = /*@__PURE__*/
   messageDesc(file_identity_v1_identity, 1);
 
 /**
+ * @generated from message identity.v1.VerifyEmailRequest
+ */
+export type VerifyEmailRequest = Message<"identity.v1.VerifyEmailRequest"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
+};
+
+/**
+ * Describes the message identity.v1.VerifyEmailRequest.
+ * Use `create(VerifyEmailRequestSchema)` to create a new message.
+ */
+export const VerifyEmailRequestSchema: GenMessage<VerifyEmailRequest> = /*@__PURE__*/
+  messageDesc(file_identity_v1_identity, 2);
+
+/**
+ * @generated from message identity.v1.VerifyEmailResponse
+ */
+export type VerifyEmailResponse = Message<"identity.v1.VerifyEmailResponse"> & {
+  /**
+   * @generated from field: bool verified = 1;
+   */
+  verified: boolean;
+};
+
+/**
+ * Describes the message identity.v1.VerifyEmailResponse.
+ * Use `create(VerifyEmailResponseSchema)` to create a new message.
+ */
+export const VerifyEmailResponseSchema: GenMessage<VerifyEmailResponse> = /*@__PURE__*/
+  messageDesc(file_identity_v1_identity, 3);
+
+/**
  * @generated from service identity.v1.IdentityService
  */
 export const IdentityService: GenService<{
@@ -73,6 +107,14 @@ export const IdentityService: GenService<{
     methodKind: "unary";
     input: typeof SignUpRequestSchema;
     output: typeof SignUpResponseSchema;
+  },
+  /**
+   * @generated from rpc identity.v1.IdentityService.VerifyEmail
+   */
+  verifyEmail: {
+    methodKind: "unary";
+    input: typeof VerifyEmailRequestSchema;
+    output: typeof VerifyEmailResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_identity_v1_identity, 0);

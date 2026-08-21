@@ -6,6 +6,7 @@ import "buf/validate/validate.proto";
 
 service IdentityService {
   rpc SignUp(SignUpRequest) returns (SignUpResponse);
+  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
 }
 
 message SignUpRequest {
@@ -20,4 +21,12 @@ message SignUpRequest {
 message SignUpResponse {
   string user_id = 1;
   string email = 2;
+}
+
+message VerifyEmailRequest {
+  string token = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+message VerifyEmailResponse {
+  bool verified = 1;
 }

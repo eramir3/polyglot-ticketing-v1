@@ -14,12 +14,13 @@ Implemented foundations:
 - `api-gateway`: NestJS/TypeScript HTTP backend-for-frontend. It currently
   exposes `POST /api/auth/signup` and calls identity through gRPC.
 - `identity`: NestJS/TypeScript gRPC-only service using Better Auth and
-  Postgres. It owns `identity-db` and implements signup.
+  Postgres. It owns `identity-db`, implements signup, and requires email
+  verification.
 - Shared protobuf contracts in `proto/`, generated with Buf and Protobuf-ES.
 - Protovalidate request validation for identity gRPC requests.
 - Standardized errors across the gateway and identity service.
-- Local Docker Compose infrastructure for the gateway, identity, and
-  `identity-db`.
+- Local Docker Compose infrastructure for the gateway, identity, `identity-db`,
+  and Mailpit. The Mailpit inbox is available on `localhost:8025`.
 
 Planned but not implemented: ticketing, orders, payments, expiration,
 concert-assistant, NATS JetStream, Kubernetes manifests, GraphQL, and a
@@ -44,8 +45,8 @@ Kubernetes Gateway API controller.
 - Protobuf sources live in `proto/`. Run `pnpm proto:generate` after changing
   protobuf sources; it generates TypeScript contracts in `protogen/ts` and
   exports the pinned Protovalidate schema to `proto-deps/`.
-- Identity builds run protobuf generation first through the Nx
-  `identity:generate-proto` target.
+- Identity and API gateway builds run protobuf generation first through their
+  respective `generate-proto` targets.
 - Gateway DTO validation provides an early HTTP guard. Protovalidate remains
   authoritative for all identity gRPC callers.
 - Public errors use `{ "errors": [{ "code", "message", "field"? }] }`.
@@ -53,6 +54,9 @@ Kubernetes Gateway API controller.
 - gRPC services return the relevant gRPC status code and serialize the error
   response JSON in gRPC `details`. The gateway translates that payload to the
   public HTTP response without reclassifying domain errors.
+- Verification links target the API gateway's public
+  `GET /api/auth/verify-email?token=...` endpoint, which delegates the token
+  verification to identity over gRPC. Keep identity gRPC-only.
 
 ## Local Development
 

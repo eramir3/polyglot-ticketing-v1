@@ -11,6 +11,15 @@ export interface SignUpResponse {
   email: string;
 }
 
+export interface VerifyEmailRequest {
+  token: string;
+}
+
+export interface VerifyEmailResponse {
+  verified: boolean;
+}
+
 export interface IdentityGrpcService {
   signUp(request: SignUpRequest): Observable<SignUpResponse>;
+  verifyEmail(request: VerifyEmailRequest): Observable<VerifyEmailResponse>;
 }
