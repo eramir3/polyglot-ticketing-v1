@@ -4,7 +4,7 @@ WORKDIR /app
 
 RUN corepack enable
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json buf.yaml buf.gen.yaml buf.lock ./
 COPY apps/identity ./apps/identity
 COPY proto ./proto
 
@@ -12,10 +12,8 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm nx build identity
 
 ENV NODE_ENV=development
-ENV PORT=3001
 ENV GRPC_PORT=50051
 
-EXPOSE 3001
 EXPOSE 50051
 
-CMD ["node", "dist/apps/identity/src/main.js"]
+CMD ["node", "dist/apps/identity/apps/identity/src/main.js"]

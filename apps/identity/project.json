@@ -4,11 +4,21 @@
   "sourceRoot": "apps/identity/src",
   "projectType": "application",
   "targets": {
+    "generate-proto": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/proto/gen/ts", "{workspaceRoot}/proto-deps"],
+      "options": {
+        "command": "pnpm proto:generate"
+      }
+    },
     "build": {
       "executor": "@nx/js:tsc",
+      "dependsOn": ["generate-proto"],
       "options": {
         "main": "apps/identity/src/main.ts",
         "outputPath": "dist/apps/identity",
+        "rootDir": ".",
         "tsConfig": "apps/identity/tsconfig.app.json",
         "assets": [
           {
@@ -26,9 +36,7 @@
       }
     },
     "prune-lockfile": {
-      "dependsOn": [
-        "build"
-      ],
+      "dependsOn": ["build"],
       "cache": true,
       "executor": "@nx/js:prune-lockfile",
       "outputs": [
@@ -40,32 +48,23 @@
       }
     },
     "copy-workspace-modules": {
-      "dependsOn": [
-        "build"
-      ],
+      "dependsOn": ["build"],
       "cache": true,
-      "outputs": [
-        "{workspaceRoot}/dist/apps/identity/workspace_modules"
-      ],
+      "outputs": ["{workspaceRoot}/dist/apps/identity/workspace_modules"],
       "executor": "@nx/js:copy-workspace-modules",
       "options": {
         "buildTarget": "build"
       }
     },
     "prune": {
-      "dependsOn": [
-        "prune-lockfile",
-        "copy-workspace-modules"
-      ],
+      "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
       "executor": "nx:noop"
     },
     "serve": {
       "continuous": true,
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",
-      "dependsOn": [
-        "build"
-      ],
+      "dependsOn": ["build"],
       "options": {
         "buildTarget": "identity:build",
         "runBuildTargetDependencies": false

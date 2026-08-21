@@ -1,0 +1,54 @@
+import { ErrorItem } from '../../errors/grpc-error';
+
+export function createInvalidNameError(): ErrorItem {
+  return {
+    code: 'INVALID_NAME',
+    field: 'name',
+    message: 'Name is required.',
+  };
+}
+
+export function createInvalidEmailError(): ErrorItem {
+  return {
+    code: 'INVALID_EMAIL',
+    field: 'email',
+    message: 'Email must be valid.',
+  };
+}
+
+export function createInvalidPasswordError(): ErrorItem {
+  return {
+    code: 'INVALID_PASSWORD',
+    field: 'password',
+    message: 'Password must be between 8 and 128 characters.',
+  };
+}
+
+export function createInvalidArgumentError(): ErrorItem {
+  return {
+    code: 'INVALID_ARGUMENT',
+    message: 'Signup data is invalid.',
+  };
+}
+
+export function createEmailAlreadyExistsError(): ErrorItem {
+  return {
+    code: 'ALREADY_EXISTS',
+    field: 'email',
+    message: 'A user with this email already exists.',
+  };
+}
+
+export function createSignupValidationInternalError(): ErrorItem {
+  return {
+    code: 'INTERNAL_ERROR',
+    message: 'Unable to validate signup data.',
+  };
+}
+
+export function createSignupInternalError(): ErrorItem {
+  return {
+    code: 'INTERNAL_ERROR',
+    message: 'Unable to complete signup.',
+  };
+}

@@ -2,14 +2,19 @@ syntax = "proto3";
 
 package identity.v1;
 
+import "buf/validate/validate.proto";
+
 service IdentityService {
   rpc SignUp(SignUpRequest) returns (SignUpResponse);
 }
 
 message SignUpRequest {
-  string name = 1;
-  string email = 2;
-  string password = 3;
+  string name = 1 [(buf.validate.field).string.pattern = ".*\\S.*"];
+  string email = 2 [(buf.validate.field).string.email = true];
+  string password = 3 [(buf.validate.field).string = {
+    min_len: 8
+    max_len: 128
+  }];
 }
 
 message SignUpResponse {

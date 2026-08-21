@@ -2,7 +2,8 @@ autoInstallPeers: true
 allowBuilds:
   nx: true
   unrs-resolver: true
-  "@nestjs/core": false
+  '@nestjs/core': false
   '@parcel/watcher': true
   less: false
   protobufjs: false
+  '@bufbuild/buf': true

@@ -5,6 +5,8 @@
 .vscode
 dist
 node_modules
+proto/gen
+proto-deps
 tmp
 
 *.log

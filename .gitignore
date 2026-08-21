@@ -4,9 +4,12 @@
 dist
 tmp
 out-tsc
+proto/gen
+proto-deps
 
 # dependencies
 node_modules
+.pnpm-store
 
 # local environment configuration
 .env
