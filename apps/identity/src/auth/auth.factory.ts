@@ -10,6 +10,13 @@ export async function createIdentityAuthContext() {
 
   return {
     auth: betterAuth({
+      advanced: {
+        cookies: {
+          session_token: {
+            name: 'better-auth.session_token',
+          },
+        },
+      },
       baseURL: requiredEnvironmentVariable('BETTER_AUTH_URL'),
       database: pool,
       emailAndPassword: {
@@ -18,6 +25,7 @@ export async function createIdentityAuthContext() {
         requireEmailVerification: true,
       },
       emailVerification: {
+        sendOnSignIn: false,
         sendOnSignUp: true,
         sendVerificationEmail: async ({ user, token }) => {
           await emailSender.sendVerificationEmail({
@@ -27,7 +35,21 @@ export async function createIdentityAuthContext() {
         },
       },
       secret: requiredEnvironmentVariable('BETTER_AUTH_SECRET'),
+      trustedOrigins: [
+        process.env.TICKETING_USER_APP_ORIGIN ?? 'http://localhost:3001',
+      ],
     }),
+    getSessionExpiry: async (
+      sessionToken: string,
+      userId: string,
+    ): Promise<Date | null> => {
+      const result = await pool.query<{ expiresAt: Date }>(
+        'SELECT "expiresAt" FROM "session" WHERE token = $1 AND "userId" = $2',
+        [sessionToken, userId],
+      );
+
+      return result.rows[0]?.expiresAt ?? null;
+    },
     pool,
   };
 }

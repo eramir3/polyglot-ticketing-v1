@@ -25,20 +25,22 @@ generation is introduced.
 
 ## Public Codes
 
-| Code                  | Meaning                                                 |
-| --------------------- | ------------------------------------------------------- |
-| `INVALID_ARGUMENT`    | A request is invalid but no more specific code applies. |
-| `INVALID_NAME`        | The `name` field is missing or invalid.                 |
-| `INVALID_EMAIL`       | The `email` field is missing or invalid.                |
-| `INVALID_PASSWORD`    | The `password` field is missing or invalid.             |
-| `INVALID_VERIFICATION_TOKEN` | An email verification token is invalid or expired. |
-| `ALREADY_EXISTS`      | The requested resource already exists.                  |
-| `UNAUTHENTICATED`     | Authentication is required or invalid.                  |
-| `FORBIDDEN`           | The caller lacks permission.                            |
-| `NOT_FOUND`           | The requested resource does not exist.                  |
-| `RATE_LIMITED`        | The caller exceeded a rate limit.                       |
-| `SERVICE_UNAVAILABLE` | A required service is unavailable.                      |
-| `INTERNAL_ERROR`      | An unexpected error occurred.                           |
+| Code                         | Meaning                                                 |
+| ---------------------------- | ------------------------------------------------------- |
+| `INVALID_ARGUMENT`           | A request is invalid but no more specific code applies. |
+| `INVALID_NAME`               | The `name` field is missing or invalid.                 |
+| `INVALID_EMAIL`              | The `email` field is missing or invalid.                |
+| `INVALID_PASSWORD`           | The `password` field is missing or invalid.             |
+| `INVALID_CREDENTIALS`        | The supplied email or password is incorrect.            |
+| `EMAIL_NOT_VERIFIED`         | The account email must be verified before sign-in.      |
+| `INVALID_VERIFICATION_TOKEN` | An email verification token is invalid or expired.      |
+| `ALREADY_EXISTS`             | The requested resource already exists.                  |
+| `UNAUTHENTICATED`            | Authentication is required or invalid.                  |
+| `FORBIDDEN`                  | The caller lacks permission.                            |
+| `NOT_FOUND`                  | The requested resource does not exist.                  |
+| `RATE_LIMITED`               | The caller exceeded a rate limit.                       |
+| `SERVICE_UNAVAILABLE`        | A required service is unavailable.                      |
+| `INTERNAL_ERROR`             | An unexpected error occurred.                           |
 
 `field`, when present, uses the public lower-camel-case request field name.
 Service implementation details, stack traces, and database errors must not be

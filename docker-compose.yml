@@ -9,6 +9,7 @@ services:
       NODE_ENV: development
       PORT: 3000
       IDENTITY_GRPC_URL: identity:50051
+      TICKETING_USER_APP_ORIGIN: ${TICKETING_USER_APP_ORIGIN:-http://localhost:3001}
     ports:
       - '3000:3000'
     depends_on:
@@ -30,6 +31,7 @@ services:
       SMTP_FROM: ${SMTP_FROM:-no-reply@polyglot-ticketing.local}
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
+      TICKETING_USER_APP_ORIGIN: ${TICKETING_USER_APP_ORIGIN:-http://localhost:3001}
     depends_on:
       identity-db:
         condition: service_healthy

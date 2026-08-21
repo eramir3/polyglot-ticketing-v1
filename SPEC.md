@@ -16,10 +16,11 @@ port `3000` in local Docker Compose.
 
 Implemented endpoint:
 
-| Method | Path               | Behavior                                                             |
-| ------ | ------------------ | -------------------------------------------------------------------- |
-| `POST` | `/api/auth/signup` | Validates a signup request and forwards it to identity through gRPC. |
-| `GET`  | `/api/auth/verify-email?token=...` | Verifies an email token through identity gRPC.         |
+| Method | Path                               | Behavior                                                                 |
+| ------ | ---------------------------------- | ------------------------------------------------------------------------ |
+| `POST` | `/api/auth/signup`                 | Validates a signup request and forwards it to identity through gRPC.     |
+| `POST` | `/api/auth/signin`                 | Signs in with email and password, then sets an HTTP-only session cookie. |
+| `GET`  | `/api/auth/verify-email?token=...` | Verifies an email token through identity gRPC.                           |
 
 The gateway validates HTTP payloads with NestJS DTOs, exposes public HTTP
 errors, and translates structured gRPC errors returned by backend services.
@@ -31,7 +32,8 @@ GraphQL is planned but not implemented.
 `identity:50051` inside local Docker Compose and is not published as an HTTP
 service.
 
-Identity implements `identity.v1.IdentityService.SignUp` and
+Identity implements `identity.v1.IdentityService.SignUp`,
+`identity.v1.IdentityService.SignIn`, and
 `identity.v1.IdentityService.VerifyEmail`. It validates requests with
 Protovalidate and invokes Better Auth internally to create users and verify
 email tokens. It owns `identity-db`, a Postgres database, and no other service
@@ -56,6 +58,21 @@ message through Mailpit in local development. A user opens the emailed gateway
 link, which forwards the token to `VerifyEmail` and returns JSON confirmation.
 Duplicate signups retain Better Auth's generic successful response and do not
 send another message.
+
+## Signin Flow
+
+1. A client calls `POST /api/auth/signin` with `email` and `password` from the
+   configured `TICKETING_USER_APP_ORIGIN`.
+2. The gateway validates the HTTP request, forwards the relevant browser
+   security headers over gRPC metadata, and calls `IdentityService.SignIn`.
+3. Identity validates the generated protobuf message with Protovalidate, then
+   delegates credential verification and session creation to Better Auth.
+4. Identity returns the session token and expiry only to the gateway. The
+   gateway stores the token in the `better-auth.session_token` HTTP-only cookie
+   and returns safe user metadata plus the ISO-8601 session expiry.
+5. Invalid credentials return `401 INVALID_CREDENTIALS`. Unverified accounts
+   return `401 EMAIL_NOT_VERIFIED`; no session is created and no verification
+   email is resent during sign-in.
 
 ## Service Communication
 
@@ -84,7 +101,8 @@ runtime schema to `proto-deps/`, and generate TypeScript Protobuf-ES contracts
 to `protogen/ts`. Identity's Nx build depends on this generation step.
 
 `identity.v1.SignUpRequest` requires a non-blank name, an email address, and a
-password from 8 through 128 characters.
+password from 8 through 128 characters. `identity.v1.SignInRequest` requires a
+valid email address and a password from 8 through 128 characters.
 
 ## Error Contract
 
@@ -116,6 +134,7 @@ Required values are listed in `.env.example`:
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL`
 - `EMAIL_VERIFICATION_URL`
+- `TICKETING_USER_APP_ORIGIN`
 - `SMTP_FROM`
 
 Common commands:

@@ -1,3 +1,4 @@
+import { Metadata } from '@grpc/grpc-js';
 import { Observable } from 'rxjs';
 
 export interface SignUpRequest {
@@ -11,6 +12,37 @@ export interface SignUpResponse {
   email: string;
 }
 
+export interface SignInRequest {
+  email: string;
+  password: string;
+}
+
+export interface SignInResponse {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    emailVerified: boolean;
+  };
+  session: {
+    expiresAt: string;
+  };
+}
+
+export interface IdentitySignInResponse {
+  userId: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  sessionToken: string;
+  sessionExpiresAt: Timestamp;
+}
+
+export interface Timestamp {
+  seconds: string | number | bigint;
+  nanos: number;
+}
+
 export interface VerifyEmailRequest {
   token: string;
 }
@@ -21,5 +53,9 @@ export interface VerifyEmailResponse {
 
 export interface IdentityGrpcService {
   signUp(request: SignUpRequest): Observable<SignUpResponse>;
+  signIn(
+    request: SignInRequest,
+    metadata?: Metadata,
+  ): Observable<IdentitySignInResponse>;
   verifyEmail(request: VerifyEmailRequest): Observable<VerifyEmailResponse>;
 }

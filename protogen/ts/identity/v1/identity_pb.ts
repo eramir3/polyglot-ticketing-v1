@@ -5,13 +5,15 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../../buf/validate/validate_pb.js";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file identity/v1/identity.proto.
  */
 export const file_identity_v1_identity: GenFile = /*@__PURE__*/
-  fileDesc("ChppZGVudGl0eS92MS9pZGVudGl0eS5wcm90bxILaWRlbnRpdHkudjEiYgoNU2lnblVwUmVxdWVzdBIbCgRuYW1lGAEgASgJQg26SApyCDIGLipcUy4qEhYKBWVtYWlsGAIgASgJQge6SARyAmABEhwKCHBhc3N3b3JkGAMgASgJQgq6SAdyBRAIGIABIjAKDlNpZ25VcFJlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSDQoFZW1haWwYAiABKAkiLAoSVmVyaWZ5RW1haWxSZXF1ZXN0EhYKBXRva2VuGAEgASgJQge6SARyAhABIicKE1ZlcmlmeUVtYWlsUmVzcG9uc2USEAoIdmVyaWZpZWQYASABKAgypgEKD0lkZW50aXR5U2VydmljZRJBCgZTaWduVXASGi5pZGVudGl0eS52MS5TaWduVXBSZXF1ZXN0GhsuaWRlbnRpdHkudjEuU2lnblVwUmVzcG9uc2USUAoLVmVyaWZ5RW1haWwSHy5pZGVudGl0eS52MS5WZXJpZnlFbWFpbFJlcXVlc3QaIC5pZGVudGl0eS52MS5WZXJpZnlFbWFpbFJlc3BvbnNlYgZwcm90bzM", [file_buf_validate_validate]);
+  fileDesc("ChppZGVudGl0eS92MS9pZGVudGl0eS5wcm90bxILaWRlbnRpdHkudjEiYgoNU2lnblVwUmVxdWVzdBIbCgRuYW1lGAEgASgJQg26SApyCDIGLipcUy4qEhYKBWVtYWlsGAIgASgJQge6SARyAmABEhwKCHBhc3N3b3JkGAMgASgJQgq6SAdyBRAIGIABIjAKDlNpZ25VcFJlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSDQoFZW1haWwYAiABKAkiRQoNU2lnbkluUmVxdWVzdBIWCgVlbWFpbBgBIAEoCUIHukgEcgJgARIcCghwYXNzd29yZBgCIAEoCUIKukgHcgUQCBiAASKlAQoOU2lnbkluUmVzcG9uc2USDwoHdXNlcl9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg0KBWVtYWlsGAMgASgJEhYKDmVtYWlsX3ZlcmlmaWVkGAQgASgIEhUKDXNlc3Npb25fdG9rZW4YBSABKAkSNgoSc2Vzc2lvbl9leHBpcmVzX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIsChJWZXJpZnlFbWFpbFJlcXVlc3QSFgoFdG9rZW4YASABKAlCB7pIBHICEAEiJwoTVmVyaWZ5RW1haWxSZXNwb25zZRIQCgh2ZXJpZmllZBgBIAEoCDLpAQoPSWRlbnRpdHlTZXJ2aWNlEkEKBlNpZ25VcBIaLmlkZW50aXR5LnYxLlNpZ25VcFJlcXVlc3QaGy5pZGVudGl0eS52MS5TaWduVXBSZXNwb25zZRJBCgZTaWduSW4SGi5pZGVudGl0eS52MS5TaWduSW5SZXF1ZXN0GhsuaWRlbnRpdHkudjEuU2lnbkluUmVzcG9uc2USUAoLVmVyaWZ5RW1haWwSHy5pZGVudGl0eS52MS5WZXJpZnlFbWFpbFJlcXVlc3QaIC5pZGVudGl0eS52MS5WZXJpZnlFbWFpbFJlc3BvbnNlYgZwcm90bzM", [file_buf_validate_validate, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message identity.v1.SignUpRequest
@@ -63,6 +65,70 @@ export const SignUpResponseSchema: GenMessage<SignUpResponse> = /*@__PURE__*/
   messageDesc(file_identity_v1_identity, 1);
 
 /**
+ * @generated from message identity.v1.SignInRequest
+ */
+export type SignInRequest = Message<"identity.v1.SignInRequest"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+
+  /**
+   * @generated from field: string password = 2;
+   */
+  password: string;
+};
+
+/**
+ * Describes the message identity.v1.SignInRequest.
+ * Use `create(SignInRequestSchema)` to create a new message.
+ */
+export const SignInRequestSchema: GenMessage<SignInRequest> = /*@__PURE__*/
+  messageDesc(file_identity_v1_identity, 2);
+
+/**
+ * @generated from message identity.v1.SignInResponse
+ */
+export type SignInResponse = Message<"identity.v1.SignInResponse"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string email = 3;
+   */
+  email: string;
+
+  /**
+   * @generated from field: bool email_verified = 4;
+   */
+  emailVerified: boolean;
+
+  /**
+   * @generated from field: string session_token = 5;
+   */
+  sessionToken: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp session_expires_at = 6;
+   */
+  sessionExpiresAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message identity.v1.SignInResponse.
+ * Use `create(SignInResponseSchema)` to create a new message.
+ */
+export const SignInResponseSchema: GenMessage<SignInResponse> = /*@__PURE__*/
+  messageDesc(file_identity_v1_identity, 3);
+
+/**
  * @generated from message identity.v1.VerifyEmailRequest
  */
 export type VerifyEmailRequest = Message<"identity.v1.VerifyEmailRequest"> & {
@@ -77,7 +143,7 @@ export type VerifyEmailRequest = Message<"identity.v1.VerifyEmailRequest"> & {
  * Use `create(VerifyEmailRequestSchema)` to create a new message.
  */
 export const VerifyEmailRequestSchema: GenMessage<VerifyEmailRequest> = /*@__PURE__*/
-  messageDesc(file_identity_v1_identity, 2);
+  messageDesc(file_identity_v1_identity, 4);
 
 /**
  * @generated from message identity.v1.VerifyEmailResponse
@@ -94,7 +160,7 @@ export type VerifyEmailResponse = Message<"identity.v1.VerifyEmailResponse"> & {
  * Use `create(VerifyEmailResponseSchema)` to create a new message.
  */
 export const VerifyEmailResponseSchema: GenMessage<VerifyEmailResponse> = /*@__PURE__*/
-  messageDesc(file_identity_v1_identity, 3);
+  messageDesc(file_identity_v1_identity, 5);
 
 /**
  * @generated from service identity.v1.IdentityService
@@ -107,6 +173,14 @@ export const IdentityService: GenService<{
     methodKind: "unary";
     input: typeof SignUpRequestSchema;
     output: typeof SignUpResponseSchema;
+  },
+  /**
+   * @generated from rpc identity.v1.IdentityService.SignIn
+   */
+  signIn: {
+    methodKind: "unary";
+    input: typeof SignInRequestSchema;
+    output: typeof SignInResponseSchema;
   },
   /**
    * @generated from rpc identity.v1.IdentityService.VerifyEmail
