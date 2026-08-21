@@ -2,111 +2,86 @@
 
 ## Repository Purpose
 
-This repository is planned as a polyglot ticketing microservices application.
-The system will be built step by step, starting with documentation and
-architecture alignment before any application scaffolding or service code.
+This repository is a polyglot ticketing microservices system built incrementally
+in an Nx monorepo. It contains backend services and shared contracts only.
+`ticketing-user-app` is a Next.js architectural dependency, but no frontend
+application, routes, components, or UI code belong in this repository.
 
-The intended architecture includes:
+## Current State
 
-- `ticketing`: Go service for tickets and concert inventory.
-- `orders`: Go service for order lifecycle management.
-- `payments`: Go service for payment workflows.
-- `expiration`: NestJS service using BullMQ for order expiration workflows.
-- `identity`: NestJS service using Better Auth for authentication and user identity.
-- `api-gateway`: Kubernetes Gateway API based gateway and backend-for-frontend layer.
-- `concert-assistant`: Python RAG service for AI-powered concert questions.
-- `ticketing-user-app`: Next.js user interface. This is architectural context
-  only; this repository is not intended to contain frontend implementation code.
+Implemented foundations:
 
-## Current Project Phase
+- `api-gateway`: NestJS/TypeScript HTTP backend-for-frontend. It currently
+  exposes `POST /api/auth/signup` and calls identity through gRPC.
+- `identity`: NestJS/TypeScript gRPC-only service using Better Auth and
+  Postgres. It owns `identity-db` and implements signup.
+- Shared protobuf contracts in `proto/`, generated with Buf and Protobuf-ES.
+- Protovalidate request validation for identity gRPC requests.
+- Standardized errors across the gateway and identity service.
+- Local Docker Compose infrastructure for the gateway, identity, and
+  `identity-db`.
 
-The project is in the documentation/specification phase.
+Planned but not implemented: ticketing, orders, payments, expiration,
+concert-assistant, NATS JetStream, Kubernetes manifests, GraphQL, and a
+Kubernetes Gateway API controller.
 
-Do not scaffold the Nx workspace, create service code, add Kubernetes manifests,
-or introduce infrastructure files until the next implementation step is
-explicitly requested.
+## Architecture Rules
 
-The first concrete deliverables are:
-
-- `AGENTS.md`: contributor and agent working instructions.
-- `SPEC.md`: project specification and architecture description.
-
-## Planned Technology Stack
-
-- Monorepo: Nx.
-- User interface: Next.js, tracked as architecture context only. Do not create
-  frontend apps, components, routes, or UI code in this repository.
-- Identity service: NestJS, TypeScript, Better Auth, Postgres.
-- Expiration service: NestJS, TypeScript, BullMQ.
-- Ticketing, orders, and payments services: Go.
-- Concert assistant service: Python RAG system.
-- Event bus: NATS JetStream.
-- Databases: Postgres with database per microservice.
-- Kubernetes networking: Gateway API.
-- UI to gateway communication: REST and GraphQL.
-- Gateway to microservice communication: gRPC.
-- Async service-to-service communication: NATS JetStream events.
-
-## Database Plan
-
-Each service owns its own database. Planned databases:
-
-- `ticketing-db`
-- `orders-db`
-- `payments-db`
-- `identity-db`
-- `expiration-db`
-- `concert-assistant-db`
-
-Services must not directly read or write another service's database.
-Cross-service state changes should happen through gRPC calls or NATS JetStream
-events, depending on whether the workflow is synchronous or asynchronous.
-
-## Communication Model
-
-- The user app communicates with the API gateway synchronously through REST and
+- UI clients communicate with the API gateway through REST and, when added,
   GraphQL.
-- The API gateway communicates with backend microservices synchronously through
+- The API gateway communicates with backend services synchronously through
   gRPC.
-- Backend microservices communicate asynchronously through NATS JetStream.
-- Event contracts should be treated as shared public interfaces and versioned
-  carefully once implementation begins.
+- Backend services will communicate asynchronously through NATS JetStream.
+- Each service owns its database. A service must not read or write another
+  service's database.
+- Shared protobuf and event contracts are public interfaces. Version them
+  carefully and preserve backward compatibility once consumers exist.
+- The API gateway is the public HTTP error boundary. Identity is gRPC-only;
+  do not add HTTP routes or ports to it without an explicit requirement.
 
-## Initial Implementation Sequence
+## Contracts And Validation
 
-Build the project incrementally:
+- Protobuf sources live in `proto/`. Run `pnpm proto:generate` after changing
+  protobuf sources; it generates TypeScript contracts in `protogen/ts` and
+  exports the pinned Protovalidate schema to `proto-deps/`.
+- Identity builds run protobuf generation first through the Nx
+  `identity:generate-proto` target.
+- Gateway DTO validation provides an early HTTP guard. Protovalidate remains
+  authoritative for all identity gRPC callers.
+- Public errors use `{ "errors": [{ "code", "message", "field"? }] }`.
+  See `docs/error-contract.md` for the full contract.
+- gRPC services return the relevant gRPC status code and serialize the error
+  response JSON in gRPC `details`. The gateway translates that payload to the
+  public HTTP response without reclassifying domain errors.
 
-1. Create repository documentation: `AGENTS.md` and `SPEC.md`.
-2. Scaffold the Nx monorepo.
-3. Add shared contract/tooling foundations, including protobuf and event schema
-   locations.
-4. Create the identity service and a minimal authentication flow.
-5. Create the first core ticketing and ordering happy path.
-6. Add payments, expiration, and concert assistant capabilities after the core
-   flow is stable.
-7. Add Kubernetes manifests and local development infrastructure once service
-   boundaries are clearer.
+## Local Development
 
-## Open Decisions
+- Required local configuration is documented in `.env.example`.
+- Build identity: `pnpm nx build identity`.
+- Build the gateway: `pnpm nx build api-gateway`.
+- Start the local stack: `docker compose up -d --build` with the required
+  Better Auth and database environment variables configured.
+- The gateway is published on `localhost:3000`; identity gRPC is internal to
+  the Compose network on `identity:50051`; Postgres is published on
+  `localhost:5432` for local database tooling.
 
-These decisions are intentionally deferred:
+## Planned Services And Databases
 
-- Concrete Kubernetes Gateway API controller.
-- Exact GraphQL schema and ownership boundaries.
-- Exact protobuf package layout.
-- Event subject naming and schema format.
-- Local development database orchestration.
-- CI/CD and deployment environments.
-- Observability, tracing, metrics, and logging stack.
+- `ticketing` (Go) owns `ticketing-db`.
+- `orders` (Go) owns `orders-db`.
+- `payments` (Go) owns `payments-db`.
+- `expiration` (NestJS/BullMQ) owns `expiration-db`.
+- `identity` (NestJS/Better Auth) owns `identity-db`.
+- `concert-assistant` (Python RAG) owns `concert-assistant-db`.
 
 ## Engineering Guidelines
 
-- Inspect the existing repository before making changes.
-- Keep changes scoped to the current requested step.
-- Prefer the existing project structure once it exists.
-- Preserve service boundaries.
-- Do not couple services through shared database access.
-- Do not introduce production-hardening work before the foundational structure
-  exists unless explicitly requested.
-- Add tests when implementation begins and the changed behavior has executable
-  surface area.
+- Inspect the existing project structure and contracts before changing code.
+- Keep changes scoped to the requested service and boundary.
+- Prefer existing Nx, NestJS, Buf, Docker Compose, and error-contract patterns.
+- Do not introduce shared database access, frontend code, Kubernetes manifests,
+  NATS subjects, or production-hardening work unless explicitly requested.
+- Add focused executable tests when a changed behavior has test coverage or a
+  practical test harness.
+- Update `SPEC.md` and contract documentation when architecture, public APIs,
+  protobuf contracts, validation, or error behavior changes.
