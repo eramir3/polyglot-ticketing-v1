@@ -20,6 +20,7 @@ Implemented endpoint:
 | ------ | ---------------------------------- | ------------------------------------------------------------------------ |
 | `POST` | `/api/auth/signup`                 | Validates a signup request and forwards it to identity through gRPC.     |
 | `POST` | `/api/auth/signin`                 | Signs in with email and password, then sets an HTTP-only session cookie. |
+| `POST` | `/api/auth/signout`                | Revokes the current session and expires the HTTP-only session cookie.    |
 | `GET`  | `/api/auth/verify-email?token=...` | Verifies an email token through identity gRPC.                           |
 
 The gateway validates HTTP payloads with NestJS DTOs, exposes public HTTP
@@ -33,7 +34,8 @@ GraphQL is planned but not implemented.
 service.
 
 Identity implements `identity.v1.IdentityService.SignUp`,
-`identity.v1.IdentityService.SignIn`, and
+`identity.v1.IdentityService.SignIn`,
+`identity.v1.IdentityService.SignOut`, and
 `identity.v1.IdentityService.VerifyEmail`. It validates requests with
 Protovalidate and invokes Better Auth internally to create users and verify
 email tokens. It owns `identity-db`, a Postgres database, and no other service
@@ -73,6 +75,18 @@ send another message.
 5. Invalid credentials return `401 INVALID_CREDENTIALS`. Unverified accounts
    return `401 EMAIL_NOT_VERIFIED`; no session is created and no verification
    email is resent during sign-in.
+
+## Signout Flow
+
+1. A client calls `POST /api/auth/signout` with its session cookie.
+2. The gateway forwards only `better-auth.session_token` to identity through
+   gRPC metadata; no other browser cookies cross the service boundary.
+3. Identity reconstructs an in-memory `Headers` object and delegates current
+   session revocation to Better Auth.
+4. On success, including when the session is absent, expired, or already
+   revoked, the gateway expires the session cookie and returns `204 No Content`.
+5. If identity cannot revoke the session, the gateway returns its structured
+   error and retains the cookie so the client can retry sign-out.
 
 ## Service Communication
 

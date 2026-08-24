@@ -38,6 +38,10 @@ export interface IdentitySignInResponse {
   sessionExpiresAt: Timestamp;
 }
 
+export interface SignOutRequest {}
+
+export interface SignOutResponse {}
+
 export interface Timestamp {
   seconds: string | number | bigint;
   nanos: number;
@@ -57,5 +61,9 @@ export interface IdentityGrpcService {
     request: SignInRequest,
     metadata?: Metadata,
   ): Observable<IdentitySignInResponse>;
+  signOut(
+    request: SignOutRequest,
+    metadata?: Metadata,
+  ): Observable<SignOutResponse>;
   verifyEmail(request: VerifyEmailRequest): Observable<VerifyEmailResponse>;
 }

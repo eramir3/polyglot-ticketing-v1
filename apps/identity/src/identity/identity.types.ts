@@ -15,6 +15,10 @@ export interface SignInResponse {
   };
 }
 
+export interface SignOutRequest {}
+
+export interface SignOutResponse {}
+
 export interface SignUpRequest {
   name: string;
   email: string;

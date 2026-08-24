@@ -6,6 +6,8 @@ import { StructuredGrpcError } from '../errors/grpc-error';
 import {
   SignInRequest,
   SignInResponse,
+  SignOutRequest,
+  SignOutResponse,
   SignUpRequest,
   SignUpResponse,
   VerifyEmailRequest,
@@ -13,11 +15,13 @@ import {
 } from './identity.types';
 import { mapBetterAuthError } from './mappers/better-auth-error.mapper';
 import { mapBetterAuthSignInError } from './mappers/better-auth-signin-error.mapper';
+import { mapBetterAuthSignOutError } from './mappers/better-auth-signout-error.mapper';
 import { mapEmailVerificationError } from './mappers/email-verification-error.mapper';
 import { createSigninValidationInternalError } from './mappers/signin-errors';
 import { createSignupValidationInternalError } from './mappers/signup-errors';
-import { createAuthRequestHeaders } from './signin-request-headers';
+import { createAuthRequestHeaders } from './headers/signin-request-headers';
 import { extractSessionCookieValue } from './session-cookie';
+import { createSignOutRequestHeaders } from './headers/signout-request-headers';
 import { validateSignInRequest } from './validators/signin-request.validator';
 import { validateSignUpRequest } from './validators/signup-request.validator';
 
@@ -111,6 +115,21 @@ export class IdentityService {
       };
     } catch (error: unknown) {
       throw mapBetterAuthSignInError(error);
+    }
+  }
+
+  async signOut(
+    _request: SignOutRequest,
+    metadata: Metadata,
+  ): Promise<SignOutResponse> {
+    try {
+      await this.identityAuthContext.auth.api.signOut({
+        headers: createSignOutRequestHeaders(metadata),
+      });
+
+      return {};
+    } catch {
+      throw mapBetterAuthSignOutError();
     }
   }
 

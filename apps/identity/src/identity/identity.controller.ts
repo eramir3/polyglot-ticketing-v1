@@ -5,6 +5,8 @@ import { IdentityService } from './identity.service';
 import {
   SignInRequest,
   SignInResponse,
+  SignOutRequest,
+  SignOutResponse,
   SignUpRequest,
   SignUpResponse,
   VerifyEmailRequest,
@@ -23,6 +25,14 @@ export class IdentityController {
   @GrpcMethod('IdentityService', 'SignIn')
   signIn(request: SignInRequest, metadata: Metadata): Promise<SignInResponse> {
     return this.identityService.signIn(request, metadata);
+  }
+
+  @GrpcMethod('IdentityService', 'SignOut')
+  signOut(
+    request: SignOutRequest,
+    metadata: Metadata,
+  ): Promise<SignOutResponse> {
+    return this.identityService.signOut(request, metadata);
   }
 
   @GrpcMethod('IdentityService', 'VerifyEmail')

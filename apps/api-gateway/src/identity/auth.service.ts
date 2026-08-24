@@ -9,12 +9,14 @@ import {
   httpStatusFromGrpcCode,
   isGrpcStatusError,
 } from '../errors/grpc-error';
-import { createAuthRequestMetadata } from './auth-request-metadata';
 import { IDENTITY_GRPC_CLIENT } from './identity.constants';
+import { createAuthRequestMetadata } from './metadata/auth-request-metadata';
+import { createSignOutRequestMetadata } from './metadata/signout-request-metadata';
 import {
   IdentitySignInResponse,
   IdentityGrpcService,
   SignInRequest,
+  SignOutRequest,
   SignUpRequest,
   SignUpResponse,
   VerifyEmailRequest,
@@ -61,6 +63,19 @@ export class AuthService implements OnModuleInit {
         code: 'INVALID_ARGUMENT',
         message: 'Signin data is invalid.',
       });
+    }
+  }
+
+  async signOut(headers: IncomingHttpHeaders): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.identityService.signOut(
+          {} satisfies SignOutRequest,
+          createSignOutRequestMetadata(headers),
+        ),
+      );
+    } catch (error: unknown) {
+      this.throwGrpcError(error);
     }
   }
 

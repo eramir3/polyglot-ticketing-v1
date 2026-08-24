@@ -4,6 +4,8 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
+  HttpStatus,
   Post,
   Query,
   Res,
@@ -54,6 +56,23 @@ export class AuthController {
         name: result.name,
       },
     };
+  }
+
+  @Post('signout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async signOut(
+    @Headers() headers: IncomingHttpHeaders,
+    @Res({ passthrough: true }) response: CookieResponse,
+  ): Promise<void> {
+    await this.authService.signOut(headers);
+    response.cookie(SESSION_COOKIE_NAME, '', {
+      encode: (value) => value,
+      expires: new Date(0),
+      httpOnly: true,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
   }
 
   @Get('verify-email')
