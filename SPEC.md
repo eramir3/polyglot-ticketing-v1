@@ -24,6 +24,7 @@ Implemented endpoint:
 | `GET`  | `/api/auth/currentuser`            | Returns safe metadata for the authenticated user.                        |
 | `GET`  | `/api/auth/verify-email?token=...` | Verifies an email token through identity gRPC.                           |
 | `GET`  | `/api/tickets`                     | Retrieves all tickets through tickets gRPC.                              |
+| `GET`  | `/api/tickets/:id`                 | Retrieves a ticket by ID through tickets gRPC.                           |
 | `POST` | `/api/tickets`                     | Creates a ticket for the authenticated user through tickets gRPC.        |
 
 The gateway validates HTTP payloads with NestJS DTOs, exposes public HTTP
@@ -53,7 +54,7 @@ title, and the authenticated user's ID. Public REST prices are positive integer
 minor units from `1` through `9007199254740991` (the JavaScript safe-integer
 limit).
 It has no public HTTP endpoint; the API gateway owns `GET /api/tickets` and
-`POST /api/tickets`.
+`GET /api/tickets/:id`, plus `POST /api/tickets`.
 
 ## List Tickets Flow
 
@@ -61,6 +62,13 @@ It has no public HTTP endpoint; the API gateway owns `GET /api/tickets` and
 2. The gateway calls `tickets.v1.TicketsService.ListTickets` over gRPC.
 3. Tickets retrieves all stored tickets ordered by title and ID.
 4. The gateway returns `200` with a JSON array of tickets.
+
+## Get Ticket Flow
+
+1. A client calls `GET /api/tickets/:id`.
+2. The gateway calls `tickets.v1.TicketsService.GetTicket` with the ticket ID.
+3. Tickets retrieves the matching ticket.
+4. The gateway returns `200`; missing tickets return `404`.
 
 ## Create Ticket Flow
 

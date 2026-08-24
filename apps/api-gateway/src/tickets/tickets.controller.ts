@@ -1,5 +1,5 @@
 import { IncomingHttpHeaders } from 'node:http';
-import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post } from '@nestjs/common';
 import { CreateTicketDto } from './dtos/create-ticket.dto';
 import { TicketsService } from './tickets.service';
 import { CreateTicketResponse, Ticket } from './tickets.types';
@@ -11,6 +11,11 @@ export class TicketsController {
   @Get()
   listTickets(): Promise<Ticket[]> {
     return this.ticketsService.listTickets();
+  }
+
+  @Get(':id')
+  getTicket(@Param('id') id: string): Promise<Ticket> {
+    return this.ticketsService.getTicket(id);
   }
 
   @Post()

@@ -1,6 +1,11 @@
 package ticket
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+var ErrNotFound = errors.New("ticket not found")
 
 type Ticket struct {
 	ID     string
@@ -17,5 +22,6 @@ type CreateInput struct {
 
 type Repository interface {
 	Create(context.Context, CreateInput) (Ticket, error)
+	FindByID(context.Context, string) (Ticket, error)
 	List(context.Context) ([]Ticket, error)
 }

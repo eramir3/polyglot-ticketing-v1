@@ -2,7 +2,9 @@ package ticket
 
 import (
 	"context"
+	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -27,6 +29,22 @@ func (repository *PostgresRepository) Create(ctx context.Context, input CreateIn
 	).Scan(&created.ID, &created.Title, &created.Price, &created.UserID)
 
 	return created, err
+}
+
+func (repository *PostgresRepository) FindByID(ctx context.Context, id string) (Ticket, error) {
+	var found Ticket
+	err := repository.pool.QueryRow(
+		ctx,
+		`SELECT id, title, price, user_id
+		 FROM tickets
+		 WHERE id = $1`,
+		id,
+	).Scan(&found.ID, &found.Title, &found.Price, &found.UserID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Ticket{}, ErrNotFound
+	}
+
+	return found, err
 }
 
 func (repository *PostgresRepository) List(ctx context.Context) ([]Ticket, error) {

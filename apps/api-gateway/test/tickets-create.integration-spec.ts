@@ -1,4 +1,5 @@
 import { ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { createConnection, createServer } from 'node:net';
 import { join } from 'node:path';
 import { INestApplication, INestMicroservice } from '@nestjs/common';
@@ -12,7 +13,7 @@ import { createApiGatewayApplication } from '../src/app/app.bootstrap';
 import { createIdentityMicroservice } from '../../identity/src/app/app.bootstrap';
 import { migrateIdentityDatabase } from '../../identity/src/migrate-identity-database';
 
-describe('POST /api/tickets', () => {
+describe('tickets endpoints', () => {
   let apiGateway: INestApplication;
   let identity: INestMicroservice;
   let identityDatabase: StartedPostgreSqlContainer;
@@ -215,11 +216,43 @@ describe('POST /api/tickets', () => {
     );
   });
 
+  it('retrieves a single ticket without authentication', async () => {
+    const createdResponse = await postTicket(
+      { price: 15_000, title: 'Muse' },
+      sessionCookie,
+    );
+    expect(createdResponse.status).toBe(201);
+    const created = createdResponse.body as { id: string };
+
+    const response = await getJson(`/api/tickets/${created.id}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      id: created.id,
+      price: 15_000,
+      title: 'Muse',
+      userId,
+    });
+  });
+
+  it('returns a 404 if the ticket is not found', async () => {
+    const response = await getJson(`/api/tickets/${randomUUID()}`);
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      errors: [
+        expect.objectContaining({
+          code: 'NOT_FOUND',
+        }),
+      ],
+    });
+  });
+
   async function createAuthenticatedUser(): Promise<{
     sessionCookie: string;
     userId: string;
   }> {
-    const email = `tickets-${Date.now()}@example.com`;
+    const email = `tickets-${randomUUID()}@example.com`;
     const password = 'password123';
     const signupResponse = await postJson('/api/auth/signup', {
       email,

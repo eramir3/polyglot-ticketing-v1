@@ -53,3 +53,7 @@ func (service *Service) Create(ctx context.Context, input CreateInput) (Ticket, 
 func (service *Service) List(ctx context.Context) ([]Ticket, error) {
 	return service.repository.List(ctx)
 }
+
+func (service *Service) Get(ctx context.Context, id string) (Ticket, error) {
+	return service.repository.FindByID(ctx, id)
+}

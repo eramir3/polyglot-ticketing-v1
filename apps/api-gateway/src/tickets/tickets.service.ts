@@ -57,4 +57,15 @@ export class TicketsService implements OnModuleInit {
       throwGatewayGrpcError(error);
     }
   }
+
+  async getTicket(id: string): Promise<Ticket> {
+    try {
+      const response = await firstValueFrom(
+        this.ticketsService.getTicket({ id }),
+      );
+      return response.ticket;
+    } catch (error: unknown) {
+      throwGatewayGrpcError(error);
+    }
+  }
 }

@@ -89,12 +89,39 @@ func TestServiceListReturnsRepositoryTickets(t *testing.T) {
 	}
 }
 
+func TestServiceGetReturnsTicket(t *testing.T) {
+	service := NewService(fakeRepository{ticket: Ticket{
+		ID:     "ticket-1",
+		Price:  100,
+		Title:  "Concert ticket",
+		UserID: "owner-1",
+	}})
+
+	found, err := service.Get(context.Background(), "ticket-1")
+
+	if err != nil {
+		t.Fatalf("expected no internal error, got %v", err)
+	}
+	if found.ID != "ticket-1" {
+		t.Fatalf("unexpected ticket: %+v", found)
+	}
+}
+
 type fakeRepository struct {
+	ticket  Ticket
 	tickets []Ticket
 }
 
 func (fakeRepository) Create(_ context.Context, input CreateInput) (Ticket, error) {
 	return Ticket{ID: "ticket-1", Title: input.Title, Price: input.Price, UserID: input.UserID}, nil
+}
+
+func (repository fakeRepository) FindByID(_ context.Context, _ string) (Ticket, error) {
+	if repository.ticket.ID == "" {
+		return Ticket{}, ErrNotFound
+	}
+
+	return repository.ticket, nil
 }
 
 func (repository fakeRepository) List(_ context.Context) ([]Ticket, error) {

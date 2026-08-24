@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -62,6 +63,27 @@ func (server *Server) ListTickets(
 	}
 
 	return response, nil
+}
+
+func (server *Server) GetTicket(
+	ctx context.Context,
+	request *ticketsv1.GetTicketRequest,
+) (*ticketsv1.GetTicketResponse, error) {
+	found, err := server.service.Get(ctx, request.GetId())
+	if errors.Is(err, ticket.ErrNotFound) {
+		return nil, structuredError(codes.NotFound, []ticket.ValidationError{{
+			Code:    "NOT_FOUND",
+			Message: "Ticket not found.",
+		}})
+	}
+	if err != nil {
+		return nil, structuredError(codes.Internal, []ticket.ValidationError{{
+			Code:    "INTERNAL_ERROR",
+			Message: "Unable to retrieve ticket.",
+		}})
+	}
+
+	return &ticketsv1.GetTicketResponse{Ticket: toTicketResponse(found)}, nil
 }
 
 func toCreateTicketResponse(ticket ticket.Ticket) *ticketsv1.CreateTicketResponse {
