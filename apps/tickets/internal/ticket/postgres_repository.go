@@ -28,3 +28,28 @@ func (repository *PostgresRepository) Create(ctx context.Context, input CreateIn
 
 	return created, err
 }
+
+func (repository *PostgresRepository) List(ctx context.Context) ([]Ticket, error) {
+	rows, err := repository.pool.Query(
+		ctx,
+		`SELECT id, title, price, user_id
+		 FROM tickets
+		 ORDER BY title ASC, id ASC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tickets := make([]Ticket, 0)
+	for rows.Next() {
+		var listed Ticket
+		if err := rows.Scan(&listed.ID, &listed.Title, &listed.Price, &listed.UserID); err != nil {
+			return nil, err
+		}
+
+		tickets = append(tickets, listed)
+	}
+
+	return tickets, rows.Err()
+}

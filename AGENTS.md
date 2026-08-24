@@ -16,8 +16,8 @@ Implemented foundations:
 - `identity`: NestJS/TypeScript gRPC-only service using Better Auth and
   Postgres. It owns `identity-db`, implements signup, and requires email
   verification.
-- `tickets`: Go gRPC service with Postgres-backed ticket creation. It owns
-  `tickets-db`.
+- `tickets`: Go gRPC service with Postgres-backed ticket creation and listing.
+  It owns `tickets-db`.
 - Shared protobuf contracts in `proto/`, generated with Buf and Protobuf-ES.
 - Protovalidate request validation for identity gRPC requests.
 - Standardized errors across the gateway and identity service.

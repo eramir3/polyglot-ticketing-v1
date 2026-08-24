@@ -71,8 +71,32 @@ func TestServiceCreateAcceptsMaximumSafePrice(t *testing.T) {
 	}
 }
 
-type fakeRepository struct{}
+func TestServiceListReturnsRepositoryTickets(t *testing.T) {
+	service := NewService(fakeRepository{tickets: []Ticket{{
+		ID:     "ticket-1",
+		Price:  100,
+		Title:  "Concert ticket",
+		UserID: "user-1",
+	}}})
+
+	listed, err := service.List(context.Background())
+
+	if err != nil {
+		t.Fatalf("expected no internal error, got %v", err)
+	}
+	if len(listed) != 1 || listed[0].ID != "ticket-1" {
+		t.Fatalf("unexpected tickets: %+v", listed)
+	}
+}
+
+type fakeRepository struct {
+	tickets []Ticket
+}
 
 func (fakeRepository) Create(_ context.Context, input CreateInput) (Ticket, error) {
 	return Ticket{ID: "ticket-1", Title: input.Title, Price: input.Price, UserID: input.UserID}, nil
+}
+
+func (repository fakeRepository) List(_ context.Context) ([]Ticket, error) {
+	return repository.tickets, nil
 }

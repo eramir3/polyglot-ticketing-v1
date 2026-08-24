@@ -49,3 +49,7 @@ func (service *Service) Create(ctx context.Context, input CreateInput) (Ticket, 
 	created, err := service.repository.Create(ctx, input)
 	return created, nil, err
 }
+
+func (service *Service) List(ctx context.Context) ([]Ticket, error) {
+	return service.repository.List(ctx)
+}

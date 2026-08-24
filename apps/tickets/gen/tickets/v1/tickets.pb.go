@@ -149,6 +149,154 @@ func (x *CreateTicketResponse) GetUserId() string {
 	return ""
 }
 
+type ListTicketsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTicketsRequest) Reset() {
+	*x = ListTicketsRequest{}
+	mi := &file_tickets_v1_tickets_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTicketsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTicketsRequest) ProtoMessage() {}
+
+func (x *ListTicketsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tickets_v1_tickets_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTicketsRequest.ProtoReflect.Descriptor instead.
+func (*ListTicketsRequest) Descriptor() ([]byte, []int) {
+	return file_tickets_v1_tickets_proto_rawDescGZIP(), []int{2}
+}
+
+type ListTicketsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tickets       []*Ticket              `protobuf:"bytes,1,rep,name=tickets,proto3" json:"tickets,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTicketsResponse) Reset() {
+	*x = ListTicketsResponse{}
+	mi := &file_tickets_v1_tickets_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTicketsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTicketsResponse) ProtoMessage() {}
+
+func (x *ListTicketsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tickets_v1_tickets_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTicketsResponse.ProtoReflect.Descriptor instead.
+func (*ListTicketsResponse) Descriptor() ([]byte, []int) {
+	return file_tickets_v1_tickets_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListTicketsResponse) GetTickets() []*Ticket {
+	if x != nil {
+		return x.Tickets
+	}
+	return nil
+}
+
+type Ticket struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Price         int64                  `protobuf:"varint,3,opt,name=price,proto3" json:"price,omitempty"`
+	UserId        string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Ticket) Reset() {
+	*x = Ticket{}
+	mi := &file_tickets_v1_tickets_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Ticket) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Ticket) ProtoMessage() {}
+
+func (x *Ticket) ProtoReflect() protoreflect.Message {
+	mi := &file_tickets_v1_tickets_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Ticket.ProtoReflect.Descriptor instead.
+func (*Ticket) Descriptor() ([]byte, []int) {
+	return file_tickets_v1_tickets_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Ticket) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Ticket) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Ticket) GetPrice() int64 {
+	if x != nil {
+		return x.Price
+	}
+	return 0
+}
+
+func (x *Ticket) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
 var File_tickets_v1_tickets_proto protoreflect.FileDescriptor
 
 const file_tickets_v1_tickets_proto_rawDesc = "" +
@@ -163,9 +311,18 @@ const file_tickets_v1_tickets_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x14\n" +
 	"\x05price\x18\x03 \x01(\x03R\x05price\x12\x17\n" +
-	"\auser_id\x18\x04 \x01(\tR\x06userId2c\n" +
+	"\auser_id\x18\x04 \x01(\tR\x06userId\"\x14\n" +
+	"\x12ListTicketsRequest\"C\n" +
+	"\x13ListTicketsResponse\x12,\n" +
+	"\atickets\x18\x01 \x03(\v2\x12.tickets.v1.TicketR\atickets\"]\n" +
+	"\x06Ticket\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12\x14\n" +
+	"\x05price\x18\x03 \x01(\x03R\x05price\x12\x17\n" +
+	"\auser_id\x18\x04 \x01(\tR\x06userId2\xb3\x01\n" +
 	"\x0eTicketsService\x12Q\n" +
-	"\fCreateTicket\x12\x1f.tickets.v1.CreateTicketRequest\x1a .tickets.v1.CreateTicketResponseB=Z;polyglot-ticketing-v1/apps/tickets/gen/tickets/v1;ticketsv1b\x06proto3"
+	"\fCreateTicket\x12\x1f.tickets.v1.CreateTicketRequest\x1a .tickets.v1.CreateTicketResponse\x12N\n" +
+	"\vListTickets\x12\x1e.tickets.v1.ListTicketsRequest\x1a\x1f.tickets.v1.ListTicketsResponseB=Z;polyglot-ticketing-v1/apps/tickets/gen/tickets/v1;ticketsv1b\x06proto3"
 
 var (
 	file_tickets_v1_tickets_proto_rawDescOnce sync.Once
@@ -179,19 +336,25 @@ func file_tickets_v1_tickets_proto_rawDescGZIP() []byte {
 	return file_tickets_v1_tickets_proto_rawDescData
 }
 
-var file_tickets_v1_tickets_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_tickets_v1_tickets_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_tickets_v1_tickets_proto_goTypes = []any{
 	(*CreateTicketRequest)(nil),  // 0: tickets.v1.CreateTicketRequest
 	(*CreateTicketResponse)(nil), // 1: tickets.v1.CreateTicketResponse
+	(*ListTicketsRequest)(nil),   // 2: tickets.v1.ListTicketsRequest
+	(*ListTicketsResponse)(nil),  // 3: tickets.v1.ListTicketsResponse
+	(*Ticket)(nil),               // 4: tickets.v1.Ticket
 }
 var file_tickets_v1_tickets_proto_depIdxs = []int32{
-	0, // 0: tickets.v1.TicketsService.CreateTicket:input_type -> tickets.v1.CreateTicketRequest
-	1, // 1: tickets.v1.TicketsService.CreateTicket:output_type -> tickets.v1.CreateTicketResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	4, // 0: tickets.v1.ListTicketsResponse.tickets:type_name -> tickets.v1.Ticket
+	0, // 1: tickets.v1.TicketsService.CreateTicket:input_type -> tickets.v1.CreateTicketRequest
+	2, // 2: tickets.v1.TicketsService.ListTickets:input_type -> tickets.v1.ListTicketsRequest
+	1, // 3: tickets.v1.TicketsService.CreateTicket:output_type -> tickets.v1.CreateTicketResponse
+	3, // 4: tickets.v1.TicketsService.ListTickets:output_type -> tickets.v1.ListTicketsResponse
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_tickets_v1_tickets_proto_init() }
@@ -205,7 +368,7 @@ func file_tickets_v1_tickets_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tickets_v1_tickets_proto_rawDesc), len(file_tickets_v1_tickets_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

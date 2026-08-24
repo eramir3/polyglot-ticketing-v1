@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file tickets/v1/tickets.proto.
  */
 export const file_tickets_v1_tickets: GenFile = /*@__PURE__*/
-  fileDesc("Chh0aWNrZXRzL3YxL3RpY2tldHMucHJvdG8SCnRpY2tldHMudjEiRAoTQ3JlYXRlVGlja2V0UmVxdWVzdBINCgV0aXRsZRgBIAEoCRINCgVwcmljZRgCIAEoAxIPCgd1c2VyX2lkGAMgASgJIlEKFENyZWF0ZVRpY2tldFJlc3BvbnNlEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEg0KBXByaWNlGAMgASgDEg8KB3VzZXJfaWQYBCABKAkyYwoOVGlja2V0c1NlcnZpY2USUQoMQ3JlYXRlVGlja2V0Eh8udGlja2V0cy52MS5DcmVhdGVUaWNrZXRSZXF1ZXN0GiAudGlja2V0cy52MS5DcmVhdGVUaWNrZXRSZXNwb25zZUI9Wjtwb2x5Z2xvdC10aWNrZXRpbmctdjEvYXBwcy90aWNrZXRzL2dlbi90aWNrZXRzL3YxO3RpY2tldHN2MWIGcHJvdG8z");
+  fileDesc("Chh0aWNrZXRzL3YxL3RpY2tldHMucHJvdG8SCnRpY2tldHMudjEiRAoTQ3JlYXRlVGlja2V0UmVxdWVzdBINCgV0aXRsZRgBIAEoCRINCgVwcmljZRgCIAEoAxIPCgd1c2VyX2lkGAMgASgJIlEKFENyZWF0ZVRpY2tldFJlc3BvbnNlEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEg0KBXByaWNlGAMgASgDEg8KB3VzZXJfaWQYBCABKAkiFAoSTGlzdFRpY2tldHNSZXF1ZXN0IjoKE0xpc3RUaWNrZXRzUmVzcG9uc2USIwoHdGlja2V0cxgBIAMoCzISLnRpY2tldHMudjEuVGlja2V0IkMKBlRpY2tldBIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCRINCgVwcmljZRgDIAEoAxIPCgd1c2VyX2lkGAQgASgJMrMBCg5UaWNrZXRzU2VydmljZRJRCgxDcmVhdGVUaWNrZXQSHy50aWNrZXRzLnYxLkNyZWF0ZVRpY2tldFJlcXVlc3QaIC50aWNrZXRzLnYxLkNyZWF0ZVRpY2tldFJlc3BvbnNlEk4KC0xpc3RUaWNrZXRzEh4udGlja2V0cy52MS5MaXN0VGlja2V0c1JlcXVlc3QaHy50aWNrZXRzLnYxLkxpc3RUaWNrZXRzUmVzcG9uc2VCPVo7cG9seWdsb3QtdGlja2V0aW5nLXYxL2FwcHMvdGlja2V0cy9nZW4vdGlja2V0cy92MTt0aWNrZXRzdjFiBnByb3RvMw");
 
 /**
  * @generated from message tickets.v1.CreateTicketRequest
@@ -72,6 +72,68 @@ export const CreateTicketResponseSchema: GenMessage<CreateTicketResponse> = /*@_
   messageDesc(file_tickets_v1_tickets, 1);
 
 /**
+ * @generated from message tickets.v1.ListTicketsRequest
+ */
+export type ListTicketsRequest = Message<"tickets.v1.ListTicketsRequest"> & {
+};
+
+/**
+ * Describes the message tickets.v1.ListTicketsRequest.
+ * Use `create(ListTicketsRequestSchema)` to create a new message.
+ */
+export const ListTicketsRequestSchema: GenMessage<ListTicketsRequest> = /*@__PURE__*/
+  messageDesc(file_tickets_v1_tickets, 2);
+
+/**
+ * @generated from message tickets.v1.ListTicketsResponse
+ */
+export type ListTicketsResponse = Message<"tickets.v1.ListTicketsResponse"> & {
+  /**
+   * @generated from field: repeated tickets.v1.Ticket tickets = 1;
+   */
+  tickets: Ticket[];
+};
+
+/**
+ * Describes the message tickets.v1.ListTicketsResponse.
+ * Use `create(ListTicketsResponseSchema)` to create a new message.
+ */
+export const ListTicketsResponseSchema: GenMessage<ListTicketsResponse> = /*@__PURE__*/
+  messageDesc(file_tickets_v1_tickets, 3);
+
+/**
+ * @generated from message tickets.v1.Ticket
+ */
+export type Ticket = Message<"tickets.v1.Ticket"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string title = 2;
+   */
+  title: string;
+
+  /**
+   * @generated from field: int64 price = 3;
+   */
+  price: bigint;
+
+  /**
+   * @generated from field: string user_id = 4;
+   */
+  userId: string;
+};
+
+/**
+ * Describes the message tickets.v1.Ticket.
+ * Use `create(TicketSchema)` to create a new message.
+ */
+export const TicketSchema: GenMessage<Ticket> = /*@__PURE__*/
+  messageDesc(file_tickets_v1_tickets, 4);
+
+/**
  * @generated from service tickets.v1.TicketsService
  */
 export const TicketsService: GenService<{
@@ -82,6 +144,14 @@ export const TicketsService: GenService<{
     methodKind: "unary";
     input: typeof CreateTicketRequestSchema;
     output: typeof CreateTicketResponseSchema;
+  },
+  /**
+   * @generated from rpc tickets.v1.TicketsService.ListTickets
+   */
+  listTickets: {
+    methodKind: "unary";
+    input: typeof ListTicketsRequestSchema;
+    output: typeof ListTicketsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_tickets_v1_tickets, 0);

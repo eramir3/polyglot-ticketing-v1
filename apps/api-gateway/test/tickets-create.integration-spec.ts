@@ -194,6 +194,27 @@ describe('POST /api/tickets', () => {
     }
   });
 
+  it('retrieves all tickets without authentication', async () => {
+    const createdResponse = await postTicket(
+      { price: 12_500, title: 'Iron Maiden' },
+      sessionCookie,
+    );
+    expect(createdResponse.status).toBe(201);
+
+    const response = await getJson('/api/tickets');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          price: 12_500,
+          title: 'Iron Maiden',
+          userId,
+        }),
+      ]),
+    );
+  });
+
   async function createAuthenticatedUser(): Promise<{
     sessionCookie: string;
     userId: string;
@@ -257,6 +278,16 @@ describe('POST /api/tickets', () => {
       },
       method: 'POST',
     });
+
+    return {
+      body: await response.json(),
+      headers: response.headers,
+      status: response.status,
+    };
+  }
+
+  async function getJson(path: string): Promise<HttpResponse> {
+    const response = await fetch(`${gatewayUrl}${path}`);
 
     return {
       body: await response.json(),

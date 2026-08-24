@@ -17,4 +17,5 @@ type CreateInput struct {
 
 type Repository interface {
 	Create(context.Context, CreateInput) (Ticket, error)
+	List(context.Context) ([]Ticket, error)
 }

@@ -8,6 +8,7 @@ import { TICKETS_GRPC_CLIENT } from './tickets.constants';
 import {
   CreateTicketRequest,
   CreateTicketResponse,
+  Ticket,
   TicketsGrpcService,
 } from './tickets.types';
 
@@ -43,6 +44,17 @@ export class TicketsService implements OnModuleInit {
         code: 'INVALID_ARGUMENT',
         message: 'Ticket data is invalid.',
       });
+    }
+  }
+
+  async listTickets(): Promise<Ticket[]> {
+    try {
+      const response = await firstValueFrom(
+        this.ticketsService.listTickets({}),
+      );
+      return response.tickets;
+    } catch (error: unknown) {
+      throwGatewayGrpcError(error);
     }
   }
 }

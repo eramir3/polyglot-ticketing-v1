@@ -39,12 +39,47 @@ func (server *Server) CreateTicket(
 		}})
 	}
 
+	return toCreateTicketResponse(created), nil
+}
+
+func (server *Server) ListTickets(
+	ctx context.Context,
+	_request *ticketsv1.ListTicketsRequest,
+) (*ticketsv1.ListTicketsResponse, error) {
+	listed, err := server.service.List(ctx)
+	if err != nil {
+		return nil, structuredError(codes.Internal, []ticket.ValidationError{{
+			Code:    "INTERNAL_ERROR",
+			Message: "Unable to retrieve tickets.",
+		}})
+	}
+
+	response := &ticketsv1.ListTicketsResponse{
+		Tickets: make([]*ticketsv1.Ticket, 0, len(listed)),
+	}
+	for _, listedTicket := range listed {
+		response.Tickets = append(response.Tickets, toTicketResponse(listedTicket))
+	}
+
+	return response, nil
+}
+
+func toCreateTicketResponse(ticket ticket.Ticket) *ticketsv1.CreateTicketResponse {
 	return &ticketsv1.CreateTicketResponse{
-		Id:     created.ID,
-		Price:  created.Price,
-		Title:  created.Title,
-		UserId: created.UserID,
-	}, nil
+		Id:     ticket.ID,
+		Price:  ticket.Price,
+		Title:  ticket.Title,
+		UserId: ticket.UserID,
+	}
+}
+
+func toTicketResponse(ticket ticket.Ticket) *ticketsv1.Ticket {
+	return &ticketsv1.Ticket{
+		Id:     ticket.ID,
+		Price:  ticket.Price,
+		Title:  ticket.Title,
+		UserId: ticket.UserID,
+	}
 }
 
 func structuredError(code codes.Code, errors []ticket.ValidationError) error {

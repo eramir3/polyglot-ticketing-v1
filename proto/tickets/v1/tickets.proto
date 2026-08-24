@@ -6,6 +6,7 @@ option go_package = "polyglot-ticketing-v1/apps/tickets/gen/tickets/v1;ticketsv1
 
 service TicketsService {
   rpc CreateTicket(CreateTicketRequest) returns (CreateTicketResponse);
+  rpc ListTickets(ListTicketsRequest) returns (ListTicketsResponse);
 }
 
 message CreateTicketRequest {
@@ -15,6 +16,19 @@ message CreateTicketRequest {
 }
 
 message CreateTicketResponse {
+  string id = 1;
+  string title = 2;
+  int64 price = 3;
+  string user_id = 4;
+}
+
+message ListTicketsRequest {}
+
+message ListTicketsResponse {
+  repeated Ticket tickets = 1;
+}
+
+message Ticket {
   string id = 1;
   string title = 2;
   int64 price = 3;
