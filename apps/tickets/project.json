@@ -1,0 +1,32 @@
+{
+  "name": "tickets",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/tickets",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/apps/tickets"],
+      "options": {
+        "command": "mkdir -p ../../dist/apps/tickets && go build -o ../../dist/apps/tickets/tickets ./cmd/tickets",
+        "cwd": "apps/tickets"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "go test ./...",
+        "cwd": "apps/tickets"
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "go run ./cmd/tickets",
+        "cwd": "apps/tickets"
+      }
+    }
+  },
+  "tags": []
+}

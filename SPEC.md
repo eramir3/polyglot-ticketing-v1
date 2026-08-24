@@ -43,6 +43,12 @@ Protovalidate and invokes Better Auth internally to create users and verify
 email tokens. It owns `identity-db`, a Postgres database, and no other service
 may access that database directly.
 
+### Tickets
+
+`tickets` is a Go service skeleton with no HTTP or gRPC endpoints, database
+integration, migrations, Docker configuration, or event contracts yet. It will
+own `tickets-db` when ticket persistence is introduced.
+
 ## Signup Flow
 
 1. A client calls `POST /api/auth/signup` with `name`, `email`, and `password`.
@@ -169,6 +175,9 @@ Common commands:
 ```bash
 pnpm nx build identity
 pnpm nx build api-gateway
+pnpm nx build tickets
+pnpm nx test tickets
+pnpm nx serve tickets
 docker compose up -d --build
 ```
 
@@ -185,7 +194,7 @@ Local ports:
 
 | Service           | Technology        | Database               |
 | ----------------- | ----------------- | ---------------------- |
-| ticketing         | Go                | `ticketing-db`         |
+| tickets           | Go                | `tickets-db`           |
 | orders            | Go                | `orders-db`            |
 | payments          | Go                | `payments-db`          |
 | expiration        | NestJS and BullMQ | `expiration-db`        |

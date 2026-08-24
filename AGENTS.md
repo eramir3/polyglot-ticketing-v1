@@ -16,13 +16,15 @@ Implemented foundations:
 - `identity`: NestJS/TypeScript gRPC-only service using Better Auth and
   Postgres. It owns `identity-db`, implements signup, and requires email
   verification.
+- `tickets`: Go service skeleton with no transport endpoints or database
+  integration yet.
 - Shared protobuf contracts in `proto/`, generated with Buf and Protobuf-ES.
 - Protovalidate request validation for identity gRPC requests.
 - Standardized errors across the gateway and identity service.
 - Local Docker Compose infrastructure for the gateway, identity, `identity-db`,
   and Mailpit. The Mailpit inbox is available on `localhost:8025`.
 
-Planned but not implemented: ticketing, orders, payments, expiration,
+Planned but not implemented: orders, payments, expiration,
 concert-assistant, NATS JetStream, Kubernetes manifests, GraphQL, and a
 Kubernetes Gateway API controller.
 
@@ -63,6 +65,9 @@ Kubernetes Gateway API controller.
 - Required local configuration is documented in `.env.example`.
 - Build identity: `pnpm nx build identity`.
 - Build the gateway: `pnpm nx build api-gateway`.
+- Build tickets: `pnpm nx build tickets`.
+- Test tickets: `pnpm nx test tickets`.
+- Run tickets: `pnpm nx serve tickets`.
 - Start the local stack: `docker compose up -d --build` with the required
   Better Auth and database environment variables configured.
 - The gateway is published on `localhost:3000`; identity gRPC is internal to
@@ -71,7 +76,7 @@ Kubernetes Gateway API controller.
 
 ## Planned Services And Databases
 
-- `ticketing` (Go) owns `ticketing-db`.
+- `tickets` (Go) owns `tickets-db`.
 - `orders` (Go) owns `orders-db`.
 - `payments` (Go) owns `payments-db`.
 - `expiration` (NestJS/BullMQ) owns `expiration-db`.
