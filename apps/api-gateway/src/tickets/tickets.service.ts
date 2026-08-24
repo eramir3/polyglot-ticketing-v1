@@ -10,6 +10,7 @@ import {
   CreateTicketResponse,
   Ticket,
   TicketsGrpcService,
+  UpdateTicketRequest,
 } from './tickets.types';
 
 @Injectable()
@@ -55,6 +56,30 @@ export class TicketsService implements OnModuleInit {
       return response.tickets;
     } catch (error: unknown) {
       throwGatewayGrpcError(error);
+    }
+  }
+
+  async updateTicket(
+    id: string,
+    request: Pick<UpdateTicketRequest, 'price' | 'title'>,
+    headers: IncomingHttpHeaders,
+  ): Promise<Ticket> {
+    const currentUser = await this.authService.currentUser(headers);
+
+    try {
+      const response = await firstValueFrom(
+        this.ticketsService.updateTicket({
+          ...request,
+          id,
+          userId: currentUser.user.id,
+        }),
+      );
+      return response.ticket;
+    } catch (error: unknown) {
+      throwGatewayGrpcError(error, {
+        code: 'INVALID_ARGUMENT',
+        message: 'Ticket data is invalid.',
+      });
     }
   }
 

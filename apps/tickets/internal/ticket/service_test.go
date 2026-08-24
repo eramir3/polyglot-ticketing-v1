@@ -2,6 +2,7 @@ package ticket
 
 import (
 	"context"
+	"errors"
 	"testing"
 )
 
@@ -107,6 +108,65 @@ func TestServiceGetReturnsTicket(t *testing.T) {
 	}
 }
 
+func TestServiceUpdateRejectsInvalidInput(t *testing.T) {
+	service := NewService(fakeRepository{})
+
+	_, validationErrors, err := service.Update(context.Background(), "ticket-1", UpdateInput{
+		Price:  100,
+		UserID: "owner-1",
+	})
+
+	if err != nil {
+		t.Fatalf("expected no internal error, got %v", err)
+	}
+	if len(validationErrors) != 1 || validationErrors[0].Code != "INVALID_TITLE" {
+		t.Fatalf("unexpected validation errors: %+v", validationErrors)
+	}
+}
+
+func TestServiceUpdateRejectsNonOwner(t *testing.T) {
+	service := NewService(fakeRepository{ticket: Ticket{
+		ID:     "ticket-1",
+		UserID: "owner-1",
+	}})
+
+	_, validationErrors, err := service.Update(context.Background(), "ticket-1", UpdateInput{
+		Title:  "Updated concert ticket",
+		Price:  100,
+		UserID: "other-user",
+	})
+
+	if len(validationErrors) != 0 {
+		t.Fatalf("expected no validation errors, got %+v", validationErrors)
+	}
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestServiceUpdateReturnsUpdatedTicket(t *testing.T) {
+	service := NewService(fakeRepository{ticket: Ticket{
+		ID:     "ticket-1",
+		UserID: "owner-1",
+	}})
+
+	updated, validationErrors, err := service.Update(context.Background(), "ticket-1", UpdateInput{
+		Title:  "Updated concert ticket",
+		Price:  200,
+		UserID: "owner-1",
+	})
+
+	if err != nil {
+		t.Fatalf("expected no internal error, got %v", err)
+	}
+	if len(validationErrors) != 0 {
+		t.Fatalf("expected no validation errors, got %+v", validationErrors)
+	}
+	if updated.Title != "Updated concert ticket" || updated.Price != 200 {
+		t.Fatalf("unexpected updated ticket: %+v", updated)
+	}
+}
+
 type fakeRepository struct {
 	ticket  Ticket
 	tickets []Ticket
@@ -126,4 +186,12 @@ func (repository fakeRepository) FindByID(_ context.Context, _ string) (Ticket, 
 
 func (repository fakeRepository) List(_ context.Context) ([]Ticket, error) {
 	return repository.tickets, nil
+}
+
+func (repository fakeRepository) Update(_ context.Context, id string, input UpdateInput) (Ticket, error) {
+	if repository.ticket.ID == "" {
+		return Ticket{}, ErrNotFound
+	}
+
+	return Ticket{ID: id, Title: input.Title, Price: input.Price, UserID: input.UserID}, nil
 }

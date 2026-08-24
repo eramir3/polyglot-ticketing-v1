@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file tickets/v1/tickets.proto.
  */
 export const file_tickets_v1_tickets: GenFile = /*@__PURE__*/
-  fileDesc("Chh0aWNrZXRzL3YxL3RpY2tldHMucHJvdG8SCnRpY2tldHMudjEiRAoTQ3JlYXRlVGlja2V0UmVxdWVzdBINCgV0aXRsZRgBIAEoCRINCgVwcmljZRgCIAEoAxIPCgd1c2VyX2lkGAMgASgJIlEKFENyZWF0ZVRpY2tldFJlc3BvbnNlEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEg0KBXByaWNlGAMgASgDEg8KB3VzZXJfaWQYBCABKAkiHgoQR2V0VGlja2V0UmVxdWVzdBIKCgJpZBgBIAEoCSI3ChFHZXRUaWNrZXRSZXNwb25zZRIiCgZ0aWNrZXQYASABKAsyEi50aWNrZXRzLnYxLlRpY2tldCIUChJMaXN0VGlja2V0c1JlcXVlc3QiOgoTTGlzdFRpY2tldHNSZXNwb25zZRIjCgd0aWNrZXRzGAEgAygLMhIudGlja2V0cy52MS5UaWNrZXQiQwoGVGlja2V0EgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEg0KBXByaWNlGAMgASgDEg8KB3VzZXJfaWQYBCABKAky/QEKDlRpY2tldHNTZXJ2aWNlElEKDENyZWF0ZVRpY2tldBIfLnRpY2tldHMudjEuQ3JlYXRlVGlja2V0UmVxdWVzdBogLnRpY2tldHMudjEuQ3JlYXRlVGlja2V0UmVzcG9uc2USSAoJR2V0VGlja2V0EhwudGlja2V0cy52MS5HZXRUaWNrZXRSZXF1ZXN0Gh0udGlja2V0cy52MS5HZXRUaWNrZXRSZXNwb25zZRJOCgtMaXN0VGlja2V0cxIeLnRpY2tldHMudjEuTGlzdFRpY2tldHNSZXF1ZXN0Gh8udGlja2V0cy52MS5MaXN0VGlja2V0c1Jlc3BvbnNlQj1aO3BvbHlnbG90LXRpY2tldGluZy12MS9hcHBzL3RpY2tldHMvZ2VuL3RpY2tldHMvdjE7dGlja2V0c3YxYgZwcm90bzM");
+  fileDesc("Chh0aWNrZXRzL3YxL3RpY2tldHMucHJvdG8SCnRpY2tldHMudjEiRAoTQ3JlYXRlVGlja2V0UmVxdWVzdBINCgV0aXRsZRgBIAEoCRINCgVwcmljZRgCIAEoAxIPCgd1c2VyX2lkGAMgASgJIlEKFENyZWF0ZVRpY2tldFJlc3BvbnNlEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEg0KBXByaWNlGAMgASgDEg8KB3VzZXJfaWQYBCABKAkiUAoTVXBkYXRlVGlja2V0UmVxdWVzdBIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCRINCgVwcmljZRgDIAEoAxIPCgd1c2VyX2lkGAQgASgJIjoKFFVwZGF0ZVRpY2tldFJlc3BvbnNlEiIKBnRpY2tldBgBIAEoCzISLnRpY2tldHMudjEuVGlja2V0Ih4KEEdldFRpY2tldFJlcXVlc3QSCgoCaWQYASABKAkiNwoRR2V0VGlja2V0UmVzcG9uc2USIgoGdGlja2V0GAEgASgLMhIudGlja2V0cy52MS5UaWNrZXQiFAoSTGlzdFRpY2tldHNSZXF1ZXN0IjoKE0xpc3RUaWNrZXRzUmVzcG9uc2USIwoHdGlja2V0cxgBIAMoCzISLnRpY2tldHMudjEuVGlja2V0IkMKBlRpY2tldBIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCRINCgVwcmljZRgDIAEoAxIPCgd1c2VyX2lkGAQgASgJMtACCg5UaWNrZXRzU2VydmljZRJRCgxDcmVhdGVUaWNrZXQSHy50aWNrZXRzLnYxLkNyZWF0ZVRpY2tldFJlcXVlc3QaIC50aWNrZXRzLnYxLkNyZWF0ZVRpY2tldFJlc3BvbnNlElEKDFVwZGF0ZVRpY2tldBIfLnRpY2tldHMudjEuVXBkYXRlVGlja2V0UmVxdWVzdBogLnRpY2tldHMudjEuVXBkYXRlVGlja2V0UmVzcG9uc2USSAoJR2V0VGlja2V0EhwudGlja2V0cy52MS5HZXRUaWNrZXRSZXF1ZXN0Gh0udGlja2V0cy52MS5HZXRUaWNrZXRSZXNwb25zZRJOCgtMaXN0VGlja2V0cxIeLnRpY2tldHMudjEuTGlzdFRpY2tldHNSZXF1ZXN0Gh8udGlja2V0cy52MS5MaXN0VGlja2V0c1Jlc3BvbnNlQj1aO3BvbHlnbG90LXRpY2tldGluZy12MS9hcHBzL3RpY2tldHMvZ2VuL3RpY2tldHMvdjE7dGlja2V0c3YxYgZwcm90bzM");
 
 /**
  * @generated from message tickets.v1.CreateTicketRequest
@@ -72,6 +72,55 @@ export const CreateTicketResponseSchema: GenMessage<CreateTicketResponse> = /*@_
   messageDesc(file_tickets_v1_tickets, 1);
 
 /**
+ * @generated from message tickets.v1.UpdateTicketRequest
+ */
+export type UpdateTicketRequest = Message<"tickets.v1.UpdateTicketRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string title = 2;
+   */
+  title: string;
+
+  /**
+   * @generated from field: int64 price = 3;
+   */
+  price: bigint;
+
+  /**
+   * @generated from field: string user_id = 4;
+   */
+  userId: string;
+};
+
+/**
+ * Describes the message tickets.v1.UpdateTicketRequest.
+ * Use `create(UpdateTicketRequestSchema)` to create a new message.
+ */
+export const UpdateTicketRequestSchema: GenMessage<UpdateTicketRequest> = /*@__PURE__*/
+  messageDesc(file_tickets_v1_tickets, 2);
+
+/**
+ * @generated from message tickets.v1.UpdateTicketResponse
+ */
+export type UpdateTicketResponse = Message<"tickets.v1.UpdateTicketResponse"> & {
+  /**
+   * @generated from field: tickets.v1.Ticket ticket = 1;
+   */
+  ticket?: Ticket | undefined;
+};
+
+/**
+ * Describes the message tickets.v1.UpdateTicketResponse.
+ * Use `create(UpdateTicketResponseSchema)` to create a new message.
+ */
+export const UpdateTicketResponseSchema: GenMessage<UpdateTicketResponse> = /*@__PURE__*/
+  messageDesc(file_tickets_v1_tickets, 3);
+
+/**
  * @generated from message tickets.v1.GetTicketRequest
  */
 export type GetTicketRequest = Message<"tickets.v1.GetTicketRequest"> & {
@@ -86,7 +135,7 @@ export type GetTicketRequest = Message<"tickets.v1.GetTicketRequest"> & {
  * Use `create(GetTicketRequestSchema)` to create a new message.
  */
 export const GetTicketRequestSchema: GenMessage<GetTicketRequest> = /*@__PURE__*/
-  messageDesc(file_tickets_v1_tickets, 2);
+  messageDesc(file_tickets_v1_tickets, 4);
 
 /**
  * @generated from message tickets.v1.GetTicketResponse
@@ -103,7 +152,7 @@ export type GetTicketResponse = Message<"tickets.v1.GetTicketResponse"> & {
  * Use `create(GetTicketResponseSchema)` to create a new message.
  */
 export const GetTicketResponseSchema: GenMessage<GetTicketResponse> = /*@__PURE__*/
-  messageDesc(file_tickets_v1_tickets, 3);
+  messageDesc(file_tickets_v1_tickets, 5);
 
 /**
  * @generated from message tickets.v1.ListTicketsRequest
@@ -116,7 +165,7 @@ export type ListTicketsRequest = Message<"tickets.v1.ListTicketsRequest"> & {
  * Use `create(ListTicketsRequestSchema)` to create a new message.
  */
 export const ListTicketsRequestSchema: GenMessage<ListTicketsRequest> = /*@__PURE__*/
-  messageDesc(file_tickets_v1_tickets, 4);
+  messageDesc(file_tickets_v1_tickets, 6);
 
 /**
  * @generated from message tickets.v1.ListTicketsResponse
@@ -133,7 +182,7 @@ export type ListTicketsResponse = Message<"tickets.v1.ListTicketsResponse"> & {
  * Use `create(ListTicketsResponseSchema)` to create a new message.
  */
 export const ListTicketsResponseSchema: GenMessage<ListTicketsResponse> = /*@__PURE__*/
-  messageDesc(file_tickets_v1_tickets, 5);
+  messageDesc(file_tickets_v1_tickets, 7);
 
 /**
  * @generated from message tickets.v1.Ticket
@@ -165,7 +214,7 @@ export type Ticket = Message<"tickets.v1.Ticket"> & {
  * Use `create(TicketSchema)` to create a new message.
  */
 export const TicketSchema: GenMessage<Ticket> = /*@__PURE__*/
-  messageDesc(file_tickets_v1_tickets, 6);
+  messageDesc(file_tickets_v1_tickets, 8);
 
 /**
  * @generated from service tickets.v1.TicketsService
@@ -178,6 +227,14 @@ export const TicketsService: GenService<{
     methodKind: "unary";
     input: typeof CreateTicketRequestSchema;
     output: typeof CreateTicketResponseSchema;
+  },
+  /**
+   * @generated from rpc tickets.v1.TicketsService.UpdateTicket
+   */
+  updateTicket: {
+    methodKind: "unary";
+    input: typeof UpdateTicketRequestSchema;
+    output: typeof UpdateTicketResponseSchema;
   },
   /**
    * @generated from rpc tickets.v1.TicketsService.GetTicket

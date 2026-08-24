@@ -26,6 +26,7 @@ Implemented endpoint:
 | `GET`  | `/api/tickets`                     | Retrieves all tickets through tickets gRPC.                              |
 | `GET`  | `/api/tickets/:id`                 | Retrieves a ticket by ID through tickets gRPC.                           |
 | `POST` | `/api/tickets`                     | Creates a ticket for the authenticated user through tickets gRPC.        |
+| `PUT`  | `/api/tickets/:id`                 | Updates an owned ticket through tickets gRPC.                            |
 
 The gateway validates HTTP payloads with NestJS DTOs, exposes public HTTP
 errors, and translates structured gRPC errors returned by backend services.
@@ -54,7 +55,7 @@ title, and the authenticated user's ID. Public REST prices are positive integer
 minor units from `1` through `9007199254740991` (the JavaScript safe-integer
 limit).
 It has no public HTTP endpoint; the API gateway owns `GET /api/tickets` and
-`GET /api/tickets/:id`, plus `POST /api/tickets`.
+`GET /api/tickets/:id`, plus `POST /api/tickets` and `PUT /api/tickets/:id`.
 
 ## List Tickets Flow
 
@@ -79,6 +80,17 @@ It has no public HTTP endpoint; the API gateway owns `GET /api/tickets` and
 3. Tickets validates the complete gRPC request and persists the ticket in
    `tickets-db`.
 4. The gateway returns `201` with `id`, `title`, `price`, and `userId`.
+
+## Update Ticket Flow
+
+1. A client calls `PUT /api/tickets/:id` with the replacement `title` and a
+   positive integer `price` no larger than `9007199254740991`.
+2. The gateway validates the request, resolves the current user from the Better
+   Auth session, and calls `tickets.v1.TicketsService.UpdateTicket` over gRPC.
+3. Tickets validates the complete request and updates the ticket only when the
+   supplied user ID owns it.
+4. The gateway returns `200` with the updated ticket. Missing tickets return
+   `404`; a non-owner receives `403 FORBIDDEN`.
 
 ## Signup Flow
 

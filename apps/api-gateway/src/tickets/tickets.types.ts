@@ -13,6 +13,17 @@ export interface CreateTicketResponse {
   userId: string;
 }
 
+export interface UpdateTicketRequest {
+  id: string;
+  title: string;
+  price: number;
+  userId: string;
+}
+
+export interface UpdateTicketResponse {
+  ticket: Ticket;
+}
+
 export interface GetTicketRequest {
   id: string;
 }
@@ -36,6 +47,7 @@ export interface Ticket {
 
 export interface TicketsGrpcService {
   createTicket(request: CreateTicketRequest): Observable<CreateTicketResponse>;
+  updateTicket(request: UpdateTicketRequest): Observable<UpdateTicketResponse>;
   getTicket(request: GetTicketRequest): Observable<GetTicketResponse>;
   listTickets(request: ListTicketsRequest): Observable<ListTicketsResponse>;
 }

@@ -71,3 +71,23 @@ func (repository *PostgresRepository) List(ctx context.Context) ([]Ticket, error
 
 	return tickets, rows.Err()
 }
+
+func (repository *PostgresRepository) Update(ctx context.Context, id string, input UpdateInput) (Ticket, error) {
+	var updated Ticket
+	err := repository.pool.QueryRow(
+		ctx,
+		`UPDATE tickets
+		 SET title = $1, price = $2
+		 WHERE id = $3 AND user_id = $4
+		 RETURNING id, title, price, user_id`,
+		input.Title,
+		input.Price,
+		id,
+		input.UserID,
+	).Scan(&updated.ID, &updated.Title, &updated.Price, &updated.UserID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Ticket{}, ErrNotFound
+	}
+
+	return updated, err
+}

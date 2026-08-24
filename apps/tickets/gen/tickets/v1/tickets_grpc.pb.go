@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	TicketsService_CreateTicket_FullMethodName = "/tickets.v1.TicketsService/CreateTicket"
+	TicketsService_UpdateTicket_FullMethodName = "/tickets.v1.TicketsService/UpdateTicket"
 	TicketsService_GetTicket_FullMethodName    = "/tickets.v1.TicketsService/GetTicket"
 	TicketsService_ListTickets_FullMethodName  = "/tickets.v1.TicketsService/ListTickets"
 )
@@ -29,6 +30,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TicketsServiceClient interface {
 	CreateTicket(ctx context.Context, in *CreateTicketRequest, opts ...grpc.CallOption) (*CreateTicketResponse, error)
+	UpdateTicket(ctx context.Context, in *UpdateTicketRequest, opts ...grpc.CallOption) (*UpdateTicketResponse, error)
 	GetTicket(ctx context.Context, in *GetTicketRequest, opts ...grpc.CallOption) (*GetTicketResponse, error)
 	ListTickets(ctx context.Context, in *ListTicketsRequest, opts ...grpc.CallOption) (*ListTicketsResponse, error)
 }
@@ -45,6 +47,16 @@ func (c *ticketsServiceClient) CreateTicket(ctx context.Context, in *CreateTicke
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateTicketResponse)
 	err := c.cc.Invoke(ctx, TicketsService_CreateTicket_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ticketsServiceClient) UpdateTicket(ctx context.Context, in *UpdateTicketRequest, opts ...grpc.CallOption) (*UpdateTicketResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateTicketResponse)
+	err := c.cc.Invoke(ctx, TicketsService_UpdateTicket_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +88,7 @@ func (c *ticketsServiceClient) ListTickets(ctx context.Context, in *ListTicketsR
 // for forward compatibility.
 type TicketsServiceServer interface {
 	CreateTicket(context.Context, *CreateTicketRequest) (*CreateTicketResponse, error)
+	UpdateTicket(context.Context, *UpdateTicketRequest) (*UpdateTicketResponse, error)
 	GetTicket(context.Context, *GetTicketRequest) (*GetTicketResponse, error)
 	ListTickets(context.Context, *ListTicketsRequest) (*ListTicketsResponse, error)
 	mustEmbedUnimplementedTicketsServiceServer()
@@ -90,6 +103,9 @@ type UnimplementedTicketsServiceServer struct{}
 
 func (UnimplementedTicketsServiceServer) CreateTicket(context.Context, *CreateTicketRequest) (*CreateTicketResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateTicket not implemented")
+}
+func (UnimplementedTicketsServiceServer) UpdateTicket(context.Context, *UpdateTicketRequest) (*UpdateTicketResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateTicket not implemented")
 }
 func (UnimplementedTicketsServiceServer) GetTicket(context.Context, *GetTicketRequest) (*GetTicketResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetTicket not implemented")
@@ -132,6 +148,24 @@ func _TicketsService_CreateTicket_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TicketsServiceServer).CreateTicket(ctx, req.(*CreateTicketRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TicketsService_UpdateTicket_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateTicketRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TicketsServiceServer).UpdateTicket(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TicketsService_UpdateTicket_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TicketsServiceServer).UpdateTicket(ctx, req.(*UpdateTicketRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -182,6 +216,10 @@ var TicketsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateTicket",
 			Handler:    _TicketsService_CreateTicket_Handler,
+		},
+		{
+			MethodName: "UpdateTicket",
+			Handler:    _TicketsService_UpdateTicket_Handler,
 		},
 		{
 			MethodName: "GetTicket",

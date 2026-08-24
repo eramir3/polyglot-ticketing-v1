@@ -43,6 +43,40 @@ func (server *Server) CreateTicket(
 	return toCreateTicketResponse(created), nil
 }
 
+func (server *Server) UpdateTicket(
+	ctx context.Context,
+	request *ticketsv1.UpdateTicketRequest,
+) (*ticketsv1.UpdateTicketResponse, error) {
+	updated, validationErrors, err := server.service.Update(ctx, request.GetId(), ticket.UpdateInput{
+		Title:  request.GetTitle(),
+		Price:  request.GetPrice(),
+		UserID: request.GetUserId(),
+	})
+	if len(validationErrors) > 0 {
+		return nil, structuredError(codes.InvalidArgument, validationErrors)
+	}
+	if errors.Is(err, ticket.ErrForbidden) {
+		return nil, structuredError(codes.PermissionDenied, []ticket.ValidationError{{
+			Code:    "FORBIDDEN",
+			Message: "You do not have permission to update this ticket.",
+		}})
+	}
+	if errors.Is(err, ticket.ErrNotFound) {
+		return nil, structuredError(codes.NotFound, []ticket.ValidationError{{
+			Code:    "NOT_FOUND",
+			Message: "Ticket not found.",
+		}})
+	}
+	if err != nil {
+		return nil, structuredError(codes.Internal, []ticket.ValidationError{{
+			Code:    "INTERNAL_ERROR",
+			Message: "Unable to update ticket.",
+		}})
+	}
+
+	return &ticketsv1.UpdateTicketResponse{Ticket: toTicketResponse(updated)}, nil
+}
+
 func (server *Server) ListTickets(
 	ctx context.Context,
 	_request *ticketsv1.ListTicketsRequest,

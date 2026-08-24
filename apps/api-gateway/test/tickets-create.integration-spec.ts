@@ -248,6 +248,150 @@ describe('tickets endpoints', () => {
     });
   });
 
+  it('can only update tickets when signed in', async () => {
+    const response = await putTicket(randomUUID(), {
+      price: 10_000,
+      title: 'Metallica',
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      errors: [
+        expect.objectContaining({
+          code: 'UNAUTHENTICATED',
+        }),
+      ],
+    });
+  });
+
+  it('can only update tickets owned by the signed-in user', async () => {
+    const createdResponse = await postTicket(
+      { price: 15_000, title: 'The National' },
+      sessionCookie,
+    );
+    expect(createdResponse.status).toBe(201);
+    const created = createdResponse.body as { id: string };
+    const anotherUser = await createAuthenticatedUser();
+
+    const response = await putTicket(
+      created.id,
+      { price: 18_000, title: 'The National Updated' },
+      anotherUser.sessionCookie,
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({
+      errors: [
+        expect.objectContaining({
+          code: 'FORBIDDEN',
+        }),
+      ],
+    });
+  });
+
+  it('returns a 404 if the provided id does not exist', async () => {
+    const response = await putTicket(
+      randomUUID(),
+      { price: 18_000, title: 'Metallica Updated' },
+      sessionCookie,
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      errors: [
+        expect.objectContaining({
+          code: 'NOT_FOUND',
+        }),
+      ],
+    });
+  });
+
+  it('returns an error when an updated title is invalid', async () => {
+    const response = await putTicket(
+      randomUUID(),
+      { price: 10_000, title: '' },
+      sessionCookie,
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      errors: [
+        expect.objectContaining({
+          code: 'INVALID_TITLE',
+          field: 'title',
+        }),
+      ],
+    });
+  });
+
+  it('returns an error when an updated price is invalid', async () => {
+    const response = await putTicket(
+      randomUUID(),
+      { price: 0, title: 'Metallica' },
+      sessionCookie,
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      errors: [
+        expect.objectContaining({
+          code: 'INVALID_PRICE',
+          field: 'price',
+        }),
+      ],
+    });
+  });
+
+  it('updates a ticket with valid parameters', async () => {
+    const createdResponse = await postTicket(
+      { price: 15_000, title: 'Mastodon' },
+      sessionCookie,
+    );
+    expect(createdResponse.status).toBe(201);
+    const created = createdResponse.body as { id: string };
+
+    const response = await putTicket(
+      created.id,
+      { price: 18_000, title: 'Mastodon Updated' },
+      sessionCookie,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      id: created.id,
+      price: 18_000,
+      title: 'Mastodon Updated',
+      userId,
+    });
+
+    const database = new Client({ connectionString: ticketsDatabaseUrl });
+    await database.connect();
+    try {
+      const result = await database.query<{
+        id: string;
+        price: string;
+        title: string;
+        user_id: string;
+      }>(
+        `SELECT id::text, price::text, title, user_id
+         FROM tickets
+         WHERE id = $1`,
+        [created.id],
+      );
+
+      expect(result.rows).toEqual([
+        {
+          id: created.id,
+          price: '18000',
+          title: 'Mastodon Updated',
+          user_id: userId,
+        },
+      ]);
+    } finally {
+      await database.end();
+    }
+  });
+
   async function createAuthenticatedUser(): Promise<{
     sessionCookie: string;
     userId: string;
@@ -298,6 +442,14 @@ describe('tickets endpoints', () => {
     return postJson('/api/tickets', body, cookie);
   }
 
+  function putTicket(
+    id: string,
+    body: { title: string; price: number },
+    cookie?: string,
+  ): Promise<HttpResponse> {
+    return putJson(`/api/tickets/${id}`, body, cookie);
+  }
+
   async function postJson(
     path: string,
     body: Record<string, string | number>,
@@ -321,6 +473,27 @@ describe('tickets endpoints', () => {
 
   async function getJson(path: string): Promise<HttpResponse> {
     const response = await fetch(`${gatewayUrl}${path}`);
+
+    return {
+      body: await response.json(),
+      headers: response.headers,
+      status: response.status,
+    };
+  }
+
+  async function putJson(
+    path: string,
+    body: Record<string, string | number>,
+    cookie?: string,
+  ): Promise<HttpResponse> {
+    const response = await fetch(`${gatewayUrl}${path}`, {
+      body: JSON.stringify(body),
+      headers: {
+        'content-type': 'application/json',
+        ...(cookie === undefined ? {} : { cookie }),
+      },
+      method: 'PUT',
+    });
 
     return {
       body: await response.json(),
