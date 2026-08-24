@@ -87,6 +87,14 @@
           "buildTarget": "api-gateway:build:production"
         }
       }
+    },
+    "integration": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["generate-proto"],
+      "cache": false,
+      "options": {
+        "command": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config apps/api-gateway/jest.integration.config.js --runInBand"
+      }
     }
   },
   "tags": []

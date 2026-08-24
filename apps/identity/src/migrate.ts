@@ -1,20 +1,6 @@
-import { createIdentityAuthContext } from './auth/auth.factory';
+import { migrateIdentityDatabase } from './migrate-identity-database';
 
-async function migrate() {
-  const identityAuthContext = await createIdentityAuthContext();
-  const { getMigrations } = await import('better-auth/db/migration');
-
-  try {
-    const { runMigrations } = await getMigrations(
-      identityAuthContext.auth.options
-    );
-    await runMigrations();
-  } finally {
-    await identityAuthContext.pool.end();
-  }
-}
-
-void migrate().catch((error: unknown) => {
+void migrateIdentityDatabase().catch((error: unknown) => {
   console.error('Identity database migration failed.', error);
   process.exitCode = 1;
 });
