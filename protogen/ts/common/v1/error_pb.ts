@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file common/v1/error.proto.
  */
 export const file_common_v1_error: GenFile = /*@__PURE__*/
-  fileDesc("ChVjb21tb24vdjEvZXJyb3IucHJvdG8SCWNvbW1vbi52MSJECgVFcnJvchIPCgdtZXNzYWdlGAEgASgJEgwKBGNvZGUYAiABKAkSEgoFZmllbGQYAyABKAlIAIgBAUIICgZfZmllbGQiMQoNRXJyb3JSZXNwb25zZRIgCgZlcnJvcnMYASADKAsyEC5jb21tb24udjEuRXJyb3JiBnByb3RvMw");
+  fileDesc("ChVjb21tb24vdjEvZXJyb3IucHJvdG8SCWNvbW1vbi52MSJECgVFcnJvchIPCgdtZXNzYWdlGAEgASgJEgwKBGNvZGUYAiABKAkSEgoFZmllbGQYAyABKAlIAIgBAUIICgZfZmllbGQiMQoNRXJyb3JSZXNwb25zZRIgCgZlcnJvcnMYASADKAsyEC5jb21tb24udjEuRXJyb3JCO1o5cG9seWdsb3QtdGlja2V0aW5nLXYxL2FwcHMvdGlja2V0cy9nZW4vY29tbW9uL3YxO2NvbW1vbnYxYgZwcm90bzM");
 
 /**
  * A client-safe application error. Error codes are stable public API values.

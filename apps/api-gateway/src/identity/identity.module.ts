@@ -27,5 +27,6 @@ import { IDENTITY_GRPC_CLIENT } from './identity.constants';
   ],
   controllers: [AuthController],
   providers: [AuthService],
+  exports: [AuthService],
 })
 export class IdentityModule {}

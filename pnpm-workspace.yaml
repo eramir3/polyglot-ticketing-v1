@@ -7,3 +7,5 @@ allowBuilds:
   less: false
   protobufjs: false
   '@bufbuild/buf': true
+  cpu-features: false
+  ssh2: false

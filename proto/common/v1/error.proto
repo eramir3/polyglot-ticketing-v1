@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package common.v1;
 
+option go_package = "polyglot-ticketing-v1/apps/tickets/gen/common/v1;commonv1";
+
 // A client-safe application error. Error codes are stable public API values.
 message Error {
   string message = 1;

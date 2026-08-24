@@ -1,14 +1,8 @@
-import { status } from '@grpc/grpc-js';
 import { IncomingHttpHeaders } from 'node:http';
-import { HttpStatus, Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { ApiError, ErrorItem } from '../errors/api-error';
-import {
-  getGrpcErrorResponse,
-  httpStatusFromGrpcCode,
-  isGrpcStatusError,
-} from '../errors/grpc-error';
+import { throwGatewayGrpcError } from '../errors/throw-grpc-error';
 import { IDENTITY_GRPC_CLIENT } from './identity.constants';
 import { createAuthRequestMetadata } from './metadata/auth-request-metadata';
 import { createSessionRequestMetadata } from './metadata/session-request-metadata';
@@ -43,7 +37,7 @@ export class AuthService implements OnModuleInit {
     try {
       return await firstValueFrom(this.identityService.signUp(request));
     } catch (error: unknown) {
-      this.throwGrpcError(error, {
+      throwGatewayGrpcError(error, {
         code: 'INVALID_ARGUMENT',
         message: 'Signup data is invalid.',
       });
@@ -62,7 +56,7 @@ export class AuthService implements OnModuleInit {
         ),
       );
     } catch (error: unknown) {
-      this.throwGrpcError(error, {
+      throwGatewayGrpcError(error, {
         code: 'INVALID_ARGUMENT',
         message: 'Signin data is invalid.',
       });
@@ -78,7 +72,7 @@ export class AuthService implements OnModuleInit {
         ),
       );
     } catch (error: unknown) {
-      this.throwGrpcError(error);
+      throwGatewayGrpcError(error);
     }
   }
 
@@ -95,7 +89,7 @@ export class AuthService implements OnModuleInit {
 
       return toCurrentUserResponse(response);
     } catch (error: unknown) {
-      this.throwGrpcError(error);
+      throwGatewayGrpcError(error);
     }
   }
 
@@ -103,34 +97,8 @@ export class AuthService implements OnModuleInit {
     try {
       return await firstValueFrom(this.identityService.verifyEmail(request));
     } catch (error: unknown) {
-      this.throwGrpcError(error);
+      throwGatewayGrpcError(error);
     }
-  }
-
-  private throwGrpcError(
-    error: unknown,
-    invalidArgumentError?: ErrorItem,
-  ): never {
-    if (isGrpcStatusError(error)) {
-      const errorResponse = getGrpcErrorResponse(error);
-      if (errorResponse) {
-        throw new ApiError(
-          httpStatusFromGrpcCode(error.code),
-          errorResponse.errors,
-        );
-      }
-
-      if (error.code === status.INVALID_ARGUMENT && invalidArgumentError) {
-        throw new ApiError(HttpStatus.BAD_REQUEST, [invalidArgumentError]);
-      }
-    }
-
-    throw new ApiError(HttpStatus.SERVICE_UNAVAILABLE, [
-      {
-        code: 'SERVICE_UNAVAILABLE',
-        message: 'A required service is unavailable.',
-      },
-    ]);
   }
 }
 

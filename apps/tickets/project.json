@@ -4,8 +4,20 @@
   "sourceRoot": "apps/tickets",
   "projectType": "application",
   "targets": {
+    "generate-proto": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{workspaceRoot}/apps/tickets/gen",
+        "{workspaceRoot}/protogen/ts"
+      ],
+      "options": {
+        "command": "pnpm proto:generate"
+      }
+    },
     "build": {
       "executor": "nx:run-commands",
+      "dependsOn": ["generate-proto"],
       "outputs": ["{workspaceRoot}/dist/apps/tickets"],
       "options": {
         "command": "mkdir -p ../../dist/apps/tickets && go build -o ../../dist/apps/tickets/tickets ./cmd/tickets",
@@ -14,6 +26,7 @@
     },
     "test": {
       "executor": "nx:run-commands",
+      "dependsOn": ["generate-proto"],
       "options": {
         "command": "go test ./...",
         "cwd": "apps/tickets"

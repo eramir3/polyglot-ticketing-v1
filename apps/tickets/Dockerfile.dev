@@ -1,0 +1,24 @@
+FROM golang:1.26-alpine AS build
+
+WORKDIR /src
+
+COPY apps/tickets/go.mod apps/tickets/go.sum ./
+RUN go mod download
+
+COPY apps/tickets ./
+RUN CGO_ENABLED=0 go build -o /out/tickets ./cmd/tickets
+RUN CGO_ENABLED=0 go build -o /out/tickets-migrate ./cmd/migrate
+
+FROM alpine:3.22
+
+WORKDIR /app
+
+COPY --from=build /out/tickets /usr/local/bin/tickets
+COPY --from=build /out/tickets-migrate /usr/local/bin/tickets-migrate
+COPY apps/tickets/migrations ./migrations
+
+ENV GRPC_PORT=50052
+
+EXPOSE 50052
+
+CMD ["tickets"]

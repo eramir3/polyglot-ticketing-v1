@@ -31,6 +31,8 @@ generation is introduced.
 | `INVALID_NAME`               | The `name` field is missing or invalid.                 |
 | `INVALID_EMAIL`              | The `email` field is missing or invalid.                |
 | `INVALID_PASSWORD`           | The `password` field is missing or invalid.             |
+| `INVALID_TITLE`              | The `title` field is missing or invalid.                |
+| `INVALID_PRICE`              | The `price` field is missing or invalid.                |
 | `INVALID_CREDENTIALS`        | The supplied email or password is incorrect.            |
 | `EMAIL_NOT_VERIFIED`         | The account email must be verified before sign-in.      |
 | `INVALID_VERIFICATION_TOKEN` | An email verification token is invalid or expired.      |

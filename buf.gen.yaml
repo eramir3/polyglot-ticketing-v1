@@ -6,5 +6,13 @@ plugins:
     opt:
       - target=ts
       - import_extension=js
+  - remote: buf.build/protocolbuffers/go
+    out: apps/tickets/gen
+    opt:
+      - paths=source_relative
+  - remote: buf.build/grpc/go
+    out: apps/tickets/gen
+    opt:
+      - paths=source_relative
 inputs:
   - directory: proto

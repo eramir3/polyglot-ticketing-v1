@@ -23,6 +23,7 @@ Implemented endpoint:
 | `POST` | `/api/auth/signout`                | Revokes the current session and expires the HTTP-only session cookie.    |
 | `GET`  | `/api/auth/currentuser`            | Returns safe metadata for the authenticated user.                        |
 | `GET`  | `/api/auth/verify-email?token=...` | Verifies an email token through identity gRPC.                           |
+| `POST` | `/api/tickets`                     | Creates a ticket for the authenticated user through tickets gRPC.        |
 
 The gateway validates HTTP payloads with NestJS DTOs, exposes public HTTP
 errors, and translates structured gRPC errors returned by backend services.
@@ -45,9 +46,19 @@ may access that database directly.
 
 ### Tickets
 
-`tickets` is a Go service skeleton with no HTTP or gRPC endpoints, database
-integration, migrations, Docker configuration, or event contracts yet. It will
-own `tickets-db` when ticket persistence is introduced.
+`tickets` is a Go gRPC service on `tickets:50052` inside local Docker Compose.
+It owns `tickets-db` and creates tickets with a generated UUID, non-blank
+title, positive integer price in minor units, and the authenticated user's ID.
+It has no public HTTP endpoint; the API gateway owns `POST /api/tickets`.
+
+## Create Ticket Flow
+
+1. A client calls `POST /api/tickets` with `title` and positive integer `price`.
+2. The gateway validates the request, resolves the current user from the Better
+   Auth session, and calls `tickets.v1.TicketsService.CreateTicket` over gRPC.
+3. Tickets validates the complete gRPC request and persists the ticket in
+   `tickets-db`.
+4. The gateway returns `201` with `id`, `title`, `price`, and `userId`.
 
 ## Signup Flow
 
@@ -169,6 +180,7 @@ Required values are listed in `.env.example`:
 - `EMAIL_VERIFICATION_URL`
 - `TICKETING_USER_APP_ORIGIN`
 - `SMTP_FROM`
+- `TICKETS_DB_PASSWORD`
 
 Common commands:
 
@@ -188,6 +200,8 @@ Local ports:
 | API gateway       | `http://localhost:3000`              |
 | Identity gRPC     | `identity:50051` within Compose only |
 | Identity Postgres | `localhost:5432`                     |
+| Tickets gRPC      | `tickets:50052` within Compose only  |
+| Tickets Postgres  | `localhost:5433`                     |
 | Mailpit inbox     | `http://localhost:8025`              |
 
 ## Planned Services

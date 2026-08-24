@@ -39,6 +39,10 @@ function getValidationCode(field: string): string {
       return 'INVALID_EMAIL';
     case 'password':
       return 'INVALID_PASSWORD';
+    case 'title':
+      return 'INVALID_TITLE';
+    case 'price':
+      return 'INVALID_PRICE';
     default:
       return 'INVALID_ARGUMENT';
   }

@@ -5,6 +5,8 @@ package identity.v1;
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 
+option go_package = "polyglot-ticketing-v1/apps/tickets/gen/identity/v1;identityv1";
+
 service IdentityService {
   rpc SignUp(SignUpRequest) returns (SignUpResponse);
   rpc SignIn(SignInRequest) returns (SignInResponse);

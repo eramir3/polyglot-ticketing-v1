@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package tickets.v1;
+
+option go_package = "polyglot-ticketing-v1/apps/tickets/gen/tickets/v1;ticketsv1";
+
+service TicketsService {
+  rpc CreateTicket(CreateTicketRequest) returns (CreateTicketResponse);
+}
+
+message CreateTicketRequest {
+  string title = 1;
+  int64 price = 2;
+  string user_id = 3;
+}
+
+message CreateTicketResponse {
+  string id = 1;
+  string title = 2;
+  int64 price = 3;
+  string user_id = 4;
+}

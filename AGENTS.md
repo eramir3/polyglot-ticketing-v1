@@ -16,8 +16,8 @@ Implemented foundations:
 - `identity`: NestJS/TypeScript gRPC-only service using Better Auth and
   Postgres. It owns `identity-db`, implements signup, and requires email
   verification.
-- `tickets`: Go service skeleton with no transport endpoints or database
-  integration yet.
+- `tickets`: Go gRPC service with Postgres-backed ticket creation. It owns
+  `tickets-db`.
 - Shared protobuf contracts in `proto/`, generated with Buf and Protobuf-ES.
 - Protovalidate request validation for identity gRPC requests.
 - Standardized errors across the gateway and identity service.
@@ -49,6 +49,8 @@ Kubernetes Gateway API controller.
   exports the pinned Protovalidate schema to `proto-deps/`.
 - Identity and API gateway builds run protobuf generation first through their
   respective `generate-proto` targets.
+- Tickets builds and tests run protobuf generation first; Go bindings are
+  generated in `apps/tickets/gen`.
 - Gateway DTO validation provides an early HTTP guard. Protovalidate remains
   authoritative for all identity gRPC callers.
 - Public errors use `{ "errors": [{ "code", "message", "field"? }] }`.
@@ -72,7 +74,8 @@ Kubernetes Gateway API controller.
   Better Auth and database environment variables configured.
 - The gateway is published on `localhost:3000`; identity gRPC is internal to
   the Compose network on `identity:50051`; Postgres is published on
-  `localhost:5432` for local database tooling.
+  `localhost:5432` for local database tooling. Tickets gRPC is internal on
+  `tickets:50052`; its Postgres database is published on `localhost:5433`.
 
 ## Planned Services And Databases
 
