@@ -1,11 +1,10 @@
 import { Metadata } from '@grpc/grpc-js';
 
 /**
- * Converts the cookie-only gRPC metadata sent by the API gateway into the
- * in-memory Web Headers object Better Auth requires for sign-out. Identity
- * remains gRPC-only; this does not create an HTTP request or route.
+ * Converts cookie-only gRPC metadata from the API gateway into the in-memory
+ * Web Headers object Better Auth uses to read the current session.
  */
-export function createSignOutRequestHeaders(metadata: Metadata): Headers {
+export function createSessionRequestHeaders(metadata: Metadata): Headers {
   const headers = new Headers();
   const cookie = metadata.get('cookie').find(isString);
 

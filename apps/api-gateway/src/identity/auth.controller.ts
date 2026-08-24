@@ -11,6 +11,7 @@ import {
   Res,
 } from '@nestjs/common';
 import {
+  CurrentUserResponse,
   SignInResponse,
   SignUpResponse,
   VerifyEmailResponse,
@@ -73,6 +74,13 @@ export class AuthController {
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
     });
+  }
+
+  @Get('currentuser')
+  currentUser(
+    @Headers() headers: IncomingHttpHeaders,
+  ): Promise<CurrentUserResponse> {
+    return this.authService.currentUser(headers);
   }
 
   @Get('verify-email')

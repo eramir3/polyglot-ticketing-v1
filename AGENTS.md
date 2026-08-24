@@ -12,7 +12,7 @@ application, routes, components, or UI code belong in this repository.
 Implemented foundations:
 
 - `api-gateway`: NestJS/TypeScript HTTP backend-for-frontend. It currently
-  exposes `POST /api/auth/signup` and calls identity through gRPC.
+  exposes authentication endpoints and calls identity through gRPC.
 - `identity`: NestJS/TypeScript gRPC-only service using Better Auth and
   Postgres. It owns `identity-db`, implements signup, and requires email
   verification.

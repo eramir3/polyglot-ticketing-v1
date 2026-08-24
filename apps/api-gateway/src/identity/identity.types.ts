@@ -42,6 +42,24 @@ export interface SignOutRequest {}
 
 export interface SignOutResponse {}
 
+export interface CurrentUserRequest {}
+
+export interface CurrentUserResponse {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    emailVerified: boolean;
+  };
+}
+
+export interface IdentityCurrentUserResponse {
+  userId: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+}
+
 export interface Timestamp {
   seconds: string | number | bigint;
   nanos: number;
@@ -65,5 +83,9 @@ export interface IdentityGrpcService {
     request: SignOutRequest,
     metadata?: Metadata,
   ): Observable<SignOutResponse>;
+  currentUser(
+    request: CurrentUserRequest,
+    metadata?: Metadata,
+  ): Observable<IdentityCurrentUserResponse>;
   verifyEmail(request: VerifyEmailRequest): Observable<VerifyEmailResponse>;
 }

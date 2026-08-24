@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file identity/v1/identity.proto.
  */
 export const file_identity_v1_identity: GenFile = /*@__PURE__*/
-  fileDesc("ChppZGVudGl0eS92MS9pZGVudGl0eS5wcm90bxILaWRlbnRpdHkudjEiYgoNU2lnblVwUmVxdWVzdBIbCgRuYW1lGAEgASgJQg26SApyCDIGLipcUy4qEhYKBWVtYWlsGAIgASgJQge6SARyAmABEhwKCHBhc3N3b3JkGAMgASgJQgq6SAdyBRAIGIABIjAKDlNpZ25VcFJlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSDQoFZW1haWwYAiABKAkiRQoNU2lnbkluUmVxdWVzdBIWCgVlbWFpbBgBIAEoCUIHukgEcgJgARIcCghwYXNzd29yZBgCIAEoCUIKukgHcgUQCBiAASKlAQoOU2lnbkluUmVzcG9uc2USDwoHdXNlcl9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg0KBWVtYWlsGAMgASgJEhYKDmVtYWlsX3ZlcmlmaWVkGAQgASgIEhUKDXNlc3Npb25fdG9rZW4YBSABKAkSNgoSc2Vzc2lvbl9leHBpcmVzX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIQCg5TaWduT3V0UmVxdWVzdCIRCg9TaWduT3V0UmVzcG9uc2UiLAoSVmVyaWZ5RW1haWxSZXF1ZXN0EhYKBXRva2VuGAEgASgJQge6SARyAhABIicKE1ZlcmlmeUVtYWlsUmVzcG9uc2USEAoIdmVyaWZpZWQYASABKAgyrwIKD0lkZW50aXR5U2VydmljZRJBCgZTaWduVXASGi5pZGVudGl0eS52MS5TaWduVXBSZXF1ZXN0GhsuaWRlbnRpdHkudjEuU2lnblVwUmVzcG9uc2USQQoGU2lnbkluEhouaWRlbnRpdHkudjEuU2lnbkluUmVxdWVzdBobLmlkZW50aXR5LnYxLlNpZ25JblJlc3BvbnNlEkQKB1NpZ25PdXQSGy5pZGVudGl0eS52MS5TaWduT3V0UmVxdWVzdBocLmlkZW50aXR5LnYxLlNpZ25PdXRSZXNwb25zZRJQCgtWZXJpZnlFbWFpbBIfLmlkZW50aXR5LnYxLlZlcmlmeUVtYWlsUmVxdWVzdBogLmlkZW50aXR5LnYxLlZlcmlmeUVtYWlsUmVzcG9uc2ViBnByb3RvMw", [file_buf_validate_validate, file_google_protobuf_timestamp]);
+  fileDesc("ChppZGVudGl0eS92MS9pZGVudGl0eS5wcm90bxILaWRlbnRpdHkudjEiYgoNU2lnblVwUmVxdWVzdBIbCgRuYW1lGAEgASgJQg26SApyCDIGLipcUy4qEhYKBWVtYWlsGAIgASgJQge6SARyAmABEhwKCHBhc3N3b3JkGAMgASgJQgq6SAdyBRAIGIABIjAKDlNpZ25VcFJlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSDQoFZW1haWwYAiABKAkiRQoNU2lnbkluUmVxdWVzdBIWCgVlbWFpbBgBIAEoCUIHukgEcgJgARIcCghwYXNzd29yZBgCIAEoCUIKukgHcgUQCBiAASKlAQoOU2lnbkluUmVzcG9uc2USDwoHdXNlcl9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg0KBWVtYWlsGAMgASgJEhYKDmVtYWlsX3ZlcmlmaWVkGAQgASgIEhUKDXNlc3Npb25fdG9rZW4YBSABKAkSNgoSc2Vzc2lvbl9leHBpcmVzX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIQCg5TaWduT3V0UmVxdWVzdCIRCg9TaWduT3V0UmVzcG9uc2UiFAoSQ3VycmVudFVzZXJSZXF1ZXN0IlsKE0N1cnJlbnRVc2VyUmVzcG9uc2USDwoHdXNlcl9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg0KBWVtYWlsGAMgASgJEhYKDmVtYWlsX3ZlcmlmaWVkGAQgASgIIiwKElZlcmlmeUVtYWlsUmVxdWVzdBIWCgV0b2tlbhgBIAEoCUIHukgEcgIQASInChNWZXJpZnlFbWFpbFJlc3BvbnNlEhAKCHZlcmlmaWVkGAEgASgIMoEDCg9JZGVudGl0eVNlcnZpY2USQQoGU2lnblVwEhouaWRlbnRpdHkudjEuU2lnblVwUmVxdWVzdBobLmlkZW50aXR5LnYxLlNpZ25VcFJlc3BvbnNlEkEKBlNpZ25JbhIaLmlkZW50aXR5LnYxLlNpZ25JblJlcXVlc3QaGy5pZGVudGl0eS52MS5TaWduSW5SZXNwb25zZRJECgdTaWduT3V0EhsuaWRlbnRpdHkudjEuU2lnbk91dFJlcXVlc3QaHC5pZGVudGl0eS52MS5TaWduT3V0UmVzcG9uc2USUAoLQ3VycmVudFVzZXISHy5pZGVudGl0eS52MS5DdXJyZW50VXNlclJlcXVlc3QaIC5pZGVudGl0eS52MS5DdXJyZW50VXNlclJlc3BvbnNlElAKC1ZlcmlmeUVtYWlsEh8uaWRlbnRpdHkudjEuVmVyaWZ5RW1haWxSZXF1ZXN0GiAuaWRlbnRpdHkudjEuVmVyaWZ5RW1haWxSZXNwb25zZWIGcHJvdG8z", [file_buf_validate_validate, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message identity.v1.SignUpRequest
@@ -155,6 +155,51 @@ export const SignOutResponseSchema: GenMessage<SignOutResponse> = /*@__PURE__*/
   messageDesc(file_identity_v1_identity, 5);
 
 /**
+ * @generated from message identity.v1.CurrentUserRequest
+ */
+export type CurrentUserRequest = Message<"identity.v1.CurrentUserRequest"> & {
+};
+
+/**
+ * Describes the message identity.v1.CurrentUserRequest.
+ * Use `create(CurrentUserRequestSchema)` to create a new message.
+ */
+export const CurrentUserRequestSchema: GenMessage<CurrentUserRequest> = /*@__PURE__*/
+  messageDesc(file_identity_v1_identity, 6);
+
+/**
+ * @generated from message identity.v1.CurrentUserResponse
+ */
+export type CurrentUserResponse = Message<"identity.v1.CurrentUserResponse"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string email = 3;
+   */
+  email: string;
+
+  /**
+   * @generated from field: bool email_verified = 4;
+   */
+  emailVerified: boolean;
+};
+
+/**
+ * Describes the message identity.v1.CurrentUserResponse.
+ * Use `create(CurrentUserResponseSchema)` to create a new message.
+ */
+export const CurrentUserResponseSchema: GenMessage<CurrentUserResponse> = /*@__PURE__*/
+  messageDesc(file_identity_v1_identity, 7);
+
+/**
  * @generated from message identity.v1.VerifyEmailRequest
  */
 export type VerifyEmailRequest = Message<"identity.v1.VerifyEmailRequest"> & {
@@ -169,7 +214,7 @@ export type VerifyEmailRequest = Message<"identity.v1.VerifyEmailRequest"> & {
  * Use `create(VerifyEmailRequestSchema)` to create a new message.
  */
 export const VerifyEmailRequestSchema: GenMessage<VerifyEmailRequest> = /*@__PURE__*/
-  messageDesc(file_identity_v1_identity, 6);
+  messageDesc(file_identity_v1_identity, 8);
 
 /**
  * @generated from message identity.v1.VerifyEmailResponse
@@ -186,7 +231,7 @@ export type VerifyEmailResponse = Message<"identity.v1.VerifyEmailResponse"> & {
  * Use `create(VerifyEmailResponseSchema)` to create a new message.
  */
 export const VerifyEmailResponseSchema: GenMessage<VerifyEmailResponse> = /*@__PURE__*/
-  messageDesc(file_identity_v1_identity, 7);
+  messageDesc(file_identity_v1_identity, 9);
 
 /**
  * @generated from service identity.v1.IdentityService
@@ -215,6 +260,14 @@ export const IdentityService: GenService<{
     methodKind: "unary";
     input: typeof SignOutRequestSchema;
     output: typeof SignOutResponseSchema;
+  },
+  /**
+   * @generated from rpc identity.v1.IdentityService.CurrentUser
+   */
+  currentUser: {
+    methodKind: "unary";
+    input: typeof CurrentUserRequestSchema;
+    output: typeof CurrentUserResponseSchema;
   },
   /**
    * @generated from rpc identity.v1.IdentityService.VerifyEmail

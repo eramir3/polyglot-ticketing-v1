@@ -7,7 +7,7 @@ import { SESSION_COOKIE_NAME } from '../identity.constants';
  * metadata. Other browser cookies must not cross the gateway-to-identity
  * boundary.
  */
-export function createSignOutRequestMetadata(
+export function createSessionRequestMetadata(
   headers: IncomingHttpHeaders,
 ): Metadata {
   const metadata = new Metadata();

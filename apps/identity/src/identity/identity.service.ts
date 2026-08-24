@@ -4,6 +4,8 @@ import { IDENTITY_AUTH_CONTEXT } from '../auth/auth.constants';
 import { IdentityAuthContext } from '../auth/auth.factory';
 import { StructuredGrpcError } from '../errors/grpc-error';
 import {
+  CurrentUserRequest,
+  CurrentUserResponse,
   SignInRequest,
   SignInResponse,
   SignOutRequest,
@@ -21,9 +23,13 @@ import { createSigninValidationInternalError } from './mappers/signin-errors';
 import { createSignupValidationInternalError } from './mappers/signup-errors';
 import { createAuthRequestHeaders } from './headers/signin-request-headers';
 import { extractSessionCookieValue } from './session-cookie';
-import { createSignOutRequestHeaders } from './headers/signout-request-headers';
+import { createSessionRequestHeaders } from './headers/session-request-headers';
 import { validateSignInRequest } from './validators/signin-request.validator';
 import { validateSignUpRequest } from './validators/signup-request.validator';
+import {
+  createCurrentUserInternalError,
+  createCurrentUserUnauthenticatedError,
+} from './mappers/current-user-errors';
 
 @Injectable()
 export class IdentityService {
@@ -124,13 +130,43 @@ export class IdentityService {
   ): Promise<SignOutResponse> {
     try {
       await this.identityAuthContext.auth.api.signOut({
-        headers: createSignOutRequestHeaders(metadata),
+        headers: createSessionRequestHeaders(metadata),
       });
 
       return {};
     } catch {
       throw mapBetterAuthSignOutError();
     }
+  }
+
+  async currentUser(
+    _request: CurrentUserRequest,
+    metadata: Metadata,
+  ): Promise<CurrentUserResponse> {
+    let currentSession;
+
+    try {
+      currentSession = await this.identityAuthContext.auth.api.getSession({
+        headers: createSessionRequestHeaders(metadata),
+      });
+    } catch {
+      throw new StructuredGrpcError(status.INTERNAL, [
+        createCurrentUserInternalError(),
+      ]);
+    }
+
+    if (!currentSession) {
+      throw new StructuredGrpcError(status.UNAUTHENTICATED, [
+        createCurrentUserUnauthenticatedError(),
+      ]);
+    }
+
+    return {
+      email: currentSession.user.email,
+      emailVerified: currentSession.user.emailVerified,
+      name: currentSession.user.name,
+      userId: currentSession.user.id,
+    };
   }
 
   async verifyEmail(request: VerifyEmailRequest): Promise<VerifyEmailResponse> {

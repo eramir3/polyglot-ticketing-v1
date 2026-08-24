@@ -3,6 +3,8 @@ import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { IdentityService } from './identity.service';
 import {
+  CurrentUserRequest,
+  CurrentUserResponse,
   SignInRequest,
   SignInResponse,
   SignOutRequest,
@@ -33,6 +35,14 @@ export class IdentityController {
     metadata: Metadata,
   ): Promise<SignOutResponse> {
     return this.identityService.signOut(request, metadata);
+  }
+
+  @GrpcMethod('IdentityService', 'CurrentUser')
+  currentUser(
+    request: CurrentUserRequest,
+    metadata: Metadata,
+  ): Promise<CurrentUserResponse> {
+    return this.identityService.currentUser(request, metadata);
   }
 
   @GrpcMethod('IdentityService', 'VerifyEmail')

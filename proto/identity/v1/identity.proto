@@ -9,6 +9,7 @@ service IdentityService {
   rpc SignUp(SignUpRequest) returns (SignUpResponse);
   rpc SignIn(SignInRequest) returns (SignInResponse);
   rpc SignOut(SignOutRequest) returns (SignOutResponse);
+  rpc CurrentUser(CurrentUserRequest) returns (CurrentUserResponse);
   rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
 }
 
@@ -46,6 +47,15 @@ message SignInResponse {
 message SignOutRequest {}
 
 message SignOutResponse {}
+
+message CurrentUserRequest {}
+
+message CurrentUserResponse {
+  string user_id = 1;
+  string name = 2;
+  string email = 3;
+  bool email_verified = 4;
+}
 
 message VerifyEmailRequest {
   string token = 1 [(buf.validate.field).string.min_len = 1];

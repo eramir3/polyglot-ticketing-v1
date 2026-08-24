@@ -11,8 +11,11 @@ import {
 } from '../errors/grpc-error';
 import { IDENTITY_GRPC_CLIENT } from './identity.constants';
 import { createAuthRequestMetadata } from './metadata/auth-request-metadata';
-import { createSignOutRequestMetadata } from './metadata/signout-request-metadata';
+import { createSessionRequestMetadata } from './metadata/session-request-metadata';
 import {
+  CurrentUserRequest,
+  CurrentUserResponse,
+  IdentityCurrentUserResponse,
   IdentitySignInResponse,
   IdentityGrpcService,
   SignInRequest,
@@ -71,9 +74,26 @@ export class AuthService implements OnModuleInit {
       await firstValueFrom(
         this.identityService.signOut(
           {} satisfies SignOutRequest,
-          createSignOutRequestMetadata(headers),
+          createSessionRequestMetadata(headers),
         ),
       );
+    } catch (error: unknown) {
+      this.throwGrpcError(error);
+    }
+  }
+
+  async currentUser(
+    headers: IncomingHttpHeaders,
+  ): Promise<CurrentUserResponse> {
+    try {
+      const response = await firstValueFrom(
+        this.identityService.currentUser(
+          {} satisfies CurrentUserRequest,
+          createSessionRequestMetadata(headers),
+        ),
+      );
+
+      return toCurrentUserResponse(response);
     } catch (error: unknown) {
       this.throwGrpcError(error);
     }
@@ -112,4 +132,17 @@ export class AuthService implements OnModuleInit {
       },
     ]);
   }
+}
+
+function toCurrentUserResponse(
+  response: IdentityCurrentUserResponse,
+): CurrentUserResponse {
+  return {
+    user: {
+      email: response.email,
+      emailVerified: response.emailVerified,
+      id: response.userId,
+      name: response.name,
+    },
+  };
 }
