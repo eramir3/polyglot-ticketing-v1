@@ -1,13 +1,15 @@
-import { IncomingHttpHeaders } from 'node:http';
 import {
   Body,
   Controller,
   Get,
-  Headers,
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
+import { CurrentUser } from '../identity/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../identity/authenticated-request';
+import { SessionAuthGuard } from '../identity/guards/session-auth.guard';
 import { CreateTicketDto } from './dtos/create-ticket.dto';
 import { UpdateTicketDto } from './dtos/update-ticket.dto';
 import { TicketsService } from './tickets.service';
@@ -28,19 +30,21 @@ export class TicketsController {
   }
 
   @Put(':id')
+  @UseGuards(SessionAuthGuard)
   updateTicket(
     @Param('id') id: string,
     @Body() dto: UpdateTicketDto,
-    @Headers() headers: IncomingHttpHeaders,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<Ticket> {
-    return this.ticketsService.updateTicket(id, dto, headers);
+    return this.ticketsService.updateTicket(id, dto, user.id);
   }
 
   @Post()
+  @UseGuards(SessionAuthGuard)
   createTicket(
     @Body() dto: CreateTicketDto,
-    @Headers() headers: IncomingHttpHeaders,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<CreateTicketResponse> {
-    return this.ticketsService.createTicket(dto, headers);
+    return this.ticketsService.createTicket(dto, user.id);
   }
 }

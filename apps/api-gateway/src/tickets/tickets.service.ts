@@ -1,9 +1,7 @@
-import { IncomingHttpHeaders } from 'node:http';
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { throwGatewayGrpcError } from '../errors/throw-grpc-error';
-import { AuthService } from '../identity/auth.service';
 import { TICKETS_GRPC_CLIENT } from './tickets.constants';
 import {
   CreateTicketRequest,
@@ -18,7 +16,6 @@ export class TicketsService implements OnModuleInit {
   private ticketsService!: TicketsGrpcService;
 
   constructor(
-    private readonly authService: AuthService,
     @Inject(TICKETS_GRPC_CLIENT) private readonly ticketsClient: ClientGrpc,
   ) {}
 
@@ -29,15 +26,13 @@ export class TicketsService implements OnModuleInit {
 
   async createTicket(
     request: Pick<CreateTicketRequest, 'price' | 'title'>,
-    headers: IncomingHttpHeaders,
+    userId: string,
   ): Promise<CreateTicketResponse> {
-    const currentUser = await this.authService.currentUser(headers);
-
     try {
       return await firstValueFrom(
         this.ticketsService.createTicket({
           ...request,
-          userId: currentUser.user.id,
+          userId,
         }),
       );
     } catch (error: unknown) {
@@ -62,16 +57,14 @@ export class TicketsService implements OnModuleInit {
   async updateTicket(
     id: string,
     request: Pick<UpdateTicketRequest, 'price' | 'title'>,
-    headers: IncomingHttpHeaders,
+    userId: string,
   ): Promise<Ticket> {
-    const currentUser = await this.authService.currentUser(headers);
-
     try {
       const response = await firstValueFrom(
         this.ticketsService.updateTicket({
           ...request,
           id,
-          userId: currentUser.user.id,
+          userId,
         }),
       );
       return response.ticket;

@@ -12,7 +12,6 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { createValidationApiError } from '../src/errors/validation-error';
-import { AuthService } from '../src/identity/auth.service';
 import {
   MAX_TICKET_PRICE,
   TICKETS_GRPC_LOADER_OPTIONS,
@@ -43,23 +42,14 @@ describe('tickets gRPC serialization', () => {
         url: `127.0.0.1:${port}`,
       },
     }) as ClientGrpc & { close(): void };
-    const ticketsService = new TicketsService(
-      {
-        currentUser: async () => ({
-          user: {
-            email: 'test@example.com',
-            emailVerified: true,
-            id: 'user-1',
-            name: 'Test User',
-          },
-        }),
-      } as unknown as AuthService,
-      client,
-    );
+    const ticketsService = new TicketsService(client);
     ticketsService.onModuleInit();
 
     await expect(
-      ticketsService.createTicket({ price: 10_000, title: 'Metallica' }, {}),
+      ticketsService.createTicket(
+        { price: 10_000, title: 'Metallica' },
+        'user-1',
+      ),
     ).resolves.toEqual({
       id: 'ticket-1',
       price: 10_000,

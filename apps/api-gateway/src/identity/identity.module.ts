@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { SessionAuthGuard } from './guards/session-auth.guard';
 import { IDENTITY_GRPC_CLIENT } from './identity.constants';
 
 @Module({
@@ -26,7 +27,7 @@ import { IDENTITY_GRPC_CLIENT } from './identity.constants';
     ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
-  exports: [AuthService],
+  providers: [AuthService, SessionAuthGuard],
+  exports: [AuthService, SessionAuthGuard],
 })
 export class IdentityModule {}
