@@ -48,12 +48,15 @@ may access that database directly.
 
 `tickets` is a Go gRPC service on `tickets:50052` inside local Docker Compose.
 It owns `tickets-db` and creates tickets with a generated UUID, non-blank
-title, positive integer price in minor units, and the authenticated user's ID.
+title, and the authenticated user's ID. Public REST prices are positive integer
+minor units from `1` through `9007199254740991` (the JavaScript safe-integer
+limit).
 It has no public HTTP endpoint; the API gateway owns `POST /api/tickets`.
 
 ## Create Ticket Flow
 
-1. A client calls `POST /api/tickets` with `title` and positive integer `price`.
+1. A client calls `POST /api/tickets` with `title` and a positive integer
+   `price` no larger than `9007199254740991`.
 2. The gateway validates the request, resolves the current user from the Better
    Auth session, and calls `tickets.v1.TicketsService.CreateTicket` over gRPC.
 3. Tickets validates the complete gRPC request and persists the ticket in

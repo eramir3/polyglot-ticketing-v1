@@ -26,6 +26,12 @@ func TestServiceCreateRejectsInvalidInput(t *testing.T) {
 			code:  "INVALID_PRICE",
 			field: "price",
 		},
+		{
+			name:  "price above the JavaScript safe integer limit",
+			input: CreateInput{Title: "Concert ticket", Price: MaxPrice + 1, UserID: "user-1"},
+			code:  "INVALID_PRICE",
+			field: "price",
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -42,6 +48,26 @@ func TestServiceCreateRejectsInvalidInput(t *testing.T) {
 				t.Fatalf("unexpected validation error: %+v", validationErrors[0])
 			}
 		})
+	}
+}
+
+func TestServiceCreateAcceptsMaximumSafePrice(t *testing.T) {
+	service := NewService(fakeRepository{})
+
+	created, validationErrors, err := service.Create(context.Background(), CreateInput{
+		Title:  "Concert ticket",
+		Price:  MaxPrice,
+		UserID: "user-1",
+	})
+
+	if err != nil {
+		t.Fatalf("expected no internal error, got %v", err)
+	}
+	if len(validationErrors) != 0 {
+		t.Fatalf("expected no validation errors, got %+v", validationErrors)
+	}
+	if created.Price != MaxPrice {
+		t.Fatalf("expected price %d, got %d", MaxPrice, created.Price)
 	}
 }
 

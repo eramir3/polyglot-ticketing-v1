@@ -2,7 +2,10 @@ import { join } from 'node:path';
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { IdentityModule } from '../identity/identity.module';
-import { TICKETS_GRPC_CLIENT } from './tickets.constants';
+import {
+  TICKETS_GRPC_CLIENT,
+  TICKETS_GRPC_LOADER_OPTIONS,
+} from './tickets.constants';
 import { TicketsController } from './tickets.controller';
 import { TicketsService } from './tickets.service';
 
@@ -16,6 +19,7 @@ import { TicketsService } from './tickets.service';
         options: {
           loader: {
             includeDirs: [join(process.cwd(), 'proto')],
+            ...TICKETS_GRPC_LOADER_OPTIONS,
           },
           package: 'tickets.v1',
           protoPath: join(process.cwd(), 'proto/tickets/v1/tickets.proto'),

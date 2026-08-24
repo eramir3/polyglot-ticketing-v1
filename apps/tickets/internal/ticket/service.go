@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+const MaxPrice int64 = 9_007_199_254_740_991
+
 type ValidationError struct {
 	Code    string `json:"code"`
 	Field   string `json:"field,omitempty"`
@@ -28,11 +30,11 @@ func (service *Service) Create(ctx context.Context, input CreateInput) (Ticket, 
 		}}, nil
 	}
 
-	if input.Price <= 0 {
+	if input.Price <= 0 || input.Price > MaxPrice {
 		return Ticket{}, []ValidationError{{
 			Code:    "INVALID_PRICE",
 			Field:   "price",
-			Message: "Price must be a positive integer.",
+			Message: "Price must be between 1 and 9007199254740991.",
 		}}, nil
 	}
 
