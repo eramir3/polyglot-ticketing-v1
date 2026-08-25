@@ -225,6 +225,7 @@ make test
 make generate-proto
 make serve-tickets
 make docker-up
+make docker-up-tools
 ```
 
 The Makefile delegates to the existing Nx, Go, Buf, and Docker Compose
@@ -241,7 +242,13 @@ Local ports:
 | Tickets gRPC      | `tickets:50052` within Compose only  |
 | Tickets Postgres  | `localhost:5433`                     |
 | NATS JetStream    | `nats://localhost:4222`              |
+| NATS monitoring   | `http://localhost:8222`              |
+| NUI               | `http://localhost:31311`             |
 | Mailpit inbox     | `http://localhost:8025`              |
+
+NUI is optional local development tooling. Start it with `make docker-up-tools`,
+then add a connection to `nats://nats:4222` from the NUI web interface. Its
+configuration persists in the local `nui-data` Docker volume.
 
 ## Planned Services
 

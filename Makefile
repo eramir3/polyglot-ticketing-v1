@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install generate-proto build build-api-gateway build-identity build-tickets test test-api-gateway test-tickets serve-api-gateway serve-identity serve-tickets docker-build docker-up docker-down docker-logs docker-ps
+.PHONY: help install generate-proto build build-api-gateway build-identity build-tickets test test-api-gateway test-tickets serve-api-gateway serve-identity serve-tickets docker-build docker-up docker-up-tools docker-down docker-logs docker-ps
 
 help: ## Show available commands.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-22s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -44,6 +44,9 @@ docker-build: ## Build all Docker Compose service images.
 
 docker-up: ## Start the local Docker Compose stack and rebuild images.
 	docker compose up -d --build
+
+docker-up-tools: ## Start optional local development tools, including NUI.
+	docker compose --profile tools up -d nui
 
 docker-down: ## Stop and remove the local Docker Compose stack.
 	docker compose down
