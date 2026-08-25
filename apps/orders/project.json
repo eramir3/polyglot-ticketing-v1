@@ -1,0 +1,45 @@
+{
+  "name": "orders",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/orders",
+  "projectType": "application",
+  "targets": {
+    "generate-proto": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{workspaceRoot}/protogen/go",
+        "{workspaceRoot}/protogen/ts"
+      ],
+      "options": {
+        "command": "pnpm proto:generate"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["generate-proto"],
+      "outputs": ["{workspaceRoot}/dist/apps/orders"],
+      "options": {
+        "command": "mkdir -p ../../dist/apps/orders && go build -o ../../dist/apps/orders/orders ./cmd/orders",
+        "cwd": "apps/orders"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["generate-proto"],
+      "options": {
+        "command": "go test ./...",
+        "cwd": "apps/orders"
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "go run ./cmd/orders",
+        "cwd": "apps/orders"
+      }
+    }
+  },
+  "tags": []
+}

@@ -1,0 +1,22 @@
+FROM golang:1.26-alpine AS build
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY apps/orders ./apps/orders
+COPY protogen/go ./protogen/go
+COPY contracts ./contracts
+RUN CGO_ENABLED=0 go build -o /out/orders ./apps/orders/cmd/orders
+RUN CGO_ENABLED=0 go build -o /out/orders-migrate ./apps/orders/cmd/migrate
+
+FROM alpine:3.22
+
+WORKDIR /app
+
+COPY --from=build /out/orders /usr/local/bin/orders
+COPY --from=build /out/orders-migrate /usr/local/bin/orders-migrate
+COPY apps/orders/migrations ./migrations
+
+CMD ["orders"]

@@ -87,6 +87,54 @@ services:
     volumes:
       - tickets-db-data:/var/lib/postgresql/data
 
+  orders:
+    build:
+      context: .
+      dockerfile: apps/orders/Dockerfile.dev
+    image: orders:dev
+    container_name: orders
+    environment:
+      DATABASE_URL: postgresql://orders:${ORDERS_DB_PASSWORD:?ORDERS_DB_PASSWORD must be set}@orders-db:5432/orders-db?sslmode=disable
+      NATS_URL: nats://nats:4222
+    depends_on:
+      nats:
+        condition: service_started
+      orders-db:
+        condition: service_healthy
+      orders-migrate:
+        condition: service_completed_successfully
+
+  orders-migrate:
+    build:
+      context: .
+      dockerfile: apps/orders/Dockerfile.dev
+    image: orders-migrate:dev
+    container_name: orders-migrate
+    command: ['orders-migrate']
+    environment:
+      DATABASE_URL: postgresql://orders:${ORDERS_DB_PASSWORD:?ORDERS_DB_PASSWORD must be set}@orders-db:5432/orders-db?sslmode=disable
+    depends_on:
+      orders-db:
+        condition: service_healthy
+    restart: 'no'
+
+  orders-db:
+    image: postgres:17-alpine
+    container_name: orders-db
+    environment:
+      POSTGRES_DB: orders-db
+      POSTGRES_PASSWORD: ${ORDERS_DB_PASSWORD:?ORDERS_DB_PASSWORD must be set}
+      POSTGRES_USER: orders
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U orders -d orders-db']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - '5434:5432'
+    volumes:
+      - orders-db-data:/var/lib/postgresql/data
+
   identity:
     build:
       context: .
@@ -158,5 +206,6 @@ services:
 volumes:
   identity-db-data:
   tickets-db-data:
+  orders-db-data:
   nats-data:
   nui-data:

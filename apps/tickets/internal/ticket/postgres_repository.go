@@ -11,7 +11,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"polyglot-ticketing-v1/apps/tickets/internal/outbox"
+	ticketevents "polyglot-ticketing-v1/contracts/tickets"
 	ticketsv1 "polyglot-ticketing-v1/protogen/go/tickets/v1"
 )
 
@@ -53,7 +53,7 @@ func (repository *PostgresRepository) Create(ctx context.Context, input CreateIn
 
 	_, err = tx.Exec(ctx, `
 		INSERT INTO outbox_events (event_id, subject, payload, created_at)
-		VALUES ($1, $2, $3, $4)`, eventID, outbox.TicketCreatedSubject, payload, occurredAt)
+		VALUES ($1, $2, $3, $4)`, eventID, ticketevents.TicketCreatedSubject, payload, occurredAt)
 	if err != nil {
 		return Ticket{}, err
 	}
@@ -166,7 +166,7 @@ func (repository *PostgresRepository) Update(ctx context.Context, id string, inp
 
 	_, err = tx.Exec(ctx, `
 		INSERT INTO outbox_events (event_id, subject, payload, created_at)
-		VALUES ($1, $2, $3, $4)`, eventID, outbox.TicketUpdatedSubject, payload, occurredAt)
+		VALUES ($1, $2, $3, $4)`, eventID, ticketevents.TicketUpdatedSubject, payload, occurredAt)
 	if err != nil {
 		return Ticket{}, err
 	}

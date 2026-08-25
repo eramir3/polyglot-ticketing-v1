@@ -57,6 +57,13 @@ limit).
 It has no public HTTP endpoint; the API gateway owns `GET /api/tickets` and
 `GET /api/tickets/:id`, plus `POST /api/tickets` and `PUT /api/tickets/:id`.
 
+### Orders
+
+`orders` is a Go background service with no public HTTP or gRPC API in this
+slice. It owns `orders-db` and consumes retained ticket events from JetStream
+to maintain its local ticket projection. It has the `orders` data model ready
+for a later order-creation workflow.
+
 ## List Tickets Flow
 
 1. A client calls `GET /api/tickets` without pagination.
@@ -156,7 +163,7 @@ send another message.
 | ---------------------------------- | ------------------------- | ------------------------------- |
 | User application to API gateway    | REST now; GraphQL planned | Gateway REST signup implemented |
 | API gateway to backend services    | gRPC                      | Identity signup implemented     |
-| Backend service to backend service | NATS JetStream            | Planned                         |
+| Backend service to backend service | NATS JetStream            | Tickets-to-orders projection    |
 
 Kubernetes Gateway API will provide ingress and routing in a later deployment
 phase. No Kubernetes controller or manifests are implemented yet.
@@ -214,6 +221,7 @@ Required values are listed in `.env.example`:
 - `TICKETING_USER_APP_ORIGIN`
 - `SMTP_FROM`
 - `TICKETS_DB_PASSWORD`
+- `ORDERS_DB_PASSWORD`
 - `NATS_URL` (defaults to `nats://localhost:4222` when running tickets locally)
 
 Common commands:
@@ -241,6 +249,7 @@ Local ports:
 | Identity Postgres | `localhost:5432`                     |
 | Tickets gRPC      | `tickets:50052` within Compose only  |
 | Tickets Postgres  | `localhost:5433`                     |
+| Orders Postgres   | `localhost:5434`                     |
 | NATS JetStream    | `nats://localhost:4222`              |
 | NATS monitoring   | `http://localhost:8222`              |
 | NUI               | `http://localhost:31311`             |
@@ -288,6 +297,14 @@ a string in protobuf JSON to preserve JavaScript integer precision.
 
 `tickets.ticket.updated.v1` carries `tickets.v1.TicketUpdated`, which has the
 same JSON shape and represents the ticket snapshot after the update.
+
+Orders consumes both ticket event subjects through its durable
+`orders-ticket-projection-v1` JetStream consumer, replaying retained events to
+maintain an orders-owned local `tickets` projection. Its `orders.ticket_id`
+foreign key references that local table in `orders-db`, never `tickets-db`.
+The `orders` table has `id`, `expires_at`, `user_id`, `ticket_id`, and a
+`status` enum with `Created`, `Canceled`, `AwaitingPayment`, and `Complete`.
+Order creation is not implemented yet.
 
 Additional event subjects, consumers, CI/CD, observability, and deployment
 environments remain open design and implementation work.
