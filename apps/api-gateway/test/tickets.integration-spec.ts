@@ -94,332 +94,338 @@ describe('tickets endpoints', () => {
     await identityDatabase?.stop();
   });
 
-  it('has a route handler listening to /api/tickets for POST requests', async () => {
-    const response = await postTicket({ price: 10_000, title: 'Metallica' });
+  describe('create tickets', () => {
+    it('has a route handler listening to /api/tickets for POST requests', async () => {
+      const response = await postTicket({ price: 10_000, title: 'Metallica' });
 
-    expect(response.status).toBe(401);
-    expect(response.body).toEqual({
-      errors: [
-        expect.objectContaining({
-          code: 'UNAUTHENTICATED',
-        }),
-      ],
-    });
-  });
-
-  it('can only be accessed if the user is signed in', async () => {
-    const response = await postTicket({ price: 10_000, title: 'Metallica' });
-
-    expect(response.status).toBe(401);
-    expect(response.body).toEqual({
-      errors: [
-        expect.objectContaining({
-          code: 'UNAUTHENTICATED',
-        }),
-      ],
-    });
-  });
-
-  it('returns an error if an invalid title is provided', async () => {
-    const response = await postTicket(
-      { price: 10_000, title: '' },
-      sessionCookie,
-    );
-
-    expect(response.status).toBe(400);
-    expect(response.body).toEqual({
-      errors: [
-        expect.objectContaining({
-          code: 'INVALID_TITLE',
-          field: 'title',
-        }),
-      ],
-    });
-  });
-
-  it('returns an error if an invalid price is provided', async () => {
-    const response = await postTicket(
-      { price: 0, title: 'Metallica' },
-      sessionCookie,
-    );
-
-    expect(response.status).toBe(400);
-    expect(response.body).toEqual({
-      errors: [
-        expect.objectContaining({
-          code: 'INVALID_PRICE',
-          field: 'price',
-        }),
-      ],
-    });
-  });
-
-  it('creates a ticket with valid parameters', async () => {
-    const response = await postTicket(
-      { price: 10_000, title: 'Metallica' },
-      sessionCookie,
-    );
-
-    expect(response.status).toBe(201);
-    expect(response.body).toEqual({
-      id: expect.any(String),
-      price: 10_000,
-      title: 'Metallica',
-      userId,
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'UNAUTHENTICATED',
+          }),
+        ],
+      });
     });
 
-    const ticket = response.body as { id: string };
-    const database = new Client({ connectionString: ticketsDatabaseUrl });
-    await database.connect();
-    try {
-      const result = await database.query<{
-        id: string;
-        price: string;
-        title: string;
-        user_id: string;
-      }>(
-        `SELECT id::text, price::text, title, user_id
-         FROM tickets
-         WHERE id = $1`,
-        [ticket.id],
+    it('can only be accessed if the user is signed in', async () => {
+      const response = await postTicket({ price: 10_000, title: 'Metallica' });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'UNAUTHENTICATED',
+          }),
+        ],
+      });
+    });
+
+    it('returns an error if an invalid title is provided', async () => {
+      const response = await postTicket(
+        { price: 10_000, title: '' },
+        sessionCookie,
       );
 
-      expect(result.rows).toEqual([
-        {
-          id: ticket.id,
-          price: '10000',
-          title: 'Metallica',
-          user_id: userId,
-        },
-      ]);
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'INVALID_TITLE',
+            field: 'title',
+          }),
+        ],
+      });
+    });
 
-      const outboxResult = await database.query<{
-        event_id: string;
-        payload: Buffer;
-        subject: string;
-      }>(
-        `SELECT event_id::text, subject, payload
+    it('returns an error if an invalid price is provided', async () => {
+      const response = await postTicket(
+        { price: 0, title: 'Metallica' },
+        sessionCookie,
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'INVALID_PRICE',
+            field: 'price',
+          }),
+        ],
+      });
+    });
+
+    it('creates a ticket with valid parameters', async () => {
+      const response = await postTicket(
+        { price: 10_000, title: 'Metallica' },
+        sessionCookie,
+      );
+
+      expect(response.status).toBe(201);
+      expect(response.body).toEqual({
+        id: expect.any(String),
+        price: 10_000,
+        title: 'Metallica',
+        userId,
+      });
+
+      const ticket = response.body as { id: string };
+      const database = new Client({ connectionString: ticketsDatabaseUrl });
+      await database.connect();
+      try {
+        const result = await database.query<{
+          id: string;
+          price: string;
+          title: string;
+          user_id: string;
+        }>(
+          `SELECT id::text, price::text, title, user_id
+         FROM tickets
+         WHERE id = $1`,
+          [ticket.id],
+        );
+
+        expect(result.rows).toEqual([
+          {
+            id: ticket.id,
+            price: '10000',
+            title: 'Metallica',
+            user_id: userId,
+          },
+        ]);
+
+        const outboxResult = await database.query<{
+          event_id: string;
+          payload: Buffer;
+          subject: string;
+        }>(
+          `SELECT event_id::text, subject, payload
          FROM outbox_events
          WHERE published_at IS NULL
          ORDER BY created_at DESC
          LIMIT 1`,
-      );
-      expect(outboxResult.rows).toHaveLength(1);
-      expect(outboxResult.rows[0].subject).toBe('tickets.ticket.created.v1');
+        );
+        expect(outboxResult.rows).toHaveLength(1);
+        expect(outboxResult.rows[0].subject).toBe('tickets.ticket.created.v1');
 
-      const event = fromBinary(
-        TicketCreatedSchema,
-        outboxResult.rows[0].payload,
+        const event = fromBinary(
+          TicketCreatedSchema,
+          outboxResult.rows[0].payload,
+        );
+        expect(event).toMatchObject({
+          eventId: outboxResult.rows[0].event_id,
+          ticket: {
+            id: ticket.id,
+            price: BigInt(10_000),
+            title: 'Metallica',
+            userId,
+          },
+        });
+      } finally {
+        await database.end();
+      }
+    });
+  });
+
+  describe('read tickets', () => {
+    it('retrieves all tickets without authentication', async () => {
+      const createdResponse = await postTicket(
+        { price: 12_500, title: 'Iron Maiden' },
+        sessionCookie,
       );
-      expect(event).toMatchObject({
-        eventId: outboxResult.rows[0].event_id,
-        ticket: {
-          id: ticket.id,
-          price: BigInt(10_000),
-          title: 'Metallica',
-          userId,
-        },
+      expect(createdResponse.status).toBe(201);
+
+      const response = await getJson('/api/tickets');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            price: 12_500,
+            title: 'Iron Maiden',
+            userId,
+          }),
+        ]),
+      );
+    });
+
+    it('retrieves a single ticket without authentication', async () => {
+      const createdResponse = await postTicket(
+        { price: 15_000, title: 'Muse' },
+        sessionCookie,
+      );
+      expect(createdResponse.status).toBe(201);
+      const created = createdResponse.body as { id: string };
+
+      const response = await getJson(`/api/tickets/${created.id}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        id: created.id,
+        price: 15_000,
+        title: 'Muse',
+        userId,
       });
-    } finally {
-      await database.end();
-    }
-  });
+    });
 
-  it('retrieves all tickets without authentication', async () => {
-    const createdResponse = await postTicket(
-      { price: 12_500, title: 'Iron Maiden' },
-      sessionCookie,
-    );
-    expect(createdResponse.status).toBe(201);
+    it('returns a 404 if the ticket is not found', async () => {
+      const response = await getJson(`/api/tickets/${randomUUID()}`);
 
-    const response = await getJson('/api/tickets');
-
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          price: 12_500,
-          title: 'Iron Maiden',
-          userId,
-        }),
-      ]),
-    );
-  });
-
-  it('retrieves a single ticket without authentication', async () => {
-    const createdResponse = await postTicket(
-      { price: 15_000, title: 'Muse' },
-      sessionCookie,
-    );
-    expect(createdResponse.status).toBe(201);
-    const created = createdResponse.body as { id: string };
-
-    const response = await getJson(`/api/tickets/${created.id}`);
-
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({
-      id: created.id,
-      price: 15_000,
-      title: 'Muse',
-      userId,
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'NOT_FOUND',
+          }),
+        ],
+      });
     });
   });
 
-  it('returns a 404 if the ticket is not found', async () => {
-    const response = await getJson(`/api/tickets/${randomUUID()}`);
+  describe('update tickets', () => {
+    it('can only update tickets when signed in', async () => {
+      const response = await putTicket(randomUUID(), {
+        price: 10_000,
+        title: 'Metallica',
+      });
 
-    expect(response.status).toBe(404);
-    expect(response.body).toEqual({
-      errors: [
-        expect.objectContaining({
-          code: 'NOT_FOUND',
-        }),
-      ],
-    });
-  });
-
-  it('can only update tickets when signed in', async () => {
-    const response = await putTicket(randomUUID(), {
-      price: 10_000,
-      title: 'Metallica',
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'UNAUTHENTICATED',
+          }),
+        ],
+      });
     });
 
-    expect(response.status).toBe(401);
-    expect(response.body).toEqual({
-      errors: [
-        expect.objectContaining({
-          code: 'UNAUTHENTICATED',
-        }),
-      ],
-    });
-  });
+    it('can only update tickets owned by the signed-in user', async () => {
+      const createdResponse = await postTicket(
+        { price: 15_000, title: 'The National' },
+        sessionCookie,
+      );
+      expect(createdResponse.status).toBe(201);
+      const created = createdResponse.body as { id: string };
+      const anotherUser = await createAuthenticatedUser();
 
-  it('can only update tickets owned by the signed-in user', async () => {
-    const createdResponse = await postTicket(
-      { price: 15_000, title: 'The National' },
-      sessionCookie,
-    );
-    expect(createdResponse.status).toBe(201);
-    const created = createdResponse.body as { id: string };
-    const anotherUser = await createAuthenticatedUser();
+      const response = await putTicket(
+        created.id,
+        { price: 18_000, title: 'The National Updated' },
+        anotherUser.sessionCookie,
+      );
 
-    const response = await putTicket(
-      created.id,
-      { price: 18_000, title: 'The National Updated' },
-      anotherUser.sessionCookie,
-    );
-
-    expect(response.status).toBe(403);
-    expect(response.body).toEqual({
-      errors: [
-        expect.objectContaining({
-          code: 'FORBIDDEN',
-        }),
-      ],
-    });
-  });
-
-  it('returns a 404 if the provided id does not exist', async () => {
-    const response = await putTicket(
-      randomUUID(),
-      { price: 18_000, title: 'Metallica Updated' },
-      sessionCookie,
-    );
-
-    expect(response.status).toBe(404);
-    expect(response.body).toEqual({
-      errors: [
-        expect.objectContaining({
-          code: 'NOT_FOUND',
-        }),
-      ],
-    });
-  });
-
-  it('returns an error when an updated title is invalid', async () => {
-    const response = await putTicket(
-      randomUUID(),
-      { price: 10_000, title: '' },
-      sessionCookie,
-    );
-
-    expect(response.status).toBe(400);
-    expect(response.body).toEqual({
-      errors: [
-        expect.objectContaining({
-          code: 'INVALID_TITLE',
-          field: 'title',
-        }),
-      ],
-    });
-  });
-
-  it('returns an error when an updated price is invalid', async () => {
-    const response = await putTicket(
-      randomUUID(),
-      { price: 0, title: 'Metallica' },
-      sessionCookie,
-    );
-
-    expect(response.status).toBe(400);
-    expect(response.body).toEqual({
-      errors: [
-        expect.objectContaining({
-          code: 'INVALID_PRICE',
-          field: 'price',
-        }),
-      ],
-    });
-  });
-
-  it('updates a ticket with valid parameters', async () => {
-    const createdResponse = await postTicket(
-      { price: 15_000, title: 'Mastodon' },
-      sessionCookie,
-    );
-    expect(createdResponse.status).toBe(201);
-    const created = createdResponse.body as { id: string };
-
-    const response = await putTicket(
-      created.id,
-      { price: 18_000, title: 'Mastodon Updated' },
-      sessionCookie,
-    );
-
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({
-      id: created.id,
-      price: 18_000,
-      title: 'Mastodon Updated',
-      userId,
+      expect(response.status).toBe(403);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'FORBIDDEN',
+          }),
+        ],
+      });
     });
 
-    const database = new Client({ connectionString: ticketsDatabaseUrl });
-    await database.connect();
-    try {
-      const result = await database.query<{
-        id: string;
-        price: string;
-        title: string;
-        user_id: string;
-      }>(
-        `SELECT id::text, price::text, title, user_id
+    it('returns a 404 if the provided id does not exist', async () => {
+      const response = await putTicket(
+        randomUUID(),
+        { price: 18_000, title: 'Metallica Updated' },
+        sessionCookie,
+      );
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'NOT_FOUND',
+          }),
+        ],
+      });
+    });
+
+    it('returns an error when an updated title is invalid', async () => {
+      const response = await putTicket(
+        randomUUID(),
+        { price: 10_000, title: '' },
+        sessionCookie,
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'INVALID_TITLE',
+            field: 'title',
+          }),
+        ],
+      });
+    });
+
+    it('returns an error when an updated price is invalid', async () => {
+      const response = await putTicket(
+        randomUUID(),
+        { price: 0, title: 'Metallica' },
+        sessionCookie,
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'INVALID_PRICE',
+            field: 'price',
+          }),
+        ],
+      });
+    });
+
+    it('updates a ticket with valid parameters', async () => {
+      const createdResponse = await postTicket(
+        { price: 15_000, title: 'Mastodon' },
+        sessionCookie,
+      );
+      expect(createdResponse.status).toBe(201);
+      const created = createdResponse.body as { id: string };
+
+      const response = await putTicket(
+        created.id,
+        { price: 18_000, title: 'Mastodon Updated' },
+        sessionCookie,
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        id: created.id,
+        price: 18_000,
+        title: 'Mastodon Updated',
+        userId,
+      });
+
+      const database = new Client({ connectionString: ticketsDatabaseUrl });
+      await database.connect();
+      try {
+        const result = await database.query<{
+          id: string;
+          price: string;
+          title: string;
+          user_id: string;
+        }>(
+          `SELECT id::text, price::text, title, user_id
          FROM tickets
          WHERE id = $1`,
-        [created.id],
-      );
+          [created.id],
+        );
 
-      expect(result.rows).toEqual([
-        {
-          id: created.id,
-          price: '18000',
-          title: 'Mastodon Updated',
-          user_id: userId,
-        },
-      ]);
-    } finally {
-      await database.end();
-    }
+        expect(result.rows).toEqual([
+          {
+            id: created.id,
+            price: '18000',
+            title: 'Mastodon Updated',
+            user_id: userId,
+          },
+        ]);
+      } finally {
+        await database.end();
+      }
+    });
   });
 
   async function createAuthenticatedUser(): Promise<{
