@@ -13,7 +13,10 @@ import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 import { createApiGatewayApplication } from '../src/app/app.bootstrap';
 import { createIdentityMicroservice } from '../../identity/src/app/app.bootstrap';
 import { migrateIdentityDatabase } from '../../identity/src/migrate-identity-database';
-import { TicketCreatedSchema } from '../../../protogen/ts/tickets/v1/events_pb.js';
+import {
+  TicketCreatedSchema,
+  TicketUpdatedSchema,
+} from '../../../protogen/ts/tickets/v1/events_pb.js';
 
 describe('tickets endpoints', () => {
   let apiGateway: INestApplication;
@@ -422,6 +425,34 @@ describe('tickets endpoints', () => {
             user_id: userId,
           },
         ]);
+
+        const outboxResult = await database.query<{
+          event_id: string;
+          payload: Buffer;
+          subject: string;
+        }>(
+          `SELECT event_id::text, subject, payload
+           FROM outbox_events
+           WHERE subject = 'tickets.ticket.updated.v1'
+             AND published_at IS NULL
+           ORDER BY created_at DESC
+           LIMIT 1`,
+        );
+        expect(outboxResult.rows).toHaveLength(1);
+
+        const event = fromBinary(
+          TicketUpdatedSchema,
+          outboxResult.rows[0].payload,
+        );
+        expect(event).toMatchObject({
+          eventId: outboxResult.rows[0].event_id,
+          ticket: {
+            id: created.id,
+            price: BigInt(18_000),
+            title: 'Mastodon Updated',
+            userId,
+          },
+        });
       } finally {
         await database.end();
       }

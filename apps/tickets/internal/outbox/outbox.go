@@ -5,7 +5,10 @@ import (
 	"time"
 )
 
-const TicketCreatedSubject = "tickets.ticket.created.v1"
+const (
+	TicketCreatedSubject = "tickets.ticket.created.v1"
+	TicketUpdatedSubject = "tickets.ticket.updated.v1"
+)
 
 type Event struct {
 	EventID string

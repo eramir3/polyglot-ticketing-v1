@@ -77,6 +77,19 @@ func marshalTicketCreated(eventID string, occurredAt time.Time, created Ticket) 
 	})
 }
 
+func marshalTicketUpdated(eventID string, occurredAt time.Time, updated Ticket) ([]byte, error) {
+	return proto.Marshal(&ticketsv1.TicketUpdated{
+		EventId:    eventID,
+		OccurredAt: timestamppb.New(occurredAt),
+		Ticket: &ticketsv1.Ticket{
+			Id:     updated.ID,
+			Title:  updated.Title,
+			Price:  updated.Price,
+			UserId: updated.UserID,
+		},
+	})
+}
+
 func (repository *PostgresRepository) FindByID(ctx context.Context, id string) (Ticket, error) {
 	var found Ticket
 	err := repository.pool.QueryRow(
@@ -119,8 +132,14 @@ func (repository *PostgresRepository) List(ctx context.Context) ([]Ticket, error
 }
 
 func (repository *PostgresRepository) Update(ctx context.Context, id string, input UpdateInput) (Ticket, error) {
+	tx, err := repository.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return Ticket{}, err
+	}
+	defer tx.Rollback(ctx)
+
 	var updated Ticket
-	err := repository.pool.QueryRow(
+	err = tx.QueryRow(
 		ctx,
 		`UPDATE tickets
 		 SET title = $1, price = $2
@@ -134,6 +153,26 @@ func (repository *PostgresRepository) Update(ctx context.Context, id string, inp
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Ticket{}, ErrNotFound
 	}
+	if err != nil {
+		return Ticket{}, err
+	}
 
-	return updated, err
+	occurredAt := time.Now().UTC()
+	eventID := uuid.NewString()
+	payload, err := marshalTicketUpdated(eventID, occurredAt, updated)
+	if err != nil {
+		return Ticket{}, err
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO outbox_events (event_id, subject, payload, created_at)
+		VALUES ($1, $2, $3, $4)`, eventID, outbox.TicketUpdatedSubject, payload, occurredAt)
+	if err != nil {
+		return Ticket{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Ticket{}, err
+	}
+
+	return updated, nil
 }

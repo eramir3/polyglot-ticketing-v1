@@ -40,3 +40,34 @@ func TestMarshalTicketCreatedProducesTicketSnapshot(t *testing.T) {
 		t.Fatalf("unexpected ticket snapshot: %+v", event.GetTicket())
 	}
 }
+
+func TestMarshalTicketUpdatedProducesTicketSnapshot(t *testing.T) {
+	occurredAt := time.Date(2026, time.August, 25, 12, 0, 0, 0, time.UTC)
+	eventID := uuid.NewString()
+	payload, err := marshalTicketUpdated(eventID, occurredAt, Ticket{
+		ID:     "ticket-1",
+		Title:  "Updated concert ticket",
+		Price:  200,
+		UserID: "user-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal ticket-updated event: %v", err)
+	}
+
+	var event ticketsv1.TicketUpdated
+	if err := proto.Unmarshal(payload, &event); err != nil {
+		t.Fatalf("unmarshal ticket-updated event: %v", err)
+	}
+	if event.GetEventId() != eventID {
+		t.Fatalf("expected event ID %q, got %q", eventID, event.GetEventId())
+	}
+	if !event.GetOccurredAt().AsTime().Equal(occurredAt) {
+		t.Fatalf("unexpected occurrence time: %s", event.GetOccurredAt().AsTime())
+	}
+	if event.GetTicket().GetId() != "ticket-1" ||
+		event.GetTicket().GetTitle() != "Updated concert ticket" ||
+		event.GetTicket().GetPrice() != 200 ||
+		event.GetTicket().GetUserId() != "user-1" {
+		t.Fatalf("unexpected ticket snapshot: %+v", event.GetTicket())
+	}
+}

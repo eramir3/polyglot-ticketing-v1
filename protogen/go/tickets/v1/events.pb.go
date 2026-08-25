@@ -83,6 +83,67 @@ func (x *TicketCreated) GetTicket() *Ticket {
 	return nil
 }
 
+// TicketUpdated is an immutable snapshot of a ticket after an update.
+type TicketUpdated struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	Ticket        *Ticket                `protobuf:"bytes,3,opt,name=ticket,proto3" json:"ticket,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TicketUpdated) Reset() {
+	*x = TicketUpdated{}
+	mi := &file_tickets_v1_events_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TicketUpdated) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TicketUpdated) ProtoMessage() {}
+
+func (x *TicketUpdated) ProtoReflect() protoreflect.Message {
+	mi := &file_tickets_v1_events_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TicketUpdated.ProtoReflect.Descriptor instead.
+func (*TicketUpdated) Descriptor() ([]byte, []int) {
+	return file_tickets_v1_events_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *TicketUpdated) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *TicketUpdated) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *TicketUpdated) GetTicket() *Ticket {
+	if x != nil {
+		return x.Ticket
+	}
+	return nil
+}
+
 var File_tickets_v1_events_proto protoreflect.FileDescriptor
 
 const file_tickets_v1_events_proto_rawDesc = "" +
@@ -90,6 +151,11 @@ const file_tickets_v1_events_proto_rawDesc = "" +
 	"\x17tickets/v1/events.proto\x12\n" +
 	"tickets.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18tickets/v1/tickets.proto\"\x93\x01\n" +
 	"\rTicketCreated\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
+	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12*\n" +
+	"\x06ticket\x18\x03 \x01(\v2\x12.tickets.v1.TicketR\x06ticket\"\x93\x01\n" +
+	"\rTicketUpdated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12*\n" +
@@ -107,20 +173,23 @@ func file_tickets_v1_events_proto_rawDescGZIP() []byte {
 	return file_tickets_v1_events_proto_rawDescData
 }
 
-var file_tickets_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_tickets_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_tickets_v1_events_proto_goTypes = []any{
 	(*TicketCreated)(nil),         // 0: tickets.v1.TicketCreated
-	(*timestamppb.Timestamp)(nil), // 1: google.protobuf.Timestamp
-	(*Ticket)(nil),                // 2: tickets.v1.Ticket
+	(*TicketUpdated)(nil),         // 1: tickets.v1.TicketUpdated
+	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
+	(*Ticket)(nil),                // 3: tickets.v1.Ticket
 }
 var file_tickets_v1_events_proto_depIdxs = []int32{
-	1, // 0: tickets.v1.TicketCreated.occurred_at:type_name -> google.protobuf.Timestamp
-	2, // 1: tickets.v1.TicketCreated.ticket:type_name -> tickets.v1.Ticket
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	2, // 0: tickets.v1.TicketCreated.occurred_at:type_name -> google.protobuf.Timestamp
+	3, // 1: tickets.v1.TicketCreated.ticket:type_name -> tickets.v1.Ticket
+	2, // 2: tickets.v1.TicketUpdated.occurred_at:type_name -> google.protobuf.Timestamp
+	3, // 3: tickets.v1.TicketUpdated.ticket:type_name -> tickets.v1.Ticket
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_tickets_v1_events_proto_init() }
@@ -135,7 +204,7 @@ func file_tickets_v1_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tickets_v1_events_proto_rawDesc), len(file_tickets_v1_events_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

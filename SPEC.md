@@ -260,11 +260,12 @@ configuration persists in the local `nui-data` Docker volume.
 | expiration        | NestJS and BullMQ | `expiration-db`        |
 | concert-assistant | Python RAG        | `concert-assistant-db` |
 
-Tickets publishes `tickets.ticket.created.v1` events to the `TICKETS_EVENTS`
-JetStream stream. Ticket creation writes an event to the tickets-owned Postgres
-outbox in the same transaction as the ticket, then a background dispatcher
-publishes it at least once with bounded retry backoff. Consumers must be durable,
-explicitly acknowledge messages, and deduplicate by `event_id`.
+Tickets publishes `tickets.ticket.created.v1` and `tickets.ticket.updated.v1`
+events to the `TICKETS_EVENTS` JetStream stream. Ticket creation and updates
+write their respective events to the tickets-owned Postgres outbox in the same
+transaction as the ticket mutation, then a background dispatcher publishes them
+at least once with bounded retry backoff. Consumers must be durable, explicitly
+acknowledge messages, and deduplicate by `event_id`.
 
 `tickets.ticket.created.v1` carries the protobuf
 `tickets.v1.TicketCreated` payload. Its JSON representation is:
@@ -284,6 +285,9 @@ explicitly acknowledge messages, and deduplicate by `event_id`.
 
 JetStream receives protobuf binary, not JSON. The `int64` `price` is shown as
 a string in protobuf JSON to preserve JavaScript integer precision.
+
+`tickets.ticket.updated.v1` carries `tickets.v1.TicketUpdated`, which has the
+same JSON shape and represents the ticket snapshot after the update.
 
 Additional event subjects, consumers, CI/CD, observability, and deployment
 environments remain open design and implementation work.
