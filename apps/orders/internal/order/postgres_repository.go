@@ -2,6 +2,7 @@ package order
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -13,6 +14,40 @@ type PostgresRepository struct {
 
 func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
+}
+
+// Create inserts an order only when the referenced ticket is available in the
+// orders-owned projection. The INSERT ... SELECT keeps that check and insert
+// in one database operation.
+func (repository *PostgresRepository) Create(ctx context.Context, input CreateInput) (Order, error) {
+	var created Order
+	var status string
+	err := repository.pool.QueryRow(ctx, `
+		INSERT INTO orders (expires_at, user_id, ticket_id, status)
+		SELECT $1, $2, tickets.id, $3
+		FROM tickets
+		WHERE tickets.id = $4
+		RETURNING id, expires_at, user_id, ticket_id, status::text`,
+		input.ExpiresAt,
+		input.UserID,
+		StatusCreated,
+		input.TicketID,
+	).Scan(
+		&created.ID,
+		&created.ExpiresAt,
+		&created.UserID,
+		&created.TicketID,
+		&status,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Order{}, ErrNotFound
+	}
+	if err != nil {
+		return Order{}, err
+	}
+	created.Status = Status(status)
+
+	return created, nil
 }
 
 // UpsertTicketFromEvent records the event and applies the ticket projection in

@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package orders.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "polyglot-ticketing-v1/protogen/go/orders/v1;ordersv1";
+
+service OrdersService {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+}
+
+message CreateOrderRequest {
+  string ticket_id = 1;
+  string user_id = 2;
+}
+
+message CreateOrderResponse {
+  string id = 1;
+  google.protobuf.Timestamp expires_at = 2;
+  string user_id = 3;
+  string ticket_id = 4;
+  OrderStatus status = 5;
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_CREATED = 1;
+  ORDER_STATUS_CANCELED = 2;
+  ORDER_STATUS_AWAITING_PAYMENT = 3;
+  ORDER_STATUS_COMPLETE = 4;
+}

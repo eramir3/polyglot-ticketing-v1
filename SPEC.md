@@ -59,10 +59,13 @@ It has no public HTTP endpoint; the API gateway owns `GET /api/tickets` and
 
 ### Orders
 
-`orders` is a Go background service with no public HTTP or gRPC API in this
-slice. It owns `orders-db` and consumes retained ticket events from JetStream
-to maintain its local ticket projection. It has the `orders` data model ready
-for a later order-creation workflow.
+`orders` is a Go service that exposes gRPC internally on `orders:50053` and
+owns `orders-db`. It consumes retained ticket events from JetStream to maintain
+its local ticket projection. The API gateway exposes authenticated
+`POST /api/orders`; it accepts `{ "ticketId": "<uuid>" }`, creates a `Created`
+order for the session user, and sets `expiresAt` to 15 minutes after creation.
+It returns `404` when the ticket has not yet reached the Orders projection; it
+does not read `tickets-db` or synchronously call Tickets.
 
 ## List Tickets Flow
 
@@ -304,7 +307,9 @@ maintain an orders-owned local `tickets` projection. Its `orders.ticket_id`
 foreign key references that local table in `orders-db`, never `tickets-db`.
 The `orders` table has `id`, `expires_at`, `user_id`, `ticket_id`, and a
 `status` enum with `Created`, `Canceled`, `AwaitingPayment`, and `Complete`.
-Order creation is not implemented yet.
+Order creation currently allows multiple active orders for the same ticket;
+reservation conflict prevention, expiration processing, and payment remain
+future work.
 
 Additional event subjects, consumers, CI/CD, observability, and deployment
 environments remain open design and implementation work.

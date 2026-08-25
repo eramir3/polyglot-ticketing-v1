@@ -9,6 +9,7 @@ services:
       NODE_ENV: development
       PORT: 3000
       IDENTITY_GRPC_URL: identity:50051
+      ORDERS_GRPC_URL: orders:50053
       TICKETS_GRPC_URL: tickets:50052
       TICKETING_USER_APP_ORIGIN: ${TICKETING_USER_APP_ORIGIN:-http://localhost:3001}
     ports:
@@ -95,6 +96,7 @@ services:
     container_name: orders
     environment:
       DATABASE_URL: postgresql://orders:${ORDERS_DB_PASSWORD:?ORDERS_DB_PASSWORD must be set}@orders-db:5432/orders-db?sslmode=disable
+      GRPC_PORT: 50053
       NATS_URL: nats://nats:4222
     depends_on:
       nats:
@@ -103,6 +105,8 @@ services:
         condition: service_healthy
       orders-migrate:
         condition: service_completed_successfully
+    expose:
+      - '50053'
 
   orders-migrate:
     build:

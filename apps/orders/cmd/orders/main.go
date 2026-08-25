@@ -3,14 +3,18 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/grpc"
 
 	"polyglot-ticketing-v1/apps/orders/internal/consumer"
+	grpcserver "polyglot-ticketing-v1/apps/orders/internal/grpc"
 	"polyglot-ticketing-v1/apps/orders/internal/order"
+	ordersv1 "polyglot-ticketing-v1/protogen/go/orders/v1"
 )
 
 func main() {
@@ -24,11 +28,34 @@ func main() {
 	}
 	defer pool.Close()
 
-	consumer.NewTicketConsumer(
-		order.NewPostgresRepository(pool),
+	repository := order.NewPostgresRepository(pool)
+	go consumer.NewTicketConsumer(
+		repository,
 		environmentVariable("NATS_URL", "nats://localhost:4222"),
 		slog.Default(),
 	).Run(ctx)
+
+	listener, err := net.Listen("tcp", ":"+environmentVariable("GRPC_PORT", "50053"))
+	if err != nil {
+		slog.Error("failed to listen for gRPC", "error", err)
+		os.Exit(1)
+	}
+
+	server := grpc.NewServer()
+	ordersv1.RegisterOrdersServiceServer(
+		server,
+		grpcserver.NewServer(order.NewService(repository)),
+	)
+
+	go func() {
+		slog.Info("orders gRPC service started", "address", listener.Addr().String())
+		if err := server.Serve(listener); err != nil {
+			slog.Error("orders gRPC service stopped unexpectedly", "error", err)
+		}
+	}()
+
+	<-ctx.Done()
+	server.GracefulStop()
 }
 
 func environmentVariable(name string, fallback string) string {
