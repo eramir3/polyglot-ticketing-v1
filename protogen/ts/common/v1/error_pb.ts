@@ -2,15 +2,15 @@
 // @generated from file common/v1/error.proto (package common.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file common/v1/error.proto.
  */
 export const file_common_v1_error: GenFile = /*@__PURE__*/
-  fileDesc("ChVjb21tb24vdjEvZXJyb3IucHJvdG8SCWNvbW1vbi52MSJECgVFcnJvchIPCgdtZXNzYWdlGAEgASgJEgwKBGNvZGUYAiABKAkSEgoFZmllbGQYAyABKAlIAIgBAUIICgZfZmllbGQiMQoNRXJyb3JSZXNwb25zZRIgCgZlcnJvcnMYASADKAsyEC5jb21tb24udjEuRXJyb3JCO1o5cG9seWdsb3QtdGlja2V0aW5nLXYxL2FwcHMvdGlja2V0cy9nZW4vY29tbW9uL3YxO2NvbW1vbnYxYgZwcm90bzM");
+  fileDesc("ChVjb21tb24vdjEvZXJyb3IucHJvdG8SCWNvbW1vbi52MSJECgVFcnJvchIPCgdtZXNzYWdlGAEgASgJEgwKBGNvZGUYAiABKAkSEgoFZmllbGQYAyABKAlIAIgBAUIICgZfZmllbGQiMQoNRXJyb3JSZXNwb25zZRIgCgZlcnJvcnMYASADKAsyEC5jb21tb24udjEuRXJyb3IqpQQKCUVycm9yQ29kZRIaChZFUlJPUl9DT0RFX1VOU1BFQ0lGSUVEEAASHwobRVJST1JfQ09ERV9JTlZBTElEX0FSR1VNRU5UEAESGwoXRVJST1JfQ09ERV9JTlZBTElEX05BTUUQAhIcChhFUlJPUl9DT0RFX0lOVkFMSURfRU1BSUwQAxIfChtFUlJPUl9DT0RFX0lOVkFMSURfUEFTU1dPUkQQBBIcChhFUlJPUl9DT0RFX0lOVkFMSURfVElUTEUQBRIcChhFUlJPUl9DT0RFX0lOVkFMSURfUFJJQ0UQBhIiCh5FUlJPUl9DT0RFX0lOVkFMSURfQ1JFREVOVElBTFMQBxIhCh1FUlJPUl9DT0RFX0VNQUlMX05PVF9WRVJJRklFRBAIEikKJUVSUk9SX0NPREVfSU5WQUxJRF9WRVJJRklDQVRJT05fVE9LRU4QCRIdChlFUlJPUl9DT0RFX0FMUkVBRFlfRVhJU1RTEAoSHgoaRVJST1JfQ09ERV9VTkFVVEhFTlRJQ0FURUQQCxIYChRFUlJPUl9DT0RFX0ZPUkJJRERFThAMEhgKFEVSUk9SX0NPREVfTk9UX0ZPVU5EEA0SGwoXRVJST1JfQ09ERV9SQVRFX0xJTUlURUQQDhIiCh5FUlJPUl9DT0RFX1NFUlZJQ0VfVU5BVkFJTEFCTEUQDxIdChlFUlJPUl9DT0RFX0lOVEVSTkFMX0VSUk9SEBBCO1o5cG9seWdsb3QtdGlja2V0aW5nLXYxL2FwcHMvdGlja2V0cy9nZW4vY29tbW9uL3YxO2NvbW1vbnYxYgZwcm90bzM");
 
 /**
  * A client-safe application error. Error codes are stable public API values.
@@ -57,4 +57,102 @@ export type ErrorResponse = Message<"common.v1.ErrorResponse"> & {
  */
 export const ErrorResponseSchema: GenMessage<ErrorResponse> = /*@__PURE__*/
   messageDesc(file_common_v1_error, 1);
+
+/**
+ * Stable public error codes shared by every service.
+ *
+ * @generated from enum common.v1.ErrorCode
+ */
+export enum ErrorCode {
+  /**
+   * @generated from enum value: ERROR_CODE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: ERROR_CODE_INVALID_ARGUMENT = 1;
+   */
+  INVALID_ARGUMENT = 1,
+
+  /**
+   * @generated from enum value: ERROR_CODE_INVALID_NAME = 2;
+   */
+  INVALID_NAME = 2,
+
+  /**
+   * @generated from enum value: ERROR_CODE_INVALID_EMAIL = 3;
+   */
+  INVALID_EMAIL = 3,
+
+  /**
+   * @generated from enum value: ERROR_CODE_INVALID_PASSWORD = 4;
+   */
+  INVALID_PASSWORD = 4,
+
+  /**
+   * @generated from enum value: ERROR_CODE_INVALID_TITLE = 5;
+   */
+  INVALID_TITLE = 5,
+
+  /**
+   * @generated from enum value: ERROR_CODE_INVALID_PRICE = 6;
+   */
+  INVALID_PRICE = 6,
+
+  /**
+   * @generated from enum value: ERROR_CODE_INVALID_CREDENTIALS = 7;
+   */
+  INVALID_CREDENTIALS = 7,
+
+  /**
+   * @generated from enum value: ERROR_CODE_EMAIL_NOT_VERIFIED = 8;
+   */
+  EMAIL_NOT_VERIFIED = 8,
+
+  /**
+   * @generated from enum value: ERROR_CODE_INVALID_VERIFICATION_TOKEN = 9;
+   */
+  INVALID_VERIFICATION_TOKEN = 9,
+
+  /**
+   * @generated from enum value: ERROR_CODE_ALREADY_EXISTS = 10;
+   */
+  ALREADY_EXISTS = 10,
+
+  /**
+   * @generated from enum value: ERROR_CODE_UNAUTHENTICATED = 11;
+   */
+  UNAUTHENTICATED = 11,
+
+  /**
+   * @generated from enum value: ERROR_CODE_FORBIDDEN = 12;
+   */
+  FORBIDDEN = 12,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NOT_FOUND = 13;
+   */
+  NOT_FOUND = 13,
+
+  /**
+   * @generated from enum value: ERROR_CODE_RATE_LIMITED = 14;
+   */
+  RATE_LIMITED = 14,
+
+  /**
+   * @generated from enum value: ERROR_CODE_SERVICE_UNAVAILABLE = 15;
+   */
+  SERVICE_UNAVAILABLE = 15,
+
+  /**
+   * @generated from enum value: ERROR_CODE_INTERNAL_ERROR = 16;
+   */
+  INTERNAL_ERROR = 16,
+}
+
+/**
+ * Describes the enum common.v1.ErrorCode.
+ */
+export const ErrorCodeSchema: GenEnum<ErrorCode> = /*@__PURE__*/
+  enumDesc(file_common_v1_error, 0);
 

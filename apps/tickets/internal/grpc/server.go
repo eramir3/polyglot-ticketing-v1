@@ -8,7 +8,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	commonv1 "polyglot-ticketing-v1/apps/tickets/gen/common/v1"
 	ticketsv1 "polyglot-ticketing-v1/apps/tickets/gen/tickets/v1"
+	"polyglot-ticketing-v1/apps/tickets/internal/errorcode"
 	"polyglot-ticketing-v1/apps/tickets/internal/ticket"
 )
 
@@ -35,7 +37,7 @@ func (server *Server) CreateTicket(
 	}
 	if err != nil {
 		return nil, structuredError(codes.Internal, []ticket.ValidationError{{
-			Code:    "INTERNAL_ERROR",
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
 			Message: "Unable to create ticket.",
 		}})
 	}
@@ -57,19 +59,19 @@ func (server *Server) UpdateTicket(
 	}
 	if errors.Is(err, ticket.ErrForbidden) {
 		return nil, structuredError(codes.PermissionDenied, []ticket.ValidationError{{
-			Code:    "FORBIDDEN",
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_FORBIDDEN),
 			Message: "You do not have permission to update this ticket.",
 		}})
 	}
 	if errors.Is(err, ticket.ErrNotFound) {
 		return nil, structuredError(codes.NotFound, []ticket.ValidationError{{
-			Code:    "NOT_FOUND",
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_NOT_FOUND),
 			Message: "Ticket not found.",
 		}})
 	}
 	if err != nil {
 		return nil, structuredError(codes.Internal, []ticket.ValidationError{{
-			Code:    "INTERNAL_ERROR",
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
 			Message: "Unable to update ticket.",
 		}})
 	}
@@ -84,7 +86,7 @@ func (server *Server) ListTickets(
 	listed, err := server.service.List(ctx)
 	if err != nil {
 		return nil, structuredError(codes.Internal, []ticket.ValidationError{{
-			Code:    "INTERNAL_ERROR",
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
 			Message: "Unable to retrieve tickets.",
 		}})
 	}
@@ -106,13 +108,13 @@ func (server *Server) GetTicket(
 	found, err := server.service.Get(ctx, request.GetId())
 	if errors.Is(err, ticket.ErrNotFound) {
 		return nil, structuredError(codes.NotFound, []ticket.ValidationError{{
-			Code:    "NOT_FOUND",
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_NOT_FOUND),
 			Message: "Ticket not found.",
 		}})
 	}
 	if err != nil {
 		return nil, structuredError(codes.Internal, []ticket.ValidationError{{
-			Code:    "INTERNAL_ERROR",
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
 			Message: "Unable to retrieve ticket.",
 		}})
 	}
@@ -144,7 +146,7 @@ func structuredError(code codes.Code, errors []ticket.ValidationError) error {
 	}{Errors: errors}
 	details, err := json.Marshal(payload)
 	if err != nil {
-		return status.Error(codes.Internal, `{"errors":[{"code":"INTERNAL_ERROR","message":"An unexpected error occurred."}]}`)
+		return status.Error(codes.Internal, `{"errors":[{"code":"`+errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR)+`","message":"An unexpected error occurred."}]}`)
 	}
 
 	return status.Error(code, string(details))

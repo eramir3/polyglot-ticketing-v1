@@ -6,6 +6,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ErrorItem, ErrorResponse } from './api-error';
+import { ErrorCode, toPublicErrorCode } from './error-code';
 
 interface HttpResponse {
   status(statusCode: number): { json(body: ErrorResponse): void };
@@ -55,8 +56,8 @@ function getErrorResponse(exception: unknown, status: number): ErrorResponse {
         code:
           status === HttpStatus.SERVICE_UNAVAILABLE ||
           status === HttpStatus.BAD_GATEWAY
-            ? 'SERVICE_UNAVAILABLE'
-            : 'INTERNAL_ERROR',
+            ? toPublicErrorCode(ErrorCode.SERVICE_UNAVAILABLE)
+            : toPublicErrorCode(ErrorCode.INTERNAL_ERROR),
       },
     ],
   };
@@ -102,19 +103,19 @@ function getMessages(response: string | object): string[] {
 function getCodeForStatus(status: number): string {
   switch (status) {
     case HttpStatus.BAD_REQUEST:
-      return 'INVALID_ARGUMENT';
+      return toPublicErrorCode(ErrorCode.INVALID_ARGUMENT);
     case HttpStatus.UNAUTHORIZED:
-      return 'UNAUTHENTICATED';
+      return toPublicErrorCode(ErrorCode.UNAUTHENTICATED);
     case HttpStatus.FORBIDDEN:
-      return 'FORBIDDEN';
+      return toPublicErrorCode(ErrorCode.FORBIDDEN);
     case HttpStatus.NOT_FOUND:
-      return 'NOT_FOUND';
+      return toPublicErrorCode(ErrorCode.NOT_FOUND);
     case HttpStatus.CONFLICT:
-      return 'ALREADY_EXISTS';
+      return toPublicErrorCode(ErrorCode.ALREADY_EXISTS);
     case HttpStatus.TOO_MANY_REQUESTS:
-      return 'RATE_LIMITED';
+      return toPublicErrorCode(ErrorCode.RATE_LIMITED);
     default:
-      return 'INTERNAL_ERROR';
+      return toPublicErrorCode(ErrorCode.INTERNAL_ERROR);
   }
 }
 

@@ -1,11 +1,12 @@
 import { status } from '@grpc/grpc-js';
+import { ErrorCode, toPublicErrorCode } from '../../errors/error-code';
 import { StructuredGrpcError } from '../../errors/grpc-error';
 
 export function mapEmailVerificationError(error: unknown): StructuredGrpcError {
   if (hasVerificationErrorCode(error)) {
     return new StructuredGrpcError(status.UNAUTHENTICATED, [
       {
-        code: 'INVALID_VERIFICATION_TOKEN',
+        code: toPublicErrorCode(ErrorCode.INVALID_VERIFICATION_TOKEN),
         message: 'The email verification link is invalid or has expired.',
       },
     ]);
@@ -13,7 +14,7 @@ export function mapEmailVerificationError(error: unknown): StructuredGrpcError {
 
   return new StructuredGrpcError(status.INTERNAL, [
     {
-      code: 'INTERNAL_ERROR',
+      code: toPublicErrorCode(ErrorCode.INTERNAL_ERROR),
       message: 'Unable to verify email.',
     },
   ]);

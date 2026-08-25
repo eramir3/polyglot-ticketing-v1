@@ -1,6 +1,7 @@
 import { status } from '@grpc/grpc-js';
 import { HttpStatus } from '@nestjs/common';
 import { ApiError, ErrorItem } from './api-error';
+import { ErrorCode, toPublicErrorCode } from './error-code';
 import {
   getGrpcErrorResponse,
   httpStatusFromGrpcCode,
@@ -27,7 +28,7 @@ export function throwGatewayGrpcError(
 
   throw new ApiError(HttpStatus.SERVICE_UNAVAILABLE, [
     {
-      code: 'SERVICE_UNAVAILABLE',
+      code: toPublicErrorCode(ErrorCode.SERVICE_UNAVAILABLE),
       message: 'A required service is unavailable.',
     },
   ]);

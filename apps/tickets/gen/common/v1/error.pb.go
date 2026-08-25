@@ -21,6 +21,98 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Stable public error codes shared by every service.
+type ErrorCode int32
+
+const (
+	ErrorCode_ERROR_CODE_UNSPECIFIED                ErrorCode = 0
+	ErrorCode_ERROR_CODE_INVALID_ARGUMENT           ErrorCode = 1
+	ErrorCode_ERROR_CODE_INVALID_NAME               ErrorCode = 2
+	ErrorCode_ERROR_CODE_INVALID_EMAIL              ErrorCode = 3
+	ErrorCode_ERROR_CODE_INVALID_PASSWORD           ErrorCode = 4
+	ErrorCode_ERROR_CODE_INVALID_TITLE              ErrorCode = 5
+	ErrorCode_ERROR_CODE_INVALID_PRICE              ErrorCode = 6
+	ErrorCode_ERROR_CODE_INVALID_CREDENTIALS        ErrorCode = 7
+	ErrorCode_ERROR_CODE_EMAIL_NOT_VERIFIED         ErrorCode = 8
+	ErrorCode_ERROR_CODE_INVALID_VERIFICATION_TOKEN ErrorCode = 9
+	ErrorCode_ERROR_CODE_ALREADY_EXISTS             ErrorCode = 10
+	ErrorCode_ERROR_CODE_UNAUTHENTICATED            ErrorCode = 11
+	ErrorCode_ERROR_CODE_FORBIDDEN                  ErrorCode = 12
+	ErrorCode_ERROR_CODE_NOT_FOUND                  ErrorCode = 13
+	ErrorCode_ERROR_CODE_RATE_LIMITED               ErrorCode = 14
+	ErrorCode_ERROR_CODE_SERVICE_UNAVAILABLE        ErrorCode = 15
+	ErrorCode_ERROR_CODE_INTERNAL_ERROR             ErrorCode = 16
+)
+
+// Enum value maps for ErrorCode.
+var (
+	ErrorCode_name = map[int32]string{
+		0:  "ERROR_CODE_UNSPECIFIED",
+		1:  "ERROR_CODE_INVALID_ARGUMENT",
+		2:  "ERROR_CODE_INVALID_NAME",
+		3:  "ERROR_CODE_INVALID_EMAIL",
+		4:  "ERROR_CODE_INVALID_PASSWORD",
+		5:  "ERROR_CODE_INVALID_TITLE",
+		6:  "ERROR_CODE_INVALID_PRICE",
+		7:  "ERROR_CODE_INVALID_CREDENTIALS",
+		8:  "ERROR_CODE_EMAIL_NOT_VERIFIED",
+		9:  "ERROR_CODE_INVALID_VERIFICATION_TOKEN",
+		10: "ERROR_CODE_ALREADY_EXISTS",
+		11: "ERROR_CODE_UNAUTHENTICATED",
+		12: "ERROR_CODE_FORBIDDEN",
+		13: "ERROR_CODE_NOT_FOUND",
+		14: "ERROR_CODE_RATE_LIMITED",
+		15: "ERROR_CODE_SERVICE_UNAVAILABLE",
+		16: "ERROR_CODE_INTERNAL_ERROR",
+	}
+	ErrorCode_value = map[string]int32{
+		"ERROR_CODE_UNSPECIFIED":                0,
+		"ERROR_CODE_INVALID_ARGUMENT":           1,
+		"ERROR_CODE_INVALID_NAME":               2,
+		"ERROR_CODE_INVALID_EMAIL":              3,
+		"ERROR_CODE_INVALID_PASSWORD":           4,
+		"ERROR_CODE_INVALID_TITLE":              5,
+		"ERROR_CODE_INVALID_PRICE":              6,
+		"ERROR_CODE_INVALID_CREDENTIALS":        7,
+		"ERROR_CODE_EMAIL_NOT_VERIFIED":         8,
+		"ERROR_CODE_INVALID_VERIFICATION_TOKEN": 9,
+		"ERROR_CODE_ALREADY_EXISTS":             10,
+		"ERROR_CODE_UNAUTHENTICATED":            11,
+		"ERROR_CODE_FORBIDDEN":                  12,
+		"ERROR_CODE_NOT_FOUND":                  13,
+		"ERROR_CODE_RATE_LIMITED":               14,
+		"ERROR_CODE_SERVICE_UNAVAILABLE":        15,
+		"ERROR_CODE_INTERNAL_ERROR":             16,
+	}
+)
+
+func (x ErrorCode) Enum() *ErrorCode {
+	p := new(ErrorCode)
+	*p = x
+	return p
+}
+
+func (x ErrorCode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ErrorCode) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_v1_error_proto_enumTypes[0].Descriptor()
+}
+
+func (ErrorCode) Type() protoreflect.EnumType {
+	return &file_common_v1_error_proto_enumTypes[0]
+}
+
+func (x ErrorCode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ErrorCode.Descriptor instead.
+func (ErrorCode) EnumDescriptor() ([]byte, []int) {
+	return file_common_v1_error_proto_rawDescGZIP(), []int{0}
+}
+
 // A client-safe application error. Error codes are stable public API values.
 type Error struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -137,7 +229,26 @@ const file_common_v1_error_proto_rawDesc = "" +
 	"\x05field\x18\x03 \x01(\tH\x00R\x05field\x88\x01\x01B\b\n" +
 	"\x06_field\"9\n" +
 	"\rErrorResponse\x12(\n" +
-	"\x06errors\x18\x01 \x03(\v2\x10.common.v1.ErrorR\x06errorsB;Z9polyglot-ticketing-v1/apps/tickets/gen/common/v1;commonv1b\x06proto3"
+	"\x06errors\x18\x01 \x03(\v2\x10.common.v1.ErrorR\x06errors*\xa5\x04\n" +
+	"\tErrorCode\x12\x1a\n" +
+	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bERROR_CODE_INVALID_ARGUMENT\x10\x01\x12\x1b\n" +
+	"\x17ERROR_CODE_INVALID_NAME\x10\x02\x12\x1c\n" +
+	"\x18ERROR_CODE_INVALID_EMAIL\x10\x03\x12\x1f\n" +
+	"\x1bERROR_CODE_INVALID_PASSWORD\x10\x04\x12\x1c\n" +
+	"\x18ERROR_CODE_INVALID_TITLE\x10\x05\x12\x1c\n" +
+	"\x18ERROR_CODE_INVALID_PRICE\x10\x06\x12\"\n" +
+	"\x1eERROR_CODE_INVALID_CREDENTIALS\x10\a\x12!\n" +
+	"\x1dERROR_CODE_EMAIL_NOT_VERIFIED\x10\b\x12)\n" +
+	"%ERROR_CODE_INVALID_VERIFICATION_TOKEN\x10\t\x12\x1d\n" +
+	"\x19ERROR_CODE_ALREADY_EXISTS\x10\n" +
+	"\x12\x1e\n" +
+	"\x1aERROR_CODE_UNAUTHENTICATED\x10\v\x12\x18\n" +
+	"\x14ERROR_CODE_FORBIDDEN\x10\f\x12\x18\n" +
+	"\x14ERROR_CODE_NOT_FOUND\x10\r\x12\x1b\n" +
+	"\x17ERROR_CODE_RATE_LIMITED\x10\x0e\x12\"\n" +
+	"\x1eERROR_CODE_SERVICE_UNAVAILABLE\x10\x0f\x12\x1d\n" +
+	"\x19ERROR_CODE_INTERNAL_ERROR\x10\x10B;Z9polyglot-ticketing-v1/apps/tickets/gen/common/v1;commonv1b\x06proto3"
 
 var (
 	file_common_v1_error_proto_rawDescOnce sync.Once
@@ -151,13 +262,15 @@ func file_common_v1_error_proto_rawDescGZIP() []byte {
 	return file_common_v1_error_proto_rawDescData
 }
 
+var file_common_v1_error_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_common_v1_error_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_common_v1_error_proto_goTypes = []any{
-	(*Error)(nil),         // 0: common.v1.Error
-	(*ErrorResponse)(nil), // 1: common.v1.ErrorResponse
+	(ErrorCode)(0),        // 0: common.v1.ErrorCode
+	(*Error)(nil),         // 1: common.v1.Error
+	(*ErrorResponse)(nil), // 2: common.v1.ErrorResponse
 }
 var file_common_v1_error_proto_depIdxs = []int32{
-	0, // 0: common.v1.ErrorResponse.errors:type_name -> common.v1.Error
+	1, // 0: common.v1.ErrorResponse.errors:type_name -> common.v1.Error
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -176,13 +289,14 @@ func file_common_v1_error_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_v1_error_proto_rawDesc), len(file_common_v1_error_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_common_v1_error_proto_goTypes,
 		DependencyIndexes: file_common_v1_error_proto_depIdxs,
+		EnumInfos:         file_common_v1_error_proto_enumTypes,
 		MessageInfos:      file_common_v1_error_proto_msgTypes,
 	}.Build()
 	File_common_v1_error_proto = out.File

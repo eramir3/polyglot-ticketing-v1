@@ -1,8 +1,9 @@
 import { ErrorItem } from '../../errors/grpc-error';
+import { ErrorCode, toPublicErrorCode } from '../../errors/error-code';
 
 export function createSignOutInternalError(): ErrorItem {
   return {
-    code: 'INTERNAL_ERROR',
+    code: toPublicErrorCode(ErrorCode.INTERNAL_ERROR),
     message: 'Unable to complete signout.',
   };
 }

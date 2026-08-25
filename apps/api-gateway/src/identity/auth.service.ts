@@ -2,6 +2,7 @@ import { IncomingHttpHeaders } from 'node:http';
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { ErrorCode, toPublicErrorCode } from '../errors/error-code';
 import { throwGatewayGrpcError } from '../errors/throw-grpc-error';
 import { IDENTITY_GRPC_CLIENT } from './identity.constants';
 import { createAuthRequestMetadata } from './metadata/auth-request-metadata';
@@ -38,7 +39,7 @@ export class AuthService implements OnModuleInit {
       return await firstValueFrom(this.identityService.signUp(request));
     } catch (error: unknown) {
       throwGatewayGrpcError(error, {
-        code: 'INVALID_ARGUMENT',
+        code: toPublicErrorCode(ErrorCode.INVALID_ARGUMENT),
         message: 'Signup data is invalid.',
       });
     }
@@ -57,7 +58,7 @@ export class AuthService implements OnModuleInit {
       );
     } catch (error: unknown) {
       throwGatewayGrpcError(error, {
-        code: 'INVALID_ARGUMENT',
+        code: toPublicErrorCode(ErrorCode.INVALID_ARGUMENT),
         message: 'Signin data is invalid.',
       });
     }

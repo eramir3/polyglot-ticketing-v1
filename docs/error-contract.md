@@ -20,8 +20,9 @@ message at the top level and its application code and optional field in
 
 Services communicate errors over gRPC using the relevant gRPC status code and
 the JSON representation of `common.v1.ErrorResponse` in the status details.
-This keeps the contract usable by NestJS, Go, and Python until protobuf code
-generation is introduced.
+`common.v1.ErrorCode` is the canonical source for the stable public code
+values; its generated values are converted to the string values below at the
+public error boundary.
 
 ## Public Codes
 

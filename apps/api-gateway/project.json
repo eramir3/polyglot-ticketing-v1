@@ -18,6 +18,7 @@
       "options": {
         "main": "apps/api-gateway/src/main.ts",
         "outputPath": "dist/apps/api-gateway",
+        "rootDir": ".",
         "tsConfig": "apps/api-gateway/tsconfig.app.json",
         "assets": [
           {

@@ -1,5 +1,6 @@
 import { HttpStatus, ValidationError } from '@nestjs/common';
 import { ApiError, ErrorItem } from './api-error';
+import { ErrorCode, toPublicErrorCode } from './error-code';
 
 export function createValidationApiError(
   validationErrors: ValidationError[],
@@ -20,7 +21,7 @@ function toErrorItem(validationError: ValidationError): ErrorItem {
       ? 'Unexpected field.'
       : getValidationMessage(validationError),
     code: isUnexpectedField
-      ? 'INVALID_ARGUMENT'
+      ? toPublicErrorCode(ErrorCode.INVALID_ARGUMENT)
       : getValidationCode(validationError.property),
     field: validationError.property,
   };
@@ -34,16 +35,16 @@ function getValidationMessage(validationError: ValidationError): string {
 function getValidationCode(field: string): string {
   switch (field) {
     case 'name':
-      return 'INVALID_NAME';
+      return toPublicErrorCode(ErrorCode.INVALID_NAME);
     case 'email':
-      return 'INVALID_EMAIL';
+      return toPublicErrorCode(ErrorCode.INVALID_EMAIL);
     case 'password':
-      return 'INVALID_PASSWORD';
+      return toPublicErrorCode(ErrorCode.INVALID_PASSWORD);
     case 'title':
-      return 'INVALID_TITLE';
+      return toPublicErrorCode(ErrorCode.INVALID_TITLE);
     case 'price':
-      return 'INVALID_PRICE';
+      return toPublicErrorCode(ErrorCode.INVALID_PRICE);
     default:
-      return 'INVALID_ARGUMENT';
+      return toPublicErrorCode(ErrorCode.INVALID_ARGUMENT);
   }
 }

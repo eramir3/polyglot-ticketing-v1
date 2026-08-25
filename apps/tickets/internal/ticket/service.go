@@ -3,6 +3,9 @@ package ticket
 import (
 	"context"
 	"strings"
+
+	commonv1 "polyglot-ticketing-v1/apps/tickets/gen/common/v1"
+	"polyglot-ticketing-v1/apps/tickets/internal/errorcode"
 )
 
 const MaxPrice int64 = 9_007_199_254_740_991
@@ -58,7 +61,7 @@ func (service *Service) Update(ctx context.Context, id string, input UpdateInput
 func validateMutation(title string, price int64, userID string) []ValidationError {
 	if strings.TrimSpace(title) == "" {
 		return []ValidationError{{
-			Code:    "INVALID_TITLE",
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INVALID_TITLE),
 			Field:   "title",
 			Message: "Title is required.",
 		}}
@@ -66,7 +69,7 @@ func validateMutation(title string, price int64, userID string) []ValidationErro
 
 	if price <= 0 || price > MaxPrice {
 		return []ValidationError{{
-			Code:    "INVALID_PRICE",
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INVALID_PRICE),
 			Field:   "price",
 			Message: "Price must be between 1 and 9007199254740991.",
 		}}
@@ -74,7 +77,7 @@ func validateMutation(title string, price int64, userID string) []ValidationErro
 
 	if userID == "" {
 		return []ValidationError{{
-			Code:    "INVALID_ARGUMENT",
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT),
 			Field:   "userId",
 			Message: "Ticket owner is required.",
 		}}

@@ -1,6 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { ErrorCode, toPublicErrorCode } from '../errors/error-code';
 import { throwGatewayGrpcError } from '../errors/throw-grpc-error';
 import { TICKETS_GRPC_CLIENT } from './tickets.constants';
 import {
@@ -37,7 +38,7 @@ export class TicketsService implements OnModuleInit {
       );
     } catch (error: unknown) {
       throwGatewayGrpcError(error, {
-        code: 'INVALID_ARGUMENT',
+        code: toPublicErrorCode(ErrorCode.INVALID_ARGUMENT),
         message: 'Ticket data is invalid.',
       });
     }
@@ -70,7 +71,7 @@ export class TicketsService implements OnModuleInit {
       return response.ticket;
     } catch (error: unknown) {
       throwGatewayGrpcError(error, {
-        code: 'INVALID_ARGUMENT',
+        code: toPublicErrorCode(ErrorCode.INVALID_ARGUMENT),
         message: 'Ticket data is invalid.',
       });
     }
