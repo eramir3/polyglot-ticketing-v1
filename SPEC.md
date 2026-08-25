@@ -214,6 +214,7 @@ Required values are listed in `.env.example`:
 - `TICKETING_USER_APP_ORIGIN`
 - `SMTP_FROM`
 - `TICKETS_DB_PASSWORD`
+- `NATS_URL` (defaults to `nats://localhost:4222` when running tickets locally)
 
 Common commands:
 
@@ -239,6 +240,7 @@ Local ports:
 | Identity Postgres | `localhost:5432`                     |
 | Tickets gRPC      | `tickets:50052` within Compose only  |
 | Tickets Postgres  | `localhost:5433`                     |
+| NATS JetStream    | `nats://localhost:4222`              |
 | Mailpit inbox     | `http://localhost:8025`              |
 
 ## Planned Services
@@ -251,5 +253,11 @@ Local ports:
 | expiration        | NestJS and BullMQ | `expiration-db`        |
 | concert-assistant | Python RAG        | `concert-assistant-db` |
 
-NATS JetStream, event subjects, event schemas, CI/CD, observability, and
-deployment environments remain open design and implementation work.
+Tickets publishes `tickets.ticket.created.v1` events to the `TICKETS_EVENTS`
+JetStream stream. Ticket creation writes an event to the tickets-owned Postgres
+outbox in the same transaction as the ticket, then a background dispatcher
+publishes it at least once with bounded retry backoff. Consumers must be durable,
+explicitly acknowledge messages, and deduplicate by `event_id`.
+
+Additional event subjects, consumers, CI/CD, observability, and deployment
+environments remain open design and implementation work.

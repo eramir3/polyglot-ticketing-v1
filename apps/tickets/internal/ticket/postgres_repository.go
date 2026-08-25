@@ -3,9 +3,16 @@ package ticket
 import (
 	"context"
 	"errors"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"polyglot-ticketing-v1/apps/tickets/internal/outbox"
+	ticketsv1 "polyglot-ticketing-v1/protogen/go/tickets/v1"
 )
 
 type PostgresRepository struct {
@@ -17,8 +24,14 @@ func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 }
 
 func (repository *PostgresRepository) Create(ctx context.Context, input CreateInput) (Ticket, error) {
+	tx, err := repository.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return Ticket{}, err
+	}
+	defer tx.Rollback(ctx)
+
 	var created Ticket
-	err := repository.pool.QueryRow(
+	err = tx.QueryRow(
 		ctx,
 		`INSERT INTO tickets (title, price, user_id)
 		 VALUES ($1, $2, $3)
@@ -27,8 +40,41 @@ func (repository *PostgresRepository) Create(ctx context.Context, input CreateIn
 		input.Price,
 		input.UserID,
 	).Scan(&created.ID, &created.Title, &created.Price, &created.UserID)
+	if err != nil {
+		return Ticket{}, err
+	}
 
-	return created, err
+	occurredAt := time.Now().UTC()
+	eventID := uuid.NewString()
+	payload, err := marshalTicketCreated(eventID, occurredAt, created)
+	if err != nil {
+		return Ticket{}, err
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO outbox_events (event_id, subject, payload, created_at)
+		VALUES ($1, $2, $3, $4)`, eventID, outbox.TicketCreatedSubject, payload, occurredAt)
+	if err != nil {
+		return Ticket{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Ticket{}, err
+	}
+
+	return created, nil
+}
+
+func marshalTicketCreated(eventID string, occurredAt time.Time, created Ticket) ([]byte, error) {
+	return proto.Marshal(&ticketsv1.TicketCreated{
+		EventId:    eventID,
+		OccurredAt: timestamppb.New(occurredAt),
+		Ticket: &ticketsv1.Ticket{
+			Id:     created.ID,
+			Title:  created.Title,
+			Price:  created.Price,
+			UserId: created.UserID,
+		},
+	})
 }
 
 func (repository *PostgresRepository) FindByID(ctx context.Context, id string) (Ticket, error) {

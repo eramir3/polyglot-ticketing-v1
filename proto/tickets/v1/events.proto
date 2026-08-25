@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package tickets.v1;
+
+import "google/protobuf/timestamp.proto";
+import "tickets/v1/tickets.proto";
+
+option go_package = "polyglot-ticketing-v1/protogen/go/tickets/v1;ticketsv1";
+
+// TicketCreated is an immutable snapshot of a ticket at creation time.
+message TicketCreated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  Ticket ticket = 3;
+}

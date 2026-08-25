@@ -26,6 +26,7 @@ services:
     environment:
       DATABASE_URL: postgresql://tickets:${TICKETS_DB_PASSWORD:?TICKETS_DB_PASSWORD must be set}@tickets-db:5432/tickets-db?sslmode=disable
       GRPC_PORT: 50052
+      NATS_URL: nats://nats:4222
     depends_on:
       tickets-db:
         condition: service_healthy
@@ -33,6 +34,15 @@ services:
         condition: service_completed_successfully
     expose:
       - '50052'
+
+  nats:
+    image: nats:2.11-alpine
+    container_name: nats
+    command: ['-js', '-sd', '/data']
+    ports:
+      - '4222:4222'
+    volumes:
+      - nats-data:/data
 
   tickets-migrate:
     build:
@@ -136,3 +146,4 @@ services:
 volumes:
   identity-db-data:
   tickets-db-data:
+  nats-data:

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { createConnection, createServer } from 'node:net';
 import { join } from 'node:path';
 import { INestApplication, INestMicroservice } from '@nestjs/common';
+import { fromBinary } from '@bufbuild/protobuf';
 import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
@@ -12,6 +13,7 @@ import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 import { createApiGatewayApplication } from '../src/app/app.bootstrap';
 import { createIdentityMicroservice } from '../../identity/src/app/app.bootstrap';
 import { migrateIdentityDatabase } from '../../identity/src/migrate-identity-database';
+import { TicketCreatedSchema } from '../../../protogen/ts/tickets/v1/events_pb.js';
 
 describe('tickets endpoints', () => {
   let apiGateway: INestApplication;
@@ -190,6 +192,34 @@ describe('tickets endpoints', () => {
           user_id: userId,
         },
       ]);
+
+      const outboxResult = await database.query<{
+        event_id: string;
+        payload: Buffer;
+        subject: string;
+      }>(
+        `SELECT event_id::text, subject, payload
+         FROM outbox_events
+         WHERE published_at IS NULL
+         ORDER BY created_at DESC
+         LIMIT 1`,
+      );
+      expect(outboxResult.rows).toHaveLength(1);
+      expect(outboxResult.rows[0].subject).toBe('tickets.ticket.created.v1');
+
+      const event = fromBinary(
+        TicketCreatedSchema,
+        outboxResult.rows[0].payload,
+      );
+      expect(event).toMatchObject({
+        eventId: outboxResult.rows[0].event_id,
+        ticket: {
+          id: ticket.id,
+          price: BigInt(10_000),
+          title: 'Metallica',
+          userId,
+        },
+      });
     } finally {
       await database.end();
     }

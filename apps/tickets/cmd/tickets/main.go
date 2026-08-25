@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc"
 
 	grpcserver "polyglot-ticketing-v1/apps/tickets/internal/grpc"
+	"polyglot-ticketing-v1/apps/tickets/internal/outbox"
 	"polyglot-ticketing-v1/apps/tickets/internal/ticket"
 	ticketsv1 "polyglot-ticketing-v1/protogen/go/tickets/v1"
 )
@@ -26,6 +27,13 @@ func main() {
 		os.Exit(1)
 	}
 	defer pool.Close()
+
+	publisher := outbox.NewPublisher(
+		outbox.NewPostgresRepository(pool),
+		environmentVariable("NATS_URL", "nats://localhost:4222"),
+		slog.Default(),
+	)
+	go publisher.Run(ctx)
 
 	listener, err := net.Listen("tcp", ":"+environmentVariable("GRPC_PORT", "50052"))
 	if err != nil {
