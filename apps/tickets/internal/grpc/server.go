@@ -8,10 +8,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	commonv1 "polyglot-ticketing-v1/apps/tickets/gen/common/v1"
-	ticketsv1 "polyglot-ticketing-v1/apps/tickets/gen/tickets/v1"
 	"polyglot-ticketing-v1/apps/tickets/internal/errorcode"
 	"polyglot-ticketing-v1/apps/tickets/internal/ticket"
+	commonv1 "polyglot-ticketing-v1/protogen/go/common/v1"
+	ticketsv1 "polyglot-ticketing-v1/protogen/go/tickets/v1"
 )
 
 type Server struct {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	commonv1 "polyglot-ticketing-v1/apps/tickets/gen/common/v1"
 	"polyglot-ticketing-v1/apps/tickets/internal/errorcode"
+	commonv1 "polyglot-ticketing-v1/protogen/go/common/v1"
 )
 
 const MaxPrice int64 = 9_007_199_254_740_991

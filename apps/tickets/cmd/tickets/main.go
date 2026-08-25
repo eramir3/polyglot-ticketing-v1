@@ -11,9 +11,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 
-	ticketsv1 "polyglot-ticketing-v1/apps/tickets/gen/tickets/v1"
 	grpcserver "polyglot-ticketing-v1/apps/tickets/internal/grpc"
 	"polyglot-ticketing-v1/apps/tickets/internal/ticket"
+	ticketsv1 "polyglot-ticketing-v1/protogen/go/tickets/v1"
 )
 
 func main() {

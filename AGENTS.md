@@ -51,7 +51,7 @@ Kubernetes Gateway API controller.
 - Identity and API gateway builds run protobuf generation first through their
   respective `generate-proto` targets.
 - Tickets builds and tests run protobuf generation first; Go bindings are
-  generated in `apps/tickets/gen`.
+  generated in `protogen/go` for tickets and future Go services.
 - Gateway DTO validation provides an early HTTP guard. Protovalidate remains
   authoritative for all identity gRPC callers.
 - Public errors use `{ "errors": [{ "code", "message", "field"? }] }`.

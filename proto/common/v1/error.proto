@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package common.v1;
 
-option go_package = "polyglot-ticketing-v1/apps/tickets/gen/common/v1;commonv1";
+option go_package = "polyglot-ticketing-v1/protogen/go/common/v1;commonv1";
 
 // Stable public error codes shared by every service.
 enum ErrorCode {

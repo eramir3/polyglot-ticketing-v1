@@ -577,7 +577,7 @@ const file_identity_v1_identity_proto_rawDesc = "" +
 	"\x06SignIn\x12\x1a.identity.v1.SignInRequest\x1a\x1b.identity.v1.SignInResponse\x12D\n" +
 	"\aSignOut\x12\x1b.identity.v1.SignOutRequest\x1a\x1c.identity.v1.SignOutResponse\x12P\n" +
 	"\vCurrentUser\x12\x1f.identity.v1.CurrentUserRequest\x1a .identity.v1.CurrentUserResponse\x12P\n" +
-	"\vVerifyEmail\x12\x1f.identity.v1.VerifyEmailRequest\x1a .identity.v1.VerifyEmailResponseB?Z=polyglot-ticketing-v1/apps/tickets/gen/identity/v1;identityv1b\x06proto3"
+	"\vVerifyEmail\x12\x1f.identity.v1.VerifyEmailRequest\x1a .identity.v1.VerifyEmailResponseB:Z8polyglot-ticketing-v1/protogen/go/identity/v1;identityv1b\x06proto3"
 
 var (
 	file_identity_v1_identity_proto_rawDescOnce sync.Once

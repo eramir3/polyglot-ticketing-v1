@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package tickets.v1;
 
-option go_package = "polyglot-ticketing-v1/apps/tickets/gen/tickets/v1;ticketsv1";
+option go_package = "polyglot-ticketing-v1/protogen/go/tickets/v1;ticketsv1";
 
 service TicketsService {
   rpc CreateTicket(CreateTicketRequest) returns (CreateTicketResponse);

@@ -8,7 +8,7 @@
       "cache": true,
       "executor": "nx:run-commands",
       "outputs": [
-        "{workspaceRoot}/apps/tickets/gen",
+        "{workspaceRoot}/protogen/go",
         "{workspaceRoot}/protogen/ts"
       ],
       "options": {

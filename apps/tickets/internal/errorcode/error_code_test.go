@@ -3,7 +3,7 @@ package errorcode
 import (
 	"testing"
 
-	commonv1 "polyglot-ticketing-v1/apps/tickets/gen/common/v1"
+	commonv1 "polyglot-ticketing-v1/protogen/go/common/v1"
 )
 
 func TestStringReturnsPublicCodeForEveryDefinedErrorCode(t *testing.T) {

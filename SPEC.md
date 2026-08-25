@@ -174,7 +174,8 @@ pnpm proto:generate
 
 The command uses Buf to resolve the pinned Protovalidate dependency, export its
 runtime schema to `proto-deps/`, and generate TypeScript Protobuf-ES contracts
-to `protogen/ts`. Identity's Nx build depends on this generation step.
+to `protogen/ts` plus Go contracts to `protogen/go`. Identity, API gateway, and
+tickets builds depend on this generation step.
 
 `identity.v1.SignUpRequest` requires a non-blank name, an email address, and a
 password from 8 through 128 characters. `identity.v1.SignInRequest` requires a

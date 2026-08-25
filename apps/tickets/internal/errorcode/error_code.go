@@ -3,7 +3,7 @@ package errorcode
 import (
 	"strings"
 
-	commonv1 "polyglot-ticketing-v1/apps/tickets/gen/common/v1"
+	commonv1 "polyglot-ticketing-v1/protogen/go/common/v1"
 )
 
 const enumPrefix = "ERROR_CODE_"

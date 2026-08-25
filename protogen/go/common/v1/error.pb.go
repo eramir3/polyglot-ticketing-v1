@@ -248,7 +248,7 @@ const file_common_v1_error_proto_rawDesc = "" +
 	"\x14ERROR_CODE_NOT_FOUND\x10\r\x12\x1b\n" +
 	"\x17ERROR_CODE_RATE_LIMITED\x10\x0e\x12\"\n" +
 	"\x1eERROR_CODE_SERVICE_UNAVAILABLE\x10\x0f\x12\x1d\n" +
-	"\x19ERROR_CODE_INTERNAL_ERROR\x10\x10B;Z9polyglot-ticketing-v1/apps/tickets/gen/common/v1;commonv1b\x06proto3"
+	"\x19ERROR_CODE_INTERNAL_ERROR\x10\x10B6Z4polyglot-ticketing-v1/protogen/go/common/v1;commonv1b\x06proto3"
 
 var (
 	file_common_v1_error_proto_rawDescOnce sync.Once

@@ -535,7 +535,7 @@ const file_tickets_v1_tickets_proto_rawDesc = "" +
 	"\fCreateTicket\x12\x1f.tickets.v1.CreateTicketRequest\x1a .tickets.v1.CreateTicketResponse\x12Q\n" +
 	"\fUpdateTicket\x12\x1f.tickets.v1.UpdateTicketRequest\x1a .tickets.v1.UpdateTicketResponse\x12H\n" +
 	"\tGetTicket\x12\x1c.tickets.v1.GetTicketRequest\x1a\x1d.tickets.v1.GetTicketResponse\x12N\n" +
-	"\vListTickets\x12\x1e.tickets.v1.ListTicketsRequest\x1a\x1f.tickets.v1.ListTicketsResponseB=Z;polyglot-ticketing-v1/apps/tickets/gen/tickets/v1;ticketsv1b\x06proto3"
+	"\vListTickets\x12\x1e.tickets.v1.ListTicketsRequest\x1a\x1f.tickets.v1.ListTicketsResponseB8Z6polyglot-ticketing-v1/protogen/go/tickets/v1;ticketsv1b\x06proto3"
 
 var (
 	file_tickets_v1_tickets_proto_rawDescOnce sync.Once

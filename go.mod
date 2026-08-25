@@ -1,4 +1,4 @@
-module polyglot-ticketing-v1/apps/tickets
+module polyglot-ticketing-v1
 
 go 1.26.0
 
