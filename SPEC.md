@@ -266,5 +266,24 @@ outbox in the same transaction as the ticket, then a background dispatcher
 publishes it at least once with bounded retry backoff. Consumers must be durable,
 explicitly acknowledge messages, and deduplicate by `event_id`.
 
+`tickets.ticket.created.v1` carries the protobuf
+`tickets.v1.TicketCreated` payload. Its JSON representation is:
+
+```json
+{
+  "eventId": "e6b565df-10dc-4a8e-baf7-12bed1e9e9d2",
+  "occurredAt": "2026-08-25T15:42:18.123Z",
+  "ticket": {
+    "id": "8c91c1d3-910b-4dc4-b6f2-efb060b2a0ac",
+    "title": "Metallica — Bogotá",
+    "price": "10000",
+    "userId": "user_01K..."
+  }
+}
+```
+
+JetStream receives protobuf binary, not JSON. The `int64` `price` is shown as
+a string in protobuf JSON to preserve JavaScript integer precision.
+
 Additional event subjects, consumers, CI/CD, observability, and deployment
 environments remain open design and implementation work.
