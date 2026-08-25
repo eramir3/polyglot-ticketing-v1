@@ -66,13 +66,13 @@ Kubernetes Gateway API controller.
 ## Local Development
 
 - Required local configuration is documented in `.env.example`.
-- Build identity: `pnpm nx build identity`.
-- Build the gateway: `pnpm nx build api-gateway`.
-- Build tickets: `pnpm nx build tickets`.
-- Test tickets: `pnpm nx test tickets`.
-- Run tickets: `pnpm nx serve tickets`.
-- Start the local stack: `docker compose up -d --build` with the required
-  Better Auth and database environment variables configured.
+- Run `make help` to list the supported local commands.
+- Build all services: `make build`; test all services: `make test`.
+- Build or run an individual service with `make build-<service>` or
+  `make serve-<service>` (for example, `make serve-tickets`).
+- Generate contracts with `make generate-proto`.
+- Start the local stack with `make docker-up` after configuring the required
+  Better Auth and database environment variables.
 - The gateway is published on `localhost:3000`; identity gRPC is internal to
   the Compose network on `identity:50051`; Postgres is published on
   `localhost:5432` for local database tooling. Tickets gRPC is internal on

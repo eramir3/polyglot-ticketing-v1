@@ -218,13 +218,17 @@ Required values are listed in `.env.example`:
 Common commands:
 
 ```bash
-pnpm nx build identity
-pnpm nx build api-gateway
-pnpm nx build tickets
-pnpm nx test tickets
-pnpm nx serve tickets
-docker compose up -d --build
+make help
+make build
+make test
+make generate-proto
+make serve-tickets
+make docker-up
 ```
+
+The Makefile delegates to the existing Nx, Go, Buf, and Docker Compose
+commands. Gateway integration tests use Testcontainers and require a working
+Docker container runtime.
 
 Local ports:
 
