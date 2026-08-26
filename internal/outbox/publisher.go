@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	streamName      = "ORDERS_EVENTS"
 	pollInterval    = time.Second
 	publishTimeout  = 5 * time.Second
 	leaseDuration   = 30 * time.Second
@@ -22,6 +21,7 @@ const (
 
 type Publisher struct {
 	repository Repository
+	config     Config
 	url        string
 	logger     *slog.Logger
 
@@ -30,8 +30,8 @@ type Publisher struct {
 	js nats.JetStreamContext
 }
 
-func NewPublisher(repository Repository, url string, logger *slog.Logger) *Publisher {
-	return &Publisher{repository: repository, url: url, logger: logger}
+func NewPublisher(repository Repository, config Config, url string, logger *slog.Logger) *Publisher {
+	return &Publisher{repository: repository, config: config, url: url, logger: logger}
 }
 
 func (publisher *Publisher) Run(ctx context.Context) {
@@ -41,7 +41,7 @@ func (publisher *Publisher) Run(ctx context.Context) {
 
 	for {
 		if err := publisher.publishPending(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			publisher.logger.Warn("unable to publish pending order events", "error", err)
+			publisher.logger.Warn("unable to publish pending outbox events", "error", err)
 		}
 
 		select {
@@ -100,13 +100,13 @@ func (publisher *Publisher) ensureJetStream() error {
 		}
 	}
 
-	if _, err := publisher.js.StreamInfo(streamName); err == nil {
+	if _, err := publisher.js.StreamInfo(publisher.config.StreamName); err == nil {
 		return nil
 	}
 
 	_, err := publisher.js.AddStream(&nats.StreamConfig{
-		Name:       streamName,
-		Subjects:   []string{"orders.>"},
+		Name:       publisher.config.StreamName,
+		Subjects:   publisher.config.Subjects,
 		Storage:    nats.FileStorage,
 		Retention:  nats.LimitsPolicy,
 		MaxAge:     streamMaxAge,

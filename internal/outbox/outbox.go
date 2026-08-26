@@ -1,3 +1,4 @@
+// Package outbox provides reusable transactional-outbox dispatch primitives.
 package outbox
 
 import (
@@ -15,4 +16,9 @@ type Repository interface {
 	ClaimPending(context.Context, int, time.Duration) ([]Event, error)
 	MarkPublished(context.Context, string) error
 	MarkFailed(context.Context, string, error) error
+}
+
+type Config struct {
+	StreamName string
+	Subjects   []string
 }

@@ -14,7 +14,7 @@ import (
 	"polyglot-ticketing-v1/apps/orders/internal/consumer"
 	grpcserver "polyglot-ticketing-v1/apps/orders/internal/grpc"
 	"polyglot-ticketing-v1/apps/orders/internal/order"
-	"polyglot-ticketing-v1/apps/orders/internal/outbox"
+	"polyglot-ticketing-v1/internal/outbox"
 	ordersv1 "polyglot-ticketing-v1/protogen/go/orders/v1"
 )
 
@@ -33,6 +33,7 @@ func main() {
 	natsURL := environmentVariable("NATS_URL", "nats://localhost:4222")
 	go outbox.NewPublisher(
 		outbox.NewPostgresRepository(pool),
+		outbox.Config{StreamName: "ORDERS_EVENTS", Subjects: []string{"orders.>"}},
 		natsURL,
 		slog.Default(),
 	).Run(ctx)
