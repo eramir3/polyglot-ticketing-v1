@@ -7,7 +7,10 @@ import { throwGatewayGrpcError } from '../errors/throw-grpc-error';
 import { ORDERS_GRPC_CLIENT } from './orders.constants';
 import {
   CreateOrderGrpcResponse,
+  ListOrdersGrpcResponse,
   OrderCreationResult,
+  OrderGrpcResponse,
+  OrderResponse,
   OrdersGrpcService,
   OrderStatus,
 } from './orders.types';
@@ -41,6 +44,20 @@ export class OrdersService implements OnModuleInit {
       });
     }
   }
+
+  async listOrders(userId: string): Promise<OrderResponse[]> {
+    try {
+      const response = await firstValueFrom(
+        this.ordersService.listOrders({ userId }),
+      );
+      return toListOrdersResponse(response);
+    } catch (error: unknown) {
+      throwGatewayGrpcError(error, {
+        code: toPublicErrorCode(ErrorCode.INTERNAL_ERROR),
+        message: 'Unable to retrieve orders.',
+      });
+    }
+  }
 }
 
 function toCreateOrderResponse(
@@ -48,13 +65,23 @@ function toCreateOrderResponse(
 ): OrderCreationResult {
   return {
     created: response.created,
-    order: {
-      expiresAt: toDate(response.expiresAt).toISOString(),
-      id: response.id,
-      status: toOrderStatus(response.status),
-      ticketId: response.ticketId,
-      userId: response.userId,
-    },
+    order: toOrderResponse(response),
+  };
+}
+
+function toListOrdersResponse(
+  response: ListOrdersGrpcResponse,
+): OrderResponse[] {
+  return (response.orders ?? []).map(toOrderResponse);
+}
+
+function toOrderResponse(response: OrderGrpcResponse): OrderResponse {
+  return {
+    expiresAt: toDate(response.expiresAt).toISOString(),
+    id: response.id,
+    status: toOrderStatus(response.status),
+    ticketId: response.ticketId,
+    userId: response.userId,
   };
 }
 

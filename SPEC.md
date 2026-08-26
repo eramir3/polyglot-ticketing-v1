@@ -27,6 +27,8 @@ Implemented endpoint:
 | `GET`  | `/api/tickets/:id`                 | Retrieves a ticket by ID through tickets gRPC.                           |
 | `POST` | `/api/tickets`                     | Creates a ticket for the authenticated user through tickets gRPC.        |
 | `PUT`  | `/api/tickets/:id`                 | Updates an owned ticket through tickets gRPC.                            |
+| `GET`  | `/api/orders`                      | Retrieves the authenticated user's orders through orders gRPC.           |
+| `POST` | `/api/orders`                      | Creates an order for the authenticated user through orders gRPC.         |
 
 The gateway validates HTTP payloads with NestJS DTOs, exposes public HTTP
 errors, and translates structured gRPC errors returned by backend services.
@@ -62,7 +64,9 @@ It has no public HTTP endpoint; the API gateway owns `GET /api/tickets` and
 `orders` is a Go service that exposes gRPC internally on `orders:50053` and
 owns `orders-db`. It consumes retained ticket events from JetStream to maintain
 its local ticket projection. The API gateway exposes authenticated
-`POST /api/orders`; it accepts `{ "ticketId": "<uuid>" }`, creates a `Created`
+`GET /api/orders` and `POST /api/orders`. The list endpoint returns all orders
+for the session user in descending expiration order. The create endpoint accepts
+`{ "ticketId": "<uuid>" }`, creates a `Created`
 order for the session user, and sets `expiresAt` to 15 minutes after creation.
 It returns `404` when the ticket has not yet reached the Orders projection; it
 does not read `tickets-db` or synchronously call Tickets. An active `Created`
@@ -70,6 +74,15 @@ or `AwaitingPayment` order reserves the ticket until expiry: a same-user retry
 returns the existing order with `200`, while another user receives
 `409 ALREADY_EXISTS`. `Canceled` releases the ticket, and `Complete` keeps it
 unavailable permanently.
+
+## List Orders Flow
+
+1. A signed-in client calls `GET /api/orders`.
+2. The gateway obtains the session user ID and calls
+   `orders.v1.OrdersService.ListOrders` over gRPC.
+3. Orders retrieves that user's orders, ordered by expiration time descending
+   and then ID descending.
+4. The gateway returns `200` with a JSON array of orders.
 
 ## List Tickets Flow
 

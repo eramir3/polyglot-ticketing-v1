@@ -58,6 +58,24 @@ func (server *Server) CreateOrder(
 	return toCreateOrderResponse(reservation), nil
 }
 
+func (server *Server) ListOrders(
+	ctx context.Context,
+	request *ordersv1.ListOrdersRequest,
+) (*ordersv1.ListOrdersResponse, error) {
+	orders, validationErrors, err := server.service.ListOrders(ctx, request.GetUserId())
+	if len(validationErrors) > 0 {
+		return nil, structuredError(codes.InvalidArgument, validationErrors)
+	}
+	if err != nil {
+		return nil, structuredError(codes.Internal, []order.ValidationError{{
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
+			Message: "Unable to retrieve orders.",
+		}})
+	}
+
+	return toListOrdersResponse(orders), nil
+}
+
 func toCreateOrderResponse(result order.ReservationResult) *ordersv1.CreateOrderResponse {
 	return &ordersv1.CreateOrderResponse{
 		Created:   result.Created,
@@ -66,6 +84,27 @@ func toCreateOrderResponse(result order.ReservationResult) *ordersv1.CreateOrder
 		Status:    toOrderStatus(result.Order.Status),
 		TicketId:  result.Order.TicketID,
 		UserId:    result.Order.UserID,
+	}
+}
+
+func toListOrdersResponse(orders []order.Order) *ordersv1.ListOrdersResponse {
+	response := &ordersv1.ListOrdersResponse{
+		Orders: make([]*ordersv1.Order, 0, len(orders)),
+	}
+	for _, found := range orders {
+		response.Orders = append(response.Orders, toOrderResponse(found))
+	}
+
+	return response
+}
+
+func toOrderResponse(found order.Order) *ordersv1.Order {
+	return &ordersv1.Order{
+		ExpiresAt: timestamppb.New(found.ExpiresAt),
+		Id:        found.ID,
+		Status:    toOrderStatus(found.Status),
+		TicketId:  found.TicketID,
+		UserId:    found.UserID,
 	}
 }
 

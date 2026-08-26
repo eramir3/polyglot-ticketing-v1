@@ -8,6 +8,7 @@ option go_package = "polyglot-ticketing-v1/protogen/go/orders/v1;ordersv1";
 
 service OrdersService {
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
 }
 
 message CreateOrderRequest {
@@ -22,6 +23,22 @@ message CreateOrderResponse {
   string ticket_id = 4;
   OrderStatus status = 5;
   bool created = 6;
+}
+
+message ListOrdersRequest {
+  string user_id = 1;
+}
+
+message ListOrdersResponse {
+  repeated Order orders = 1;
+}
+
+message Order {
+  string id = 1;
+  google.protobuf.Timestamp expires_at = 2;
+  string user_id = 3;
+  string ticket_id = 4;
+  OrderStatus status = 5;
 }
 
 enum OrderStatus {

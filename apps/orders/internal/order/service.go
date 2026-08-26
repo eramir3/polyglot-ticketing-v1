@@ -13,10 +13,10 @@ import (
 
 type Service struct {
 	now        func() time.Time
-	repository TicketReservationRepository
+	repository OrderRepository
 }
 
-func NewService(repository TicketReservationRepository) *Service {
+func NewService(repository OrderRepository) *Service {
 	return &Service{now: time.Now, repository: repository}
 }
 
@@ -37,6 +37,18 @@ func (service *Service) ReserveTicket(
 	return reservation, nil, err
 }
 
+func (service *Service) ListOrders(
+	ctx context.Context,
+	userID string,
+) ([]Order, []ValidationError, error) {
+	if validationErrors := validateOrderUser(userID); len(validationErrors) > 0 {
+		return nil, validationErrors, nil
+	}
+
+	orders, err := service.repository.ListByUser(ctx, userID)
+	return orders, nil, err
+}
+
 func validateTicketReservation(ticketID string, userID string) []ValidationError {
 	if _, err := uuid.Parse(ticketID); err != nil {
 		return []ValidationError{{
@@ -45,6 +57,10 @@ func validateTicketReservation(ticketID string, userID string) []ValidationError
 			Message: "Ticket ID must be a valid UUID.",
 		}}
 	}
+	return validateOrderUser(userID)
+}
+
+func validateOrderUser(userID string) []ValidationError {
 	if strings.TrimSpace(userID) == "" {
 		return []ValidationError{{
 			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT),

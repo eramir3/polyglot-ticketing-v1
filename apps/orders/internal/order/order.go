@@ -55,8 +55,9 @@ type ValidationError struct {
 	Message string `json:"message"`
 }
 
-type TicketReservationRepository interface {
+type OrderRepository interface {
 	ReserveTicket(context.Context, TicketReservationInput) (ReservationResult, error)
+	ListByUser(context.Context, string) ([]Order, error)
 }
 
 type TicketProjectionRepository interface {

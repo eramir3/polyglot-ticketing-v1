@@ -25,6 +25,7 @@ describe('orders endpoints', () => {
   let ordersDatabaseUrl: string;
   let sessionCookie: string;
   let userId: string;
+  let anotherUser: AuthenticatedUser;
 
   beforeAll(async () => {
     const [gatewayPort, identityGrpcPort, ordersGrpcPort] = await Promise.all([
@@ -77,6 +78,7 @@ describe('orders endpoints', () => {
     apiGateway = await createApiGatewayApplication();
     await apiGateway.listen(gatewayPort, '127.0.0.1');
     ({ sessionCookie, userId } = await createAuthenticatedUser());
+    anotherUser = await createAuthenticatedUser();
   });
 
   afterAll(async () => {
@@ -95,6 +97,74 @@ describe('orders endpoints', () => {
     expect(response.body).toEqual({
       errors: [expect.objectContaining({ code: 'UNAUTHENTICATED' })],
     });
+  });
+
+  it('requires an authenticated user to list orders', async () => {
+    const response = await getOrders();
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      errors: [expect.objectContaining({ code: 'UNAUTHENTICATED' })],
+    });
+  });
+
+  it('returns an empty list when the authenticated user has no orders', async () => {
+    const userWithoutOrders = await createAuthenticatedUser();
+
+    const response = await getOrders(userWithoutOrders.sessionCookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([]);
+  });
+
+  it('lists only the orders belonging to the authenticated user', async () => {
+    const listingUser = await createAuthenticatedUser();
+    const earlierTicketId = await seedProjectedTicket();
+    const laterTicketId = await seedProjectedTicket();
+    const otherTicketId = await seedProjectedTicket();
+
+    const earlierOrder = await postOrder(
+      { ticketId: earlierTicketId },
+      listingUser.sessionCookie,
+    );
+    const otherOrder = await postOrder(
+      { ticketId: otherTicketId },
+      anotherUser.sessionCookie,
+    );
+    const laterOrder = await postOrder(
+      { ticketId: laterTicketId },
+      listingUser.sessionCookie,
+    );
+    await setOrderExpiration(
+      (earlierOrder.body as OrderResponse).id,
+      5 * 60_000,
+    );
+    await setOrderExpiration(
+      (laterOrder.body as OrderResponse).id,
+      30 * 60_000,
+    );
+    const response = await getOrders(listingUser.sessionCookie);
+
+    expect(earlierOrder.status).toBe(201);
+    expect(otherOrder.status).toBe(201);
+    expect(laterOrder.status).toBe(201);
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([
+      expect.objectContaining({
+        expiresAt: expect.any(String),
+        id: (laterOrder.body as OrderResponse).id,
+        status: 'Created',
+        ticketId: laterTicketId,
+        userId: listingUser.userId,
+      }),
+      expect.objectContaining({
+        expiresAt: expect.any(String),
+        id: (earlierOrder.body as OrderResponse).id,
+        status: 'Created',
+        ticketId: earlierTicketId,
+        userId: listingUser.userId,
+      }),
+    ]);
   });
 
   it('rejects an invalid ticket ID', async () => {
@@ -141,17 +211,91 @@ describe('orders endpoints', () => {
     expect(expiresAt).toBeLessThanOrEqual(Date.now() + 16 * 60_000);
   });
 
-  it('allows multiple orders for the same projected ticket', async () => {
+  it('returns the existing order for a same-user retry without extending it', async () => {
     const ticketId = await seedProjectedTicket();
 
     const first = await postOrder({ ticketId }, sessionCookie);
     const second = await postOrder({ ticketId }, sessionCookie);
 
     expect(first.status).toBe(201);
-    expect(second.status).toBe(201);
-    expect((first.body as { id: string }).id).not.toBe(
-      (second.body as { id: string }).id,
+    expect(second.status).toBe(200);
+    expect(second.body).toEqual(first.body);
+  });
+
+  it('blocks another user while a ticket has an active Created order', async () => {
+    const ticketId = await seedProjectedTicket();
+    await expect(postOrder({ ticketId }, sessionCookie)).resolves.toMatchObject(
+      {
+        status: 201,
+      },
     );
+
+    const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      errors: [expect.objectContaining({ code: 'ALREADY_EXISTS' })],
+    });
+  });
+
+  it('blocks another user while a ticket has an active AwaitingPayment order', async () => {
+    const ticketId = await seedProjectedTicket();
+    const created = await postOrder({ ticketId }, sessionCookie);
+    await setOrderState((created.body as OrderResponse).id, 'AwaitingPayment');
+
+    const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      errors: [expect.objectContaining({ code: 'ALREADY_EXISTS' })],
+    });
+  });
+
+  it('allows another user after the reservation expires', async () => {
+    const ticketId = await seedProjectedTicket();
+    const created = await postOrder({ ticketId }, sessionCookie);
+    await setOrderState((created.body as OrderResponse).id, 'Created', true);
+
+    const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual(
+      expect.objectContaining({ ticketId, userId: anotherUser.userId }),
+    );
+  });
+
+  it('allows another user after the reservation is canceled', async () => {
+    const ticketId = await seedProjectedTicket();
+    const created = await postOrder({ ticketId }, sessionCookie);
+    await setOrderState((created.body as OrderResponse).id, 'Canceled');
+
+    const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
+
+    expect(response.status).toBe(201);
+  });
+
+  it('blocks all users after the ticket order is complete', async () => {
+    const ticketId = await seedProjectedTicket();
+    const created = await postOrder({ ticketId }, sessionCookie);
+    await setOrderState((created.body as OrderResponse).id, 'Complete', true);
+
+    const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      errors: [expect.objectContaining({ code: 'ALREADY_EXISTS' })],
+    });
+  });
+
+  it('allows only one of two concurrent users to reserve a ticket', async () => {
+    const ticketId = await seedProjectedTicket();
+
+    const responses = await Promise.all([
+      postOrder({ ticketId }, sessionCookie),
+      postOrder({ ticketId }, anotherUser.sessionCookie),
+    ]);
+
+    expect(responses.map(({ status }) => status).sort()).toEqual([201, 409]);
   });
 
   async function createAuthenticatedUser(): Promise<{
@@ -192,6 +336,42 @@ describe('orders endpoints', () => {
     return { sessionCookie: setCookie.split(';', 1)[0], userId: signup.userId };
   }
 
+  async function setOrderState(
+    orderId: string,
+    status: 'AwaitingPayment' | 'Canceled' | 'Complete' | 'Created',
+    expired = false,
+  ): Promise<void> {
+    const database = new Client({ connectionString: ordersDatabaseUrl });
+    await database.connect();
+    try {
+      await database.query(
+        `UPDATE orders
+         SET status = $2,
+             expires_at = CASE WHEN $3 THEN NOW() - INTERVAL '1 minute' ELSE expires_at END
+         WHERE id = $1`,
+        [orderId, status, expired],
+      );
+    } finally {
+      await database.end();
+    }
+  }
+
+  async function setOrderExpiration(
+    orderId: string,
+    offsetMilliseconds: number,
+  ): Promise<void> {
+    const database = new Client({ connectionString: ordersDatabaseUrl });
+    await database.connect();
+    try {
+      await database.query('UPDATE orders SET expires_at = $2 WHERE id = $1', [
+        orderId,
+        new Date(Date.now() + offsetMilliseconds),
+      ]);
+    } finally {
+      await database.end();
+    }
+  }
+
   async function seedProjectedTicket(): Promise<string> {
     const id = randomUUID();
     const database = new Client({ connectionString: ordersDatabaseUrl });
@@ -212,6 +392,17 @@ describe('orders endpoints', () => {
     cookie?: string,
   ): Promise<HttpResponse> {
     return postJson('/api/orders', body, cookie);
+  }
+
+  async function getOrders(cookie?: string): Promise<HttpResponse> {
+    const response = await fetch(`${gatewayUrl}/api/orders`, {
+      headers: cookie === undefined ? {} : { cookie },
+    });
+    return {
+      body: await response.json(),
+      headers: response.headers,
+      status: response.status,
+    };
   }
 
   async function postJson(
@@ -239,6 +430,19 @@ interface HttpResponse {
   body: unknown;
   headers: Headers;
   status: number;
+}
+
+interface AuthenticatedUser {
+  sessionCookie: string;
+  userId: string;
+}
+
+interface OrderResponse {
+  expiresAt: string;
+  id: string;
+  status: string;
+  ticketId: string;
+  userId: string;
 }
 
 function runOrdersMigration(databaseUrl: string): Promise<void> {
@@ -337,16 +541,16 @@ async function stopOrdersService(
 }
 
 function terminateProcessGroup(
-  process: ChildProcessWithoutNullStreams,
+  childProcess: ChildProcessWithoutNullStreams,
   signal: NodeJS.Signals,
 ): void {
-  if (process.pid === undefined) {
+  if (childProcess.pid === undefined) {
     return;
   }
   try {
-    process.kill(-process.pid);
+    globalThis.process.kill(-childProcess.pid, signal);
   } catch {
-    process.kill(signal);
+    childProcess.kill(signal);
   }
 }
 

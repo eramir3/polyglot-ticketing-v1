@@ -117,6 +117,40 @@ func insertOrder(ctx context.Context, tx pgx.Tx, input TicketReservationInput) (
 	return created, nil
 }
 
+func (repository *PostgresRepository) ListByUser(ctx context.Context, userID string) ([]Order, error) {
+	rows, err := repository.pool.Query(ctx, `
+		SELECT id::text, expires_at, user_id, ticket_id::text, status::text
+		FROM orders
+		WHERE user_id = $1
+		ORDER BY expires_at DESC, id DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	orders := make([]Order, 0)
+	for rows.Next() {
+		var found Order
+		var status string
+		if err := rows.Scan(
+			&found.ID,
+			&found.ExpiresAt,
+			&found.UserID,
+			&found.TicketID,
+			&status,
+		); err != nil {
+			return nil, err
+		}
+		found.Status = Status(status)
+		orders = append(orders, found)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
 // UpsertTicketFromEvent records the event and applies the ticket projection in
 // one transaction. Redelivered event IDs are intentionally no-ops.
 func (repository *PostgresRepository) UpsertTicketFromEvent(

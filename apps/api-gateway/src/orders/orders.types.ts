@@ -26,7 +26,23 @@ export interface CreateOrderGrpcResponse {
   userId: string;
 }
 
-export interface CreateOrderResponse {
+export interface ListOrdersRequest {
+  userId: string;
+}
+
+export interface ListOrdersGrpcResponse {
+  orders?: OrderGrpcResponse[];
+}
+
+export interface OrderGrpcResponse {
+  expiresAt: Timestamp;
+  id: string;
+  status: GrpcOrderStatus;
+  ticketId: string;
+  userId: string;
+}
+
+export interface OrderResponse {
   expiresAt: string;
   id: string;
   status: OrderStatus;
@@ -36,9 +52,10 @@ export interface CreateOrderResponse {
 
 export interface OrderCreationResult {
   created: boolean;
-  order: CreateOrderResponse;
+  order: OrderResponse;
 }
 
 export interface OrdersGrpcService {
   createOrder(request: CreateOrderRequest): Observable<CreateOrderGrpcResponse>;
+  listOrders(request: ListOrdersRequest): Observable<ListOrdersGrpcResponse>;
 }

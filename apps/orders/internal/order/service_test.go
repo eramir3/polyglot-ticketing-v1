@@ -57,9 +57,35 @@ func TestServiceReturnsMissingProjectedTicket(t *testing.T) {
 	}
 }
 
+func TestServiceListsOrdersForUser(t *testing.T) {
+	repository := &fakeTicketReservationRepository{orders: []Order{{
+		ID:     "order-1",
+		UserID: "user-1",
+	}}}
+
+	orders, validationErrors, err := NewService(repository).ListOrders(
+		context.Background(),
+		"user-1",
+	)
+	if err != nil {
+		t.Fatalf("list orders: %v", err)
+	}
+	if len(validationErrors) != 0 {
+		t.Fatalf("unexpected validation errors: %+v", validationErrors)
+	}
+	if repository.listedUserID != "user-1" {
+		t.Fatalf("expected user ID user-1, got %q", repository.listedUserID)
+	}
+	if len(orders) != 1 || orders[0].ID != "order-1" {
+		t.Fatalf("unexpected orders: %+v", orders)
+	}
+}
+
 type fakeTicketReservationRepository struct {
-	err   error
-	input TicketReservationInput
+	err          error
+	input        TicketReservationInput
+	listedUserID string
+	orders       []Order
 }
 
 func (repository *fakeTicketReservationRepository) ReserveTicket(
@@ -68,4 +94,12 @@ func (repository *fakeTicketReservationRepository) ReserveTicket(
 ) (ReservationResult, error) {
 	repository.input = input
 	return ReservationResult{}, repository.err
+}
+
+func (repository *fakeTicketReservationRepository) ListByUser(
+	_ context.Context,
+	userID string,
+) ([]Order, error) {
+	repository.listedUserID = userID
+	return repository.orders, repository.err
 }
