@@ -7,6 +7,7 @@ import { throwGatewayGrpcError } from '../errors/throw-grpc-error';
 import { ORDERS_GRPC_CLIENT } from './orders.constants';
 import {
   CreateOrderGrpcResponse,
+  GetOrderGrpcResponse,
   ListOrdersGrpcResponse,
   OrderCreationResult,
   OrderGrpcResponse,
@@ -58,6 +59,20 @@ export class OrdersService implements OnModuleInit {
       });
     }
   }
+
+  async getOrder(id: string, userId: string): Promise<OrderResponse> {
+    try {
+      const response = await firstValueFrom(
+        this.ordersService.getOrder({ orderId: id, userId }),
+      );
+      return toGetOrderResponse(response);
+    } catch (error: unknown) {
+      throwGatewayGrpcError(error, {
+        code: toPublicErrorCode(ErrorCode.INVALID_ARGUMENT),
+        message: 'Order ID is invalid.',
+      });
+    }
+  }
 }
 
 function toCreateOrderResponse(
@@ -73,6 +88,10 @@ function toListOrdersResponse(
   response: ListOrdersGrpcResponse,
 ): OrderResponse[] {
   return (response.orders ?? []).map(toOrderResponse);
+}
+
+function toGetOrderResponse(response: GetOrderGrpcResponse): OrderResponse {
+  return toOrderResponse(response.order);
 }
 
 function toOrderResponse(response: OrderGrpcResponse): OrderResponse {

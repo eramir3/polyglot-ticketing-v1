@@ -37,6 +37,22 @@ func (service *Service) ReserveTicket(
 	return reservation, nil, err
 }
 
+func (service *Service) GetOrder(
+	ctx context.Context,
+	orderID string,
+	userID string,
+) (Order, []ValidationError, error) {
+	if validationErrors := validateOrderID(orderID); len(validationErrors) > 0 {
+		return Order{}, validationErrors, nil
+	}
+	if validationErrors := validateOrderUser(userID); len(validationErrors) > 0 {
+		return Order{}, validationErrors, nil
+	}
+
+	found, err := service.repository.GetByIDAndUser(ctx, orderID, userID)
+	return found, nil, err
+}
+
 func (service *Service) ListOrders(
 	ctx context.Context,
 	userID string,
@@ -58,6 +74,18 @@ func validateTicketReservation(ticketID string, userID string) []ValidationError
 		}}
 	}
 	return validateOrderUser(userID)
+}
+
+func validateOrderID(orderID string) []ValidationError {
+	if _, err := uuid.Parse(orderID); err != nil {
+		return []ValidationError{{
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT),
+			Field:   "orderId",
+			Message: "Order ID must be a valid UUID.",
+		}}
+	}
+
+	return nil
 }
 
 func validateOrderUser(userID string) []ValidationError {

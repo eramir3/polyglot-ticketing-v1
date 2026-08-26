@@ -117,6 +117,34 @@ func insertOrder(ctx context.Context, tx pgx.Tx, input TicketReservationInput) (
 	return created, nil
 }
 
+func (repository *PostgresRepository) GetByIDAndUser(
+	ctx context.Context,
+	orderID string,
+	userID string,
+) (Order, error) {
+	var found Order
+	var status string
+	err := repository.pool.QueryRow(ctx, `
+		SELECT id::text, expires_at, user_id, ticket_id::text, status::text
+		FROM orders
+		WHERE id = $1 AND user_id = $2`, orderID, userID).Scan(
+		&found.ID,
+		&found.ExpiresAt,
+		&found.UserID,
+		&found.TicketID,
+		&status,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Order{}, ErrOrderNotFound
+	}
+	if err != nil {
+		return Order{}, err
+	}
+	found.Status = Status(status)
+
+	return found, nil
+}
+
 func (repository *PostgresRepository) ListByUser(ctx context.Context, userID string) ([]Order, error) {
 	rows, err := repository.pool.Query(ctx, `
 		SELECT id::text, expires_at, user_id, ticket_id::text, status::text

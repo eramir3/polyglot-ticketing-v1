@@ -30,6 +30,15 @@ export interface ListOrdersRequest {
   userId: string;
 }
 
+export interface GetOrderRequest {
+  orderId: string;
+  userId: string;
+}
+
+export interface GetOrderGrpcResponse {
+  order: OrderGrpcResponse;
+}
+
 export interface ListOrdersGrpcResponse {
   orders?: OrderGrpcResponse[];
 }
@@ -57,5 +66,6 @@ export interface OrderCreationResult {
 
 export interface OrdersGrpcService {
   createOrder(request: CreateOrderRequest): Observable<CreateOrderGrpcResponse>;
+  getOrder(request: GetOrderRequest): Observable<GetOrderGrpcResponse>;
   listOrders(request: ListOrdersRequest): Observable<ListOrdersGrpcResponse>;
 }

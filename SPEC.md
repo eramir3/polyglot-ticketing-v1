@@ -28,6 +28,7 @@ Implemented endpoint:
 | `POST` | `/api/tickets`                     | Creates a ticket for the authenticated user through tickets gRPC.        |
 | `PUT`  | `/api/tickets/:id`                 | Updates an owned ticket through tickets gRPC.                            |
 | `GET`  | `/api/orders`                      | Retrieves the authenticated user's orders through orders gRPC.           |
+| `GET`  | `/api/orders/:id`                  | Retrieves one owned order through orders gRPC.                           |
 | `POST` | `/api/orders`                      | Creates an order for the authenticated user through orders gRPC.         |
 
 The gateway validates HTTP payloads with NestJS DTOs, exposes public HTTP
@@ -74,6 +75,14 @@ or `AwaitingPayment` order reserves the ticket until expiry: a same-user retry
 returns the existing order with `200`, while another user receives
 `409 ALREADY_EXISTS`. `Canceled` releases the ticket, and `Complete` keeps it
 unavailable permanently.
+
+## Get Order Flow
+
+1. A signed-in client calls `GET /api/orders/:id`.
+2. The gateway obtains the session user ID and calls
+   `orders.v1.OrdersService.GetOrder` with it and the order ID.
+3. Orders retrieves the order only when both values match the same row.
+4. The gateway returns `200`; missing and unowned orders both return `404`.
 
 ## List Orders Flow
 

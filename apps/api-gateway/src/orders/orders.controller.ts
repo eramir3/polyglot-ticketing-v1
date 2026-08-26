@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpStatus,
+  Param,
   Post,
   Res,
   UseGuards,
@@ -35,6 +36,15 @@ export class OrdersController {
   @UseGuards(SessionAuthGuard)
   listOrders(@CurrentUser() user: AuthenticatedUser): Promise<OrderResponse[]> {
     return this.ordersService.listOrders(user.id);
+  }
+
+  @Get(':id')
+  @UseGuards(SessionAuthGuard)
+  getOrder(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<OrderResponse> {
+    return this.ordersService.getOrder(id, user.id);
   }
 }
 

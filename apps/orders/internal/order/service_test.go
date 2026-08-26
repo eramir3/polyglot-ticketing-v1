@@ -81,8 +81,51 @@ func TestServiceListsOrdersForUser(t *testing.T) {
 	}
 }
 
+func TestServiceGetsOrderForUser(t *testing.T) {
+	orderID := "f446d2f3-4515-4b78-8e6a-81797a2517a3"
+	repository := &fakeTicketReservationRepository{foundOrder: Order{
+		ID:     orderID,
+		UserID: "user-1",
+	}}
+
+	found, validationErrors, err := NewService(repository).GetOrder(
+		context.Background(),
+		orderID,
+		"user-1",
+	)
+	if err != nil {
+		t.Fatalf("get order: %v", err)
+	}
+	if len(validationErrors) != 0 {
+		t.Fatalf("unexpected validation errors: %+v", validationErrors)
+	}
+	if repository.foundOrderID != orderID || repository.foundUserID != "user-1" {
+		t.Fatalf("unexpected repository lookup: %q, %q", repository.foundOrderID, repository.foundUserID)
+	}
+	if found.ID != orderID {
+		t.Fatalf("expected order ID %q, got %q", orderID, found.ID)
+	}
+}
+
+func TestServiceRejectsInvalidOrderID(t *testing.T) {
+	_, validationErrors, err := NewService(&fakeTicketReservationRepository{}).GetOrder(
+		context.Background(),
+		"not-a-uuid",
+		"user-1",
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(validationErrors) != 1 || validationErrors[0].Field != "orderId" {
+		t.Fatalf("expected order ID validation error, got %+v", validationErrors)
+	}
+}
+
 type fakeTicketReservationRepository struct {
 	err          error
+	foundOrder   Order
+	foundOrderID string
+	foundUserID  string
 	input        TicketReservationInput
 	listedUserID string
 	orders       []Order
@@ -94,6 +137,16 @@ func (repository *fakeTicketReservationRepository) ReserveTicket(
 ) (ReservationResult, error) {
 	repository.input = input
 	return ReservationResult{}, repository.err
+}
+
+func (repository *fakeTicketReservationRepository) GetByIDAndUser(
+	_ context.Context,
+	orderID string,
+	userID string,
+) (Order, error) {
+	repository.foundOrderID = orderID
+	repository.foundUserID = userID
+	return repository.foundOrder, repository.err
 }
 
 func (repository *fakeTicketReservationRepository) ListByUser(

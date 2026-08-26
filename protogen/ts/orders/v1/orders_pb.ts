@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file orders/v1/orders.proto.
  */
 export const file_orders_v1_orders: GenFile = /*@__PURE__*/
-  fileDesc("ChZvcmRlcnMvdjEvb3JkZXJzLnByb3RvEglvcmRlcnMudjEiOAoSQ3JlYXRlT3JkZXJSZXF1ZXN0EhEKCXRpY2tldF9pZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJIq4BChNDcmVhdGVPcmRlclJlc3BvbnNlEgoKAmlkGAEgASgJEi4KCmV4cGlyZXNfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg8KB3VzZXJfaWQYAyABKAkSEQoJdGlja2V0X2lkGAQgASgJEiYKBnN0YXR1cxgFIAEoDjIWLm9yZGVycy52MS5PcmRlclN0YXR1cxIPCgdjcmVhdGVkGAYgASgIIiQKEUxpc3RPcmRlcnNSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkiNgoSTGlzdE9yZGVyc1Jlc3BvbnNlEiAKBm9yZGVycxgBIAMoCzIQLm9yZGVycy52MS5PcmRlciKPAQoFT3JkZXISCgoCaWQYASABKAkSLgoKZXhwaXJlc19hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDwoHdXNlcl9pZBgDIAEoCRIRCgl0aWNrZXRfaWQYBCABKAkSJgoGc3RhdHVzGAUgASgOMhYub3JkZXJzLnYxLk9yZGVyU3RhdHVzKp4BCgtPcmRlclN0YXR1cxIcChhPUkRFUl9TVEFUVVNfVU5TUEVDSUZJRUQQABIYChRPUkRFUl9TVEFUVVNfQ1JFQVRFRBABEhkKFU9SREVSX1NUQVRVU19DQU5DRUxFRBACEiEKHU9SREVSX1NUQVRVU19BV0FJVElOR19QQVlNRU5UEAMSGQoVT1JERVJfU1RBVFVTX0NPTVBMRVRFEAQyqAEKDU9yZGVyc1NlcnZpY2USTAoLQ3JlYXRlT3JkZXISHS5vcmRlcnMudjEuQ3JlYXRlT3JkZXJSZXF1ZXN0Gh4ub3JkZXJzLnYxLkNyZWF0ZU9yZGVyUmVzcG9uc2USSQoKTGlzdE9yZGVycxIcLm9yZGVycy52MS5MaXN0T3JkZXJzUmVxdWVzdBodLm9yZGVycy52MS5MaXN0T3JkZXJzUmVzcG9uc2VCNlo0cG9seWdsb3QtdGlja2V0aW5nLXYxL3Byb3RvZ2VuL2dvL29yZGVycy92MTtvcmRlcnN2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("ChZvcmRlcnMvdjEvb3JkZXJzLnByb3RvEglvcmRlcnMudjEiOAoSQ3JlYXRlT3JkZXJSZXF1ZXN0EhEKCXRpY2tldF9pZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJIq4BChNDcmVhdGVPcmRlclJlc3BvbnNlEgoKAmlkGAEgASgJEi4KCmV4cGlyZXNfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg8KB3VzZXJfaWQYAyABKAkSEQoJdGlja2V0X2lkGAQgASgJEiYKBnN0YXR1cxgFIAEoDjIWLm9yZGVycy52MS5PcmRlclN0YXR1cxIPCgdjcmVhdGVkGAYgASgIIjQKD0dldE9yZGVyUmVxdWVzdBIQCghvcmRlcl9pZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJIjMKEEdldE9yZGVyUmVzcG9uc2USHwoFb3JkZXIYASABKAsyEC5vcmRlcnMudjEuT3JkZXIiJAoRTGlzdE9yZGVyc1JlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCSI2ChJMaXN0T3JkZXJzUmVzcG9uc2USIAoGb3JkZXJzGAEgAygLMhAub3JkZXJzLnYxLk9yZGVyIo8BCgVPcmRlchIKCgJpZBgBIAEoCRIuCgpleHBpcmVzX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIPCgd1c2VyX2lkGAMgASgJEhEKCXRpY2tldF9pZBgEIAEoCRImCgZzdGF0dXMYBSABKA4yFi5vcmRlcnMudjEuT3JkZXJTdGF0dXMqngEKC09yZGVyU3RhdHVzEhwKGE9SREVSX1NUQVRVU19VTlNQRUNJRklFRBAAEhgKFE9SREVSX1NUQVRVU19DUkVBVEVEEAESGQoVT1JERVJfU1RBVFVTX0NBTkNFTEVEEAISIQodT1JERVJfU1RBVFVTX0FXQUlUSU5HX1BBWU1FTlQQAxIZChVPUkRFUl9TVEFUVVNfQ09NUExFVEUQBDLtAQoNT3JkZXJzU2VydmljZRJMCgtDcmVhdGVPcmRlchIdLm9yZGVycy52MS5DcmVhdGVPcmRlclJlcXVlc3QaHi5vcmRlcnMudjEuQ3JlYXRlT3JkZXJSZXNwb25zZRJDCghHZXRPcmRlchIaLm9yZGVycy52MS5HZXRPcmRlclJlcXVlc3QaGy5vcmRlcnMudjEuR2V0T3JkZXJSZXNwb25zZRJJCgpMaXN0T3JkZXJzEhwub3JkZXJzLnYxLkxpc3RPcmRlcnNSZXF1ZXN0Gh0ub3JkZXJzLnYxLkxpc3RPcmRlcnNSZXNwb25zZUI2WjRwb2x5Z2xvdC10aWNrZXRpbmctdjEvcHJvdG9nZW4vZ28vb3JkZXJzL3YxO29yZGVyc3YxYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message orders.v1.CreateOrderRequest
@@ -79,6 +79,45 @@ export const CreateOrderResponseSchema: GenMessage<CreateOrderResponse> = /*@__P
   messageDesc(file_orders_v1_orders, 1);
 
 /**
+ * @generated from message orders.v1.GetOrderRequest
+ */
+export type GetOrderRequest = Message<"orders.v1.GetOrderRequest"> & {
+  /**
+   * @generated from field: string order_id = 1;
+   */
+  orderId: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+};
+
+/**
+ * Describes the message orders.v1.GetOrderRequest.
+ * Use `create(GetOrderRequestSchema)` to create a new message.
+ */
+export const GetOrderRequestSchema: GenMessage<GetOrderRequest> = /*@__PURE__*/
+  messageDesc(file_orders_v1_orders, 2);
+
+/**
+ * @generated from message orders.v1.GetOrderResponse
+ */
+export type GetOrderResponse = Message<"orders.v1.GetOrderResponse"> & {
+  /**
+   * @generated from field: orders.v1.Order order = 1;
+   */
+  order?: Order | undefined;
+};
+
+/**
+ * Describes the message orders.v1.GetOrderResponse.
+ * Use `create(GetOrderResponseSchema)` to create a new message.
+ */
+export const GetOrderResponseSchema: GenMessage<GetOrderResponse> = /*@__PURE__*/
+  messageDesc(file_orders_v1_orders, 3);
+
+/**
  * @generated from message orders.v1.ListOrdersRequest
  */
 export type ListOrdersRequest = Message<"orders.v1.ListOrdersRequest"> & {
@@ -93,7 +132,7 @@ export type ListOrdersRequest = Message<"orders.v1.ListOrdersRequest"> & {
  * Use `create(ListOrdersRequestSchema)` to create a new message.
  */
 export const ListOrdersRequestSchema: GenMessage<ListOrdersRequest> = /*@__PURE__*/
-  messageDesc(file_orders_v1_orders, 2);
+  messageDesc(file_orders_v1_orders, 4);
 
 /**
  * @generated from message orders.v1.ListOrdersResponse
@@ -110,7 +149,7 @@ export type ListOrdersResponse = Message<"orders.v1.ListOrdersResponse"> & {
  * Use `create(ListOrdersResponseSchema)` to create a new message.
  */
 export const ListOrdersResponseSchema: GenMessage<ListOrdersResponse> = /*@__PURE__*/
-  messageDesc(file_orders_v1_orders, 3);
+  messageDesc(file_orders_v1_orders, 5);
 
 /**
  * @generated from message orders.v1.Order
@@ -147,7 +186,7 @@ export type Order = Message<"orders.v1.Order"> & {
  * Use `create(OrderSchema)` to create a new message.
  */
 export const OrderSchema: GenMessage<Order> = /*@__PURE__*/
-  messageDesc(file_orders_v1_orders, 4);
+  messageDesc(file_orders_v1_orders, 6);
 
 /**
  * @generated from enum orders.v1.OrderStatus
@@ -196,6 +235,14 @@ export const OrdersService: GenService<{
     methodKind: "unary";
     input: typeof CreateOrderRequestSchema;
     output: typeof CreateOrderResponseSchema;
+  },
+  /**
+   * @generated from rpc orders.v1.OrdersService.GetOrder
+   */
+  getOrder: {
+    methodKind: "unary";
+    input: typeof GetOrderRequestSchema;
+    output: typeof GetOrderResponseSchema;
   },
   /**
    * @generated from rpc orders.v1.OrdersService.ListOrders

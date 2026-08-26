@@ -58,6 +58,34 @@ func (server *Server) CreateOrder(
 	return toCreateOrderResponse(reservation), nil
 }
 
+func (server *Server) GetOrder(
+	ctx context.Context,
+	request *ordersv1.GetOrderRequest,
+) (*ordersv1.GetOrderResponse, error) {
+	found, validationErrors, err := server.service.GetOrder(
+		ctx,
+		request.GetOrderId(),
+		request.GetUserId(),
+	)
+	if len(validationErrors) > 0 {
+		return nil, structuredError(codes.InvalidArgument, validationErrors)
+	}
+	if errors.Is(err, order.ErrOrderNotFound) {
+		return nil, structuredError(codes.NotFound, []order.ValidationError{{
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_NOT_FOUND),
+			Message: "Order not found.",
+		}})
+	}
+	if err != nil {
+		return nil, structuredError(codes.Internal, []order.ValidationError{{
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
+			Message: "Unable to retrieve order.",
+		}})
+	}
+
+	return &ordersv1.GetOrderResponse{Order: toOrderResponse(found)}, nil
+}
+
 func (server *Server) ListOrders(
 	ctx context.Context,
 	request *ordersv1.ListOrdersRequest,

@@ -8,6 +8,7 @@ option go_package = "polyglot-ticketing-v1/protogen/go/orders/v1;ordersv1";
 
 service OrdersService {
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
   rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
 }
 
@@ -23,6 +24,15 @@ message CreateOrderResponse {
   string ticket_id = 4;
   OrderStatus status = 5;
   bool created = 6;
+}
+
+message GetOrderRequest {
+  string order_id = 1;
+  string user_id = 2;
+}
+
+message GetOrderResponse {
+  Order order = 1;
 }
 
 message ListOrdersRequest {

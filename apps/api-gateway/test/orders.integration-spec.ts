@@ -241,7 +241,7 @@ describe('orders endpoints', () => {
     });
   });
 
-  describe('list orders', () => {
+  describe('read orders', () => {
     it('requires an authenticated user', async () => {
       const response = await getOrders();
 
@@ -308,6 +308,68 @@ describe('orders endpoints', () => {
           userId: listingUser.userId,
         }),
       ]);
+    });
+
+    it('requires an authenticated user to retrieve an order', async () => {
+      const response = await getOrder(randomUUID());
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'UNAUTHENTICATED' })],
+      });
+    });
+
+    it('retrieves an order belonging to the authenticated user', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+
+      const response = await getOrder(
+        (created.body as OrderResponse).id,
+        sessionCookie,
+      );
+
+      expect(created.status).toBe(201);
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(created.body);
+    });
+
+    it('returns 404 when the order does not exist', async () => {
+      const response = await getOrder(randomUUID(), sessionCookie);
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'NOT_FOUND' })],
+      });
+    });
+
+    it('returns 404 when another user owns the order', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+
+      const response = await getOrder(
+        (created.body as OrderResponse).id,
+        anotherUser.sessionCookie,
+      );
+
+      expect(created.status).toBe(201);
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'NOT_FOUND' })],
+      });
+    });
+
+    it('rejects an invalid order ID', async () => {
+      const response = await getOrder('not-a-uuid', sessionCookie);
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'INVALID_ARGUMENT',
+            field: 'orderId',
+          }),
+        ],
+      });
     });
   });
 
@@ -409,6 +471,17 @@ describe('orders endpoints', () => {
 
   async function getOrders(cookie?: string): Promise<HttpResponse> {
     const response = await fetch(`${gatewayUrl}/api/orders`, {
+      headers: cookie === undefined ? {} : { cookie },
+    });
+    return {
+      body: await response.json(),
+      headers: response.headers,
+      status: response.status,
+    };
+  }
+
+  async function getOrder(id: string, cookie?: string): Promise<HttpResponse> {
+    const response = await fetch(`${gatewayUrl}/api/orders/${id}`, {
       headers: cookie === undefined ? {} : { cookie },
     });
     return {
