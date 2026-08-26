@@ -90,212 +90,225 @@ describe('orders endpoints', () => {
     await identityDatabase?.stop();
   });
 
-  it('requires an authenticated user', async () => {
-    const response = await postOrder({ ticketId: randomUUID() });
+  describe('create orders', () => {
+    it('requires an authenticated user', async () => {
+      const response = await postOrder({ ticketId: randomUUID() });
 
-    expect(response.status).toBe(401);
-    expect(response.body).toEqual({
-      errors: [expect.objectContaining({ code: 'UNAUTHENTICATED' })],
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'UNAUTHENTICATED' })],
+      });
     });
-  });
 
-  it('requires an authenticated user to list orders', async () => {
-    const response = await getOrders();
+    it('rejects an invalid ticket ID', async () => {
+      const response = await postOrder(
+        { ticketId: 'not-a-uuid' },
+        sessionCookie,
+      );
 
-    expect(response.status).toBe(401);
-    expect(response.body).toEqual({
-      errors: [expect.objectContaining({ code: 'UNAUTHENTICATED' })],
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'INVALID_ARGUMENT',
+            field: 'ticketId',
+          }),
+        ],
+      });
     });
-  });
 
-  it('returns an empty list when the authenticated user has no orders', async () => {
-    const userWithoutOrders = await createAuthenticatedUser();
+    it('returns 404 until the ticket exists in the Orders projection', async () => {
+      const response = await postOrder(
+        { ticketId: randomUUID() },
+        sessionCookie,
+      );
 
-    const response = await getOrders(userWithoutOrders.sessionCookie);
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'NOT_FOUND' })],
+      });
+    });
 
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual([]);
-  });
+    it('creates an order for a projected ticket', async () => {
+      const ticketId = await seedProjectedTicket();
+      const beforeCreation = Date.now();
 
-  it('lists only the orders belonging to the authenticated user', async () => {
-    const listingUser = await createAuthenticatedUser();
-    const earlierTicketId = await seedProjectedTicket();
-    const laterTicketId = await seedProjectedTicket();
-    const otherTicketId = await seedProjectedTicket();
+      const response = await postOrder({ ticketId }, sessionCookie);
 
-    const earlierOrder = await postOrder(
-      { ticketId: earlierTicketId },
-      listingUser.sessionCookie,
-    );
-    const otherOrder = await postOrder(
-      { ticketId: otherTicketId },
-      anotherUser.sessionCookie,
-    );
-    const laterOrder = await postOrder(
-      { ticketId: laterTicketId },
-      listingUser.sessionCookie,
-    );
-    await setOrderExpiration(
-      (earlierOrder.body as OrderResponse).id,
-      5 * 60_000,
-    );
-    await setOrderExpiration(
-      (laterOrder.body as OrderResponse).id,
-      30 * 60_000,
-    );
-    const response = await getOrders(listingUser.sessionCookie);
-
-    expect(earlierOrder.status).toBe(201);
-    expect(otherOrder.status).toBe(201);
-    expect(laterOrder.status).toBe(201);
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual([
-      expect.objectContaining({
+      expect(response.status).toBe(201);
+      expect(response.body).toEqual({
         expiresAt: expect.any(String),
-        id: (laterOrder.body as OrderResponse).id,
+        id: expect.any(String),
         status: 'Created',
-        ticketId: laterTicketId,
-        userId: listingUser.userId,
-      }),
-      expect.objectContaining({
-        expiresAt: expect.any(String),
-        id: (earlierOrder.body as OrderResponse).id,
-        status: 'Created',
-        ticketId: earlierTicketId,
-        userId: listingUser.userId,
-      }),
-    ]);
-  });
-
-  it('rejects an invalid ticket ID', async () => {
-    const response = await postOrder({ ticketId: 'not-a-uuid' }, sessionCookie);
-
-    expect(response.status).toBe(400);
-    expect(response.body).toEqual({
-      errors: [
-        expect.objectContaining({
-          code: 'INVALID_ARGUMENT',
-          field: 'ticketId',
-        }),
-      ],
+        ticketId,
+        userId,
+      });
+      const expiresAt = Date.parse(
+        (response.body as { expiresAt: string }).expiresAt,
+      );
+      expect(expiresAt).toBeGreaterThanOrEqual(beforeCreation + 14 * 60_000);
+      expect(expiresAt).toBeLessThanOrEqual(Date.now() + 16 * 60_000);
     });
-  });
 
-  it('returns 404 until the ticket exists in the Orders projection', async () => {
-    const response = await postOrder({ ticketId: randomUUID() }, sessionCookie);
+    it('returns the existing order for a same-user retry without extending it', async () => {
+      const ticketId = await seedProjectedTicket();
 
-    expect(response.status).toBe(404);
-    expect(response.body).toEqual({
-      errors: [expect.objectContaining({ code: 'NOT_FOUND' })],
+      const first = await postOrder({ ticketId }, sessionCookie);
+      const second = await postOrder({ ticketId }, sessionCookie);
+
+      expect(first.status).toBe(201);
+      expect(second.status).toBe(200);
+      expect(second.body).toEqual(first.body);
     });
-  });
 
-  it('creates an order for a projected ticket', async () => {
-    const ticketId = await seedProjectedTicket();
-    const beforeCreation = Date.now();
-
-    const response = await postOrder({ ticketId }, sessionCookie);
-
-    expect(response.status).toBe(201);
-    expect(response.body).toEqual({
-      expiresAt: expect.any(String),
-      id: expect.any(String),
-      status: 'Created',
-      ticketId,
-      userId,
-    });
-    const expiresAt = Date.parse(
-      (response.body as { expiresAt: string }).expiresAt,
-    );
-    expect(expiresAt).toBeGreaterThanOrEqual(beforeCreation + 14 * 60_000);
-    expect(expiresAt).toBeLessThanOrEqual(Date.now() + 16 * 60_000);
-  });
-
-  it('returns the existing order for a same-user retry without extending it', async () => {
-    const ticketId = await seedProjectedTicket();
-
-    const first = await postOrder({ ticketId }, sessionCookie);
-    const second = await postOrder({ ticketId }, sessionCookie);
-
-    expect(first.status).toBe(201);
-    expect(second.status).toBe(200);
-    expect(second.body).toEqual(first.body);
-  });
-
-  it('blocks another user while a ticket has an active Created order', async () => {
-    const ticketId = await seedProjectedTicket();
-    await expect(postOrder({ ticketId }, sessionCookie)).resolves.toMatchObject(
-      {
+    it('blocks another user while a ticket has an active Created order', async () => {
+      const ticketId = await seedProjectedTicket();
+      await expect(
+        postOrder({ ticketId }, sessionCookie),
+      ).resolves.toMatchObject({
         status: 201,
-      },
-    );
+      });
 
-    const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
+      const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
 
-    expect(response.status).toBe(409);
-    expect(response.body).toEqual({
-      errors: [expect.objectContaining({ code: 'ALREADY_EXISTS' })],
+      expect(response.status).toBe(409);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'ALREADY_EXISTS' })],
+      });
+    });
+
+    it('blocks another user while a ticket has an active AwaitingPayment order', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+      await setOrderState(
+        (created.body as OrderResponse).id,
+        'AwaitingPayment',
+      );
+
+      const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
+
+      expect(response.status).toBe(409);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'ALREADY_EXISTS' })],
+      });
+    });
+
+    it('allows another user after the reservation expires', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+      await setOrderState((created.body as OrderResponse).id, 'Created', true);
+
+      const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
+
+      expect(response.status).toBe(201);
+      expect(response.body).toEqual(
+        expect.objectContaining({ ticketId, userId: anotherUser.userId }),
+      );
+    });
+
+    it('allows another user after the reservation is canceled', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+      await setOrderState((created.body as OrderResponse).id, 'Canceled');
+
+      const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
+
+      expect(response.status).toBe(201);
+    });
+
+    it('blocks all users after the ticket order is complete', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+      await setOrderState((created.body as OrderResponse).id, 'Complete', true);
+
+      const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
+
+      expect(response.status).toBe(409);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'ALREADY_EXISTS' })],
+      });
+    });
+
+    it('allows only one of two concurrent users to reserve a ticket', async () => {
+      const ticketId = await seedProjectedTicket();
+
+      const responses = await Promise.all([
+        postOrder({ ticketId }, sessionCookie),
+        postOrder({ ticketId }, anotherUser.sessionCookie),
+      ]);
+
+      expect(responses.map(({ status }) => status).sort()).toEqual([201, 409]);
     });
   });
 
-  it('blocks another user while a ticket has an active AwaitingPayment order', async () => {
-    const ticketId = await seedProjectedTicket();
-    const created = await postOrder({ ticketId }, sessionCookie);
-    await setOrderState((created.body as OrderResponse).id, 'AwaitingPayment');
+  describe('list orders', () => {
+    it('requires an authenticated user', async () => {
+      const response = await getOrders();
 
-    const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
-
-    expect(response.status).toBe(409);
-    expect(response.body).toEqual({
-      errors: [expect.objectContaining({ code: 'ALREADY_EXISTS' })],
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'UNAUTHENTICATED' })],
+      });
     });
-  });
 
-  it('allows another user after the reservation expires', async () => {
-    const ticketId = await seedProjectedTicket();
-    const created = await postOrder({ ticketId }, sessionCookie);
-    await setOrderState((created.body as OrderResponse).id, 'Created', true);
+    it('returns an empty list when the authenticated user has no orders', async () => {
+      const userWithoutOrders = await createAuthenticatedUser();
 
-    const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
+      const response = await getOrders(userWithoutOrders.sessionCookie);
 
-    expect(response.status).toBe(201);
-    expect(response.body).toEqual(
-      expect.objectContaining({ ticketId, userId: anotherUser.userId }),
-    );
-  });
-
-  it('allows another user after the reservation is canceled', async () => {
-    const ticketId = await seedProjectedTicket();
-    const created = await postOrder({ ticketId }, sessionCookie);
-    await setOrderState((created.body as OrderResponse).id, 'Canceled');
-
-    const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
-
-    expect(response.status).toBe(201);
-  });
-
-  it('blocks all users after the ticket order is complete', async () => {
-    const ticketId = await seedProjectedTicket();
-    const created = await postOrder({ ticketId }, sessionCookie);
-    await setOrderState((created.body as OrderResponse).id, 'Complete', true);
-
-    const response = await postOrder({ ticketId }, anotherUser.sessionCookie);
-
-    expect(response.status).toBe(409);
-    expect(response.body).toEqual({
-      errors: [expect.objectContaining({ code: 'ALREADY_EXISTS' })],
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([]);
     });
-  });
 
-  it('allows only one of two concurrent users to reserve a ticket', async () => {
-    const ticketId = await seedProjectedTicket();
+    it('lists only the orders belonging to the authenticated user', async () => {
+      const listingUser = await createAuthenticatedUser();
+      const earlierTicketId = await seedProjectedTicket();
+      const laterTicketId = await seedProjectedTicket();
+      const otherTicketId = await seedProjectedTicket();
 
-    const responses = await Promise.all([
-      postOrder({ ticketId }, sessionCookie),
-      postOrder({ ticketId }, anotherUser.sessionCookie),
-    ]);
+      const earlierOrder = await postOrder(
+        { ticketId: earlierTicketId },
+        listingUser.sessionCookie,
+      );
+      const otherOrder = await postOrder(
+        { ticketId: otherTicketId },
+        anotherUser.sessionCookie,
+      );
+      const laterOrder = await postOrder(
+        { ticketId: laterTicketId },
+        listingUser.sessionCookie,
+      );
+      await setOrderExpiration(
+        (earlierOrder.body as OrderResponse).id,
+        5 * 60_000,
+      );
+      await setOrderExpiration(
+        (laterOrder.body as OrderResponse).id,
+        30 * 60_000,
+      );
+      const response = await getOrders(listingUser.sessionCookie);
 
-    expect(responses.map(({ status }) => status).sort()).toEqual([201, 409]);
+      expect(earlierOrder.status).toBe(201);
+      expect(otherOrder.status).toBe(201);
+      expect(laterOrder.status).toBe(201);
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([
+        expect.objectContaining({
+          expiresAt: expect.any(String),
+          id: (laterOrder.body as OrderResponse).id,
+          status: 'Created',
+          ticketId: laterTicketId,
+          userId: listingUser.userId,
+        }),
+        expect.objectContaining({
+          expiresAt: expect.any(String),
+          id: (earlierOrder.body as OrderResponse).id,
+          status: 'Created',
+          ticketId: earlierTicketId,
+          userId: listingUser.userId,
+        }),
+      ]);
+    });
   });
 
   async function createAuthenticatedUser(): Promise<{
