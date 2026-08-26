@@ -63,6 +63,12 @@ func (server *Server) UpdateTicket(
 			Message: "You do not have permission to update this ticket.",
 		}})
 	}
+	if errors.Is(err, ticket.ErrReserved) {
+		return nil, structuredError(codes.PermissionDenied, []ticket.ValidationError{{
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_FORBIDDEN),
+			Message: "Reserved tickets cannot be updated.",
+		}})
+	}
 	if errors.Is(err, ticket.ErrNotFound) {
 		return nil, structuredError(codes.NotFound, []ticket.ValidationError{{
 			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_NOT_FOUND),

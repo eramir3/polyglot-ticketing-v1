@@ -136,9 +136,9 @@ unavailable permanently.
 2. The gateway validates the request, resolves the current user from the Better
    Auth session, and calls `tickets.v1.TicketsService.UpdateTicket` over gRPC.
 3. Tickets validates the complete request and updates the ticket only when the
-   supplied user ID owns it.
+   supplied user ID owns it and the ticket has not been reserved by an order.
 4. The gateway returns `200` with the updated ticket. Missing tickets return
-   `404`; a non-owner receives `403 FORBIDDEN`.
+   `404`; a non-owner or a reserved ticket receives `403 FORBIDDEN`.
 
 ## Signup Flow
 
@@ -204,7 +204,7 @@ send another message.
 | ---------------------------------- | ------------------------- | ------------------------------- |
 | User application to API gateway    | REST now; GraphQL planned | Gateway REST signup implemented |
 | API gateway to backend services    | gRPC                      | Identity signup implemented     |
-| Backend service to backend service | NATS JetStream            | Tickets-to-orders projection    |
+| Backend service to backend service | NATS JetStream            | Ticket and order projections    |
 
 Kubernetes Gateway API will provide ingress and routing in a later deployment
 phase. No Kubernetes controller or manifests are implemented yet.
@@ -348,6 +348,34 @@ The `orders` table has `id`, `expires_at`, `user_id`, `ticket_id`, and a
 Order creation locks the Orders-owned ticket projection while it checks and
 creates a reservation, so concurrent callers cannot both reserve the ticket.
 Expiration processing and payment remain future work.
+
+Orders publishes `orders.order.created.v1` events to the `ORDERS_EVENTS`
+JetStream stream. A newly created order and its event are written to the
+Orders-owned Postgres outbox in the same transaction; the dispatcher publishes
+at least once with bounded retry backoff. The event carries an `event_id` and
+`occurred_at` delivery envelope, plus the order and ticket reservation:
+
+```json
+{
+  "eventId": "e6b565df-10dc-4a8e-baf7-12bed1e9e9d2",
+  "occurredAt": "2026-08-26T15:42:18.123Z",
+  "orderId": "8c91c1d3-910b-4dc4-b6f2-efb060b2a0ac",
+  "orderStatus": "ORDER_STATUS_CREATED",
+  "userId": "user_01K...",
+  "expiresAt": "2026-08-26T15:57:18.123Z",
+  "ticket": {
+    "id": "7f301729-a359-4f4f-b71b-ea0a55b6ee71",
+    "price": "10000"
+  }
+}
+```
+
+Tickets consumes the subject through its durable
+`tickets-order-reservation-v1` consumer and deduplicates `event_id` values in
+its own database. After processing, it records the reserving order ID and
+rejects later ticket updates with `403 FORBIDDEN`. The restriction is
+asynchronous and takes effect after event consumption. Releasing it on order
+cancellation is deferred until an `OrderCanceled` event is added.
 
 Additional event subjects, consumers, CI/CD, observability, and deployment
 environments remain open design and implementation work.

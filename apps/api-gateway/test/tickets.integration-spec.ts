@@ -327,6 +327,42 @@ describe('tickets endpoints', () => {
       });
     });
 
+    it('does not update a ticket reserved by an order', async () => {
+      const createdResponse = await postTicket(
+        { price: 15_000, title: 'Reserved ticket' },
+        sessionCookie,
+      );
+      expect(createdResponse.status).toBe(201);
+      const created = createdResponse.body as { id: string };
+
+      const database = new Client({ connectionString: ticketsDatabaseUrl });
+      await database.connect();
+      try {
+        await database.query(
+          'UPDATE tickets SET reserved_by_order_id = $2 WHERE id = $1',
+          [created.id, randomUUID()],
+        );
+      } finally {
+        await database.end();
+      }
+
+      const response = await putTicket(
+        created.id,
+        { price: 18_000, title: 'Reserved ticket updated' },
+        sessionCookie,
+      );
+
+      expect(response.status).toBe(403);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'FORBIDDEN',
+            message: 'Reserved tickets cannot be updated.',
+          }),
+        ],
+      });
+    });
+
     it('returns a 404 if the provided id does not exist', async () => {
       const response = await putTicket(
         randomUUID(),

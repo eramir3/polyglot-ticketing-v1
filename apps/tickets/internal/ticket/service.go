@@ -53,6 +53,9 @@ func (service *Service) UpdateTicket(ctx context.Context, id string, input Updat
 	if found.UserID != input.UserID {
 		return Ticket{}, nil, ErrForbidden
 	}
+	if found.ReservedByOrderID != "" {
+		return Ticket{}, nil, ErrReserved
+	}
 
 	updated, err := service.repository.Update(ctx, id, input)
 	return updated, nil, err

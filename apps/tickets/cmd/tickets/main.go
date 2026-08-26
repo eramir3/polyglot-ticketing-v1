@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 
+	"polyglot-ticketing-v1/apps/tickets/internal/consumer"
 	grpcserver "polyglot-ticketing-v1/apps/tickets/internal/grpc"
 	"polyglot-ticketing-v1/apps/tickets/internal/outbox"
 	"polyglot-ticketing-v1/apps/tickets/internal/ticket"
@@ -28,12 +29,15 @@ func main() {
 	}
 	defer pool.Close()
 
+	repository := ticket.NewPostgresRepository(pool)
+	natsURL := environmentVariable("NATS_URL", "nats://localhost:4222")
 	publisher := outbox.NewPublisher(
 		outbox.NewPostgresRepository(pool),
-		environmentVariable("NATS_URL", "nats://localhost:4222"),
+		natsURL,
 		slog.Default(),
 	)
 	go publisher.Run(ctx)
+	go consumer.NewOrderConsumer(repository, natsURL, slog.Default()).Run(ctx)
 
 	listener, err := net.Listen("tcp", ":"+environmentVariable("GRPC_PORT", "50052"))
 	if err != nil {
@@ -44,7 +48,7 @@ func main() {
 	server := grpc.NewServer()
 	ticketsv1.RegisterTicketsServiceServer(
 		server,
-		grpcserver.NewServer(ticket.NewService(ticket.NewPostgresRepository(pool))),
+		grpcserver.NewServer(ticket.NewService(repository)),
 	)
 
 	go func() {

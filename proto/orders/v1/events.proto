@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package orders.v1;
+
+import "google/protobuf/timestamp.proto";
+import "orders/v1/orders.proto";
+
+option go_package = "polyglot-ticketing-v1/protogen/go/orders/v1;ordersv1";
+
+// OrderCreated is an immutable snapshot of a newly created order reservation.
+message OrderCreated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  string order_id = 3;
+  OrderStatus order_status = 4;
+  string user_id = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  OrderTicket ticket = 7;
+}
+
+message OrderTicket {
+  string id = 1;
+  int64 price = 2;
+}

@@ -144,6 +144,27 @@ func TestServiceUpdateRejectsNonOwner(t *testing.T) {
 	}
 }
 
+func TestServiceUpdateRejectsReservedTicket(t *testing.T) {
+	service := NewService(fakeRepository{ticket: Ticket{
+		ID:                "ticket-1",
+		ReservedByOrderID: "f446d2f3-4515-4b78-8e6a-81797a2517a3",
+		UserID:            "owner-1",
+	}})
+
+	_, validationErrors, err := service.UpdateTicket(context.Background(), "ticket-1", UpdateInput{
+		Title:  "Updated concert ticket",
+		Price:  100,
+		UserID: "owner-1",
+	})
+
+	if len(validationErrors) != 0 {
+		t.Fatalf("expected no validation errors, got %+v", validationErrors)
+	}
+	if !errors.Is(err, ErrReserved) {
+		t.Fatalf("expected ErrReserved, got %v", err)
+	}
+}
+
 func TestServiceUpdateReturnsUpdatedTicket(t *testing.T) {
 	service := NewService(fakeRepository{ticket: Ticket{
 		ID:     "ticket-1",

@@ -3,9 +3,16 @@ package order
 import (
 	"context"
 	"errors"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	orderevents "polyglot-ticketing-v1/contracts/orders"
+	ordersv1 "polyglot-ticketing-v1/protogen/go/orders/v1"
 )
 
 type PostgresRepository struct {
@@ -26,8 +33,16 @@ func (repository *PostgresRepository) ReserveTicket(ctx context.Context, input T
 	}
 	defer tx.Rollback(ctx)
 
-	var ticketID string
-	err = tx.QueryRow(ctx, `SELECT id::text FROM tickets WHERE id = $1 FOR UPDATE`, input.TicketID).Scan(&ticketID)
+	var projectedTicket Ticket
+	err = tx.QueryRow(ctx, `
+		SELECT id::text, title, price
+		FROM tickets
+		WHERE id = $1
+		FOR UPDATE`, input.TicketID).Scan(
+		&projectedTicket.ID,
+		&projectedTicket.Title,
+		&projectedTicket.Price,
+	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ReservationResult{}, ErrNotFound
 	}
@@ -35,7 +50,7 @@ func (repository *PostgresRepository) ReserveTicket(ctx context.Context, input T
 		return ReservationResult{}, err
 	}
 
-	existing, found, err := findBlockingOrder(ctx, tx, ticketID)
+	existing, found, err := findBlockingOrder(ctx, tx, projectedTicket.ID)
 	if err != nil {
 		return ReservationResult{}, err
 	}
@@ -54,11 +69,58 @@ func (repository *PostgresRepository) ReserveTicket(ctx context.Context, input T
 	if err != nil {
 		return ReservationResult{}, err
 	}
+	if err := insertOrderCreatedEvent(ctx, tx, created, projectedTicket); err != nil {
+		return ReservationResult{}, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return ReservationResult{}, err
 	}
 
 	return ReservationResult{Created: true, Order: created}, nil
+}
+
+func insertOrderCreatedEvent(ctx context.Context, tx pgx.Tx, created Order, ticket Ticket) error {
+	occurredAt := time.Now().UTC()
+	eventID := uuid.NewString()
+	payload, err := marshalOrderCreated(eventID, occurredAt, created, ticket)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO outbox_events (event_id, subject, payload, created_at)
+		VALUES ($1, $2, $3, $4)`, eventID, orderevents.OrderCreatedSubject, payload, occurredAt)
+	return err
+}
+
+func marshalOrderCreated(eventID string, occurredAt time.Time, created Order, ticket Ticket) ([]byte, error) {
+	return proto.Marshal(&ordersv1.OrderCreated{
+		EventId:     eventID,
+		OccurredAt:  timestamppb.New(occurredAt),
+		OrderId:     created.ID,
+		OrderStatus: toProtoOrderStatus(created.Status),
+		UserId:      created.UserID,
+		ExpiresAt:   timestamppb.New(created.ExpiresAt),
+		Ticket: &ordersv1.OrderTicket{
+			Id:    ticket.ID,
+			Price: ticket.Price,
+		},
+	})
+}
+
+func toProtoOrderStatus(value Status) ordersv1.OrderStatus {
+	switch value {
+	case StatusCreated:
+		return ordersv1.OrderStatus_ORDER_STATUS_CREATED
+	case StatusCanceled:
+		return ordersv1.OrderStatus_ORDER_STATUS_CANCELED
+	case StatusAwaitingPayment:
+		return ordersv1.OrderStatus_ORDER_STATUS_AWAITING_PAYMENT
+	case StatusComplete:
+		return ordersv1.OrderStatus_ORDER_STATUS_COMPLETE
+	default:
+		return ordersv1.OrderStatus_ORDER_STATUS_UNSPECIFIED
+	}
 }
 
 func findBlockingOrder(ctx context.Context, tx pgx.Tx, ticketID string) (Order, bool, error) {

@@ -6,15 +6,19 @@ import (
 )
 
 var (
-	ErrForbidden = errors.New("ticket access forbidden")
-	ErrNotFound  = errors.New("ticket not found")
+	ErrForbidden             = errors.New("ticket access forbidden")
+	ErrInvalidOrderEvent     = errors.New("invalid order event")
+	ErrNotFound              = errors.New("ticket not found")
+	ErrReserved              = errors.New("ticket is reserved")
+	ErrUnsupportedOrderEvent = errors.New("unsupported order event subject")
 )
 
 type Ticket struct {
-	ID     string
-	Title  string
-	Price  int64
-	UserID string
+	ID                string
+	Title             string
+	Price             int64
+	ReservedByOrderID string
+	UserID            string
 }
 
 type CreateInput struct {
@@ -34,4 +38,8 @@ type Repository interface {
 	FindByID(context.Context, string) (Ticket, error)
 	List(context.Context) ([]Ticket, error)
 	Update(context.Context, string, UpdateInput) (Ticket, error)
+}
+
+type ReservationRepository interface {
+	ReserveTicketFromOrder(context.Context, string, string, string) error
 }
