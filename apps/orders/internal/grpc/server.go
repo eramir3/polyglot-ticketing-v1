@@ -24,6 +24,40 @@ func NewServer(service *order.Service) *Server {
 	return &Server{service: service}
 }
 
+func (server *Server) CancelOrder(
+	ctx context.Context,
+	request *ordersv1.CancelOrderRequest,
+) (*ordersv1.CancelOrderResponse, error) {
+	canceled, validationErrors, err := server.service.CancelOrder(
+		ctx,
+		request.GetOrderId(),
+		request.GetUserId(),
+	)
+	if len(validationErrors) > 0 {
+		return nil, structuredError(codes.InvalidArgument, validationErrors)
+	}
+	if errors.Is(err, order.ErrOrderNotFound) {
+		return nil, structuredError(codes.NotFound, []order.ValidationError{{
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_NOT_FOUND),
+			Message: "Order not found.",
+		}})
+	}
+	if errors.Is(err, order.ErrOrderNotCancelable) {
+		return nil, structuredError(codes.AlreadyExists, []order.ValidationError{{
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_ALREADY_EXISTS),
+			Message: "Completed orders cannot be canceled.",
+		}})
+	}
+	if err != nil {
+		return nil, structuredError(codes.Internal, []order.ValidationError{{
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
+			Message: "Unable to cancel order.",
+		}})
+	}
+
+	return &ordersv1.CancelOrderResponse{Order: toOrderResponse(canceled)}, nil
+}
+
 func (server *Server) CreateOrder(
 	ctx context.Context,
 	request *ordersv1.CreateOrderRequest,

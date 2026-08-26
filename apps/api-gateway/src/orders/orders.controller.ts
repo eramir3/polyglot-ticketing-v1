@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpStatus,
   Param,
@@ -30,6 +31,15 @@ export class OrdersController {
     response.status(result.created ? HttpStatus.CREATED : HttpStatus.OK);
 
     return result.order;
+  }
+
+  @Delete(':id')
+  @UseGuards(SessionAuthGuard)
+  cancelOrder(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<OrderResponse> {
+    return this.ordersService.cancelOrder(id, user.id);
   }
 
   @Get()

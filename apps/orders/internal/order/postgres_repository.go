@@ -145,6 +145,49 @@ func (repository *PostgresRepository) GetByIDAndUser(
 	return found, nil
 }
 
+func (repository *PostgresRepository) CancelByIDAndUser(
+	ctx context.Context,
+	orderID string,
+	userID string,
+) (Order, error) {
+	var canceled Order
+	var canceledStatus string
+	err := repository.pool.QueryRow(ctx, `
+		UPDATE orders
+		SET status = $3
+		WHERE id = $1
+		  AND user_id = $2
+		  AND status IN ('Created', 'AwaitingPayment')
+		RETURNING id::text, expires_at, user_id, ticket_id::text, status::text`,
+		orderID,
+		userID,
+		StatusCanceled,
+	).Scan(
+		&canceled.ID,
+		&canceled.ExpiresAt,
+		&canceled.UserID,
+		&canceled.TicketID,
+		&canceledStatus,
+	)
+	if err == nil {
+		canceled.Status = Status(canceledStatus)
+		return canceled, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return Order{}, err
+	}
+
+	found, err := repository.GetByIDAndUser(ctx, orderID, userID)
+	if err != nil {
+		return Order{}, err
+	}
+	if found.Status == StatusCanceled {
+		return found, nil
+	}
+
+	return Order{}, ErrOrderNotCancelable
+}
+
 func (repository *PostgresRepository) ListByUser(ctx context.Context, userID string) ([]Order, error) {
 	rows, err := repository.pool.Query(ctx, `
 		SELECT id::text, expires_at, user_id, ticket_id::text, status::text

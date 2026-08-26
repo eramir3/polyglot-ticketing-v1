@@ -17,6 +17,15 @@ export interface CreateOrderRequest {
   userId: string;
 }
 
+export interface CancelOrderRequest {
+  orderId: string;
+  userId: string;
+}
+
+export interface CancelOrderGrpcResponse {
+  order: OrderGrpcResponse;
+}
+
 export interface CreateOrderGrpcResponse {
   created: boolean;
   expiresAt: Timestamp;
@@ -65,6 +74,7 @@ export interface OrderCreationResult {
 }
 
 export interface OrdersGrpcService {
+  cancelOrder(request: CancelOrderRequest): Observable<CancelOrderGrpcResponse>;
   createOrder(request: CreateOrderRequest): Observable<CreateOrderGrpcResponse>;
   getOrder(request: GetOrderRequest): Observable<GetOrderGrpcResponse>;
   listOrders(request: ListOrdersRequest): Observable<ListOrdersGrpcResponse>;

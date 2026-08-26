@@ -53,6 +53,22 @@ func (service *Service) GetOrder(
 	return found, nil, err
 }
 
+func (service *Service) CancelOrder(
+	ctx context.Context,
+	orderID string,
+	userID string,
+) (Order, []ValidationError, error) {
+	if validationErrors := validateOrderID(orderID); len(validationErrors) > 0 {
+		return Order{}, validationErrors, nil
+	}
+	if validationErrors := validateOrderUser(userID); len(validationErrors) > 0 {
+		return Order{}, validationErrors, nil
+	}
+
+	canceled, err := service.repository.CancelByIDAndUser(ctx, orderID, userID)
+	return canceled, nil, err
+}
+
 func (service *Service) ListOrders(
 	ctx context.Context,
 	userID string,

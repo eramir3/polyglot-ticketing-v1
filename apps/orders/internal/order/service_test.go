@@ -107,6 +107,33 @@ func TestServiceGetsOrderForUser(t *testing.T) {
 	}
 }
 
+func TestServiceCancelsOrderForUser(t *testing.T) {
+	orderID := "f446d2f3-4515-4b78-8e6a-81797a2517a3"
+	repository := &fakeTicketReservationRepository{canceledOrder: Order{
+		ID:     orderID,
+		Status: StatusCanceled,
+		UserID: "user-1",
+	}}
+
+	canceled, validationErrors, err := NewService(repository).CancelOrder(
+		context.Background(),
+		orderID,
+		"user-1",
+	)
+	if err != nil {
+		t.Fatalf("cancel order: %v", err)
+	}
+	if len(validationErrors) != 0 {
+		t.Fatalf("unexpected validation errors: %+v", validationErrors)
+	}
+	if repository.canceledOrderID != orderID || repository.canceledUserID != "user-1" {
+		t.Fatalf("unexpected repository cancellation: %q, %q", repository.canceledOrderID, repository.canceledUserID)
+	}
+	if canceled.ID != orderID || canceled.Status != StatusCanceled {
+		t.Fatalf("unexpected canceled order: %+v", canceled)
+	}
+}
+
 func TestServiceRejectsInvalidOrderID(t *testing.T) {
 	_, validationErrors, err := NewService(&fakeTicketReservationRepository{}).GetOrder(
 		context.Background(),
@@ -121,14 +148,41 @@ func TestServiceRejectsInvalidOrderID(t *testing.T) {
 	}
 }
 
+func TestServiceRejectsInvalidOrderIDWhenCanceling(t *testing.T) {
+	_, validationErrors, err := NewService(&fakeTicketReservationRepository{}).CancelOrder(
+		context.Background(),
+		"not-a-uuid",
+		"user-1",
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(validationErrors) != 1 || validationErrors[0].Field != "orderId" {
+		t.Fatalf("expected order ID validation error, got %+v", validationErrors)
+	}
+}
+
 type fakeTicketReservationRepository struct {
-	err          error
-	foundOrder   Order
-	foundOrderID string
-	foundUserID  string
-	input        TicketReservationInput
-	listedUserID string
-	orders       []Order
+	canceledOrder   Order
+	canceledOrderID string
+	canceledUserID  string
+	err             error
+	foundOrder      Order
+	foundOrderID    string
+	foundUserID     string
+	input           TicketReservationInput
+	listedUserID    string
+	orders          []Order
+}
+
+func (repository *fakeTicketReservationRepository) CancelByIDAndUser(
+	_ context.Context,
+	orderID string,
+	userID string,
+) (Order, error) {
+	repository.canceledOrderID = orderID
+	repository.canceledUserID = userID
+	return repository.canceledOrder, repository.err
 }
 
 func (repository *fakeTicketReservationRepository) ReserveTicket(

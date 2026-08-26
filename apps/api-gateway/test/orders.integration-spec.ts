@@ -373,6 +373,147 @@ describe('orders endpoints', () => {
     });
   });
 
+  describe('delete orders', () => {
+    it('requires an authenticated user', async () => {
+      const response = await deleteOrder(randomUUID());
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'UNAUTHENTICATED' })],
+      });
+    });
+
+    it('cancels an active order belonging to the authenticated user', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+
+      const response = await deleteOrder(
+        (created.body as OrderResponse).id,
+        sessionCookie,
+      );
+
+      expect(created.status).toBe(201);
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        ...(created.body as OrderResponse),
+        status: 'Canceled',
+      });
+    });
+
+    it('cancels an AwaitingPayment order belonging to the authenticated user', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+      await setOrderState(
+        (created.body as OrderResponse).id,
+        'AwaitingPayment',
+      );
+
+      const response = await deleteOrder(
+        (created.body as OrderResponse).id,
+        sessionCookie,
+      );
+
+      expect(created.status).toBe(201);
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        ...(created.body as OrderResponse),
+        status: 'Canceled',
+      });
+    });
+
+    it('allows an owner to cancel an already canceled order again', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+      const orderId = (created.body as OrderResponse).id;
+
+      await deleteOrder(orderId, sessionCookie);
+      const response = await deleteOrder(orderId, sessionCookie);
+
+      expect(created.status).toBe(201);
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        ...(created.body as OrderResponse),
+        status: 'Canceled',
+      });
+    });
+
+    it('releases a canceled ticket for another user', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+
+      const canceled = await deleteOrder(
+        (created.body as OrderResponse).id,
+        sessionCookie,
+      );
+      const replacement = await postOrder(
+        { ticketId },
+        anotherUser.sessionCookie,
+      );
+
+      expect(canceled.status).toBe(200);
+      expect(replacement.status).toBe(201);
+      expect(replacement.body).toEqual(
+        expect.objectContaining({ ticketId, userId: anotherUser.userId }),
+      );
+    });
+
+    it('returns 404 when the order does not exist', async () => {
+      const response = await deleteOrder(randomUUID(), sessionCookie);
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'NOT_FOUND' })],
+      });
+    });
+
+    it('returns 404 when another user owns the order', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+
+      const response = await deleteOrder(
+        (created.body as OrderResponse).id,
+        anotherUser.sessionCookie,
+      );
+
+      expect(created.status).toBe(201);
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'NOT_FOUND' })],
+      });
+    });
+
+    it('returns 409 when the order is complete', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+      await setOrderState((created.body as OrderResponse).id, 'Complete');
+
+      const response = await deleteOrder(
+        (created.body as OrderResponse).id,
+        sessionCookie,
+      );
+
+      expect(created.status).toBe(201);
+      expect(response.status).toBe(409);
+      expect(response.body).toEqual({
+        errors: [expect.objectContaining({ code: 'ALREADY_EXISTS' })],
+      });
+    });
+
+    it('rejects an invalid order ID', async () => {
+      const response = await deleteOrder('not-a-uuid', sessionCookie);
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        errors: [
+          expect.objectContaining({
+            code: 'INVALID_ARGUMENT',
+            field: 'orderId',
+          }),
+        ],
+      });
+    });
+  });
+
   async function createAuthenticatedUser(): Promise<{
     sessionCookie: string;
     userId: string;
@@ -483,6 +624,21 @@ describe('orders endpoints', () => {
   async function getOrder(id: string, cookie?: string): Promise<HttpResponse> {
     const response = await fetch(`${gatewayUrl}/api/orders/${id}`, {
       headers: cookie === undefined ? {} : { cookie },
+    });
+    return {
+      body: await response.json(),
+      headers: response.headers,
+      status: response.status,
+    };
+  }
+
+  async function deleteOrder(
+    id: string,
+    cookie?: string,
+  ): Promise<HttpResponse> {
+    const response = await fetch(`${gatewayUrl}/api/orders/${id}`, {
+      headers: cookie === undefined ? {} : { cookie },
+      method: 'DELETE',
     });
     return {
       body: await response.json(),

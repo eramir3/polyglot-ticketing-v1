@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 option go_package = "polyglot-ticketing-v1/protogen/go/orders/v1;ordersv1";
 
 service OrdersService {
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
   rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
   rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
@@ -24,6 +25,15 @@ message CreateOrderResponse {
   string ticket_id = 4;
   OrderStatus status = 5;
   bool created = 6;
+}
+
+message CancelOrderRequest {
+  string order_id = 1;
+  string user_id = 2;
+}
+
+message CancelOrderResponse {
+  Order order = 1;
 }
 
 message GetOrderRequest {

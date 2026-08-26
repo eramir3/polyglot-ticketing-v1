@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	OrdersService_CancelOrder_FullMethodName = "/orders.v1.OrdersService/CancelOrder"
 	OrdersService_CreateOrder_FullMethodName = "/orders.v1.OrdersService/CreateOrder"
 	OrdersService_GetOrder_FullMethodName    = "/orders.v1.OrdersService/GetOrder"
 	OrdersService_ListOrders_FullMethodName  = "/orders.v1.OrdersService/ListOrders"
@@ -28,6 +29,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OrdersServiceClient interface {
+	CancelOrder(ctx context.Context, in *CancelOrderRequest, opts ...grpc.CallOption) (*CancelOrderResponse, error)
 	CreateOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*CreateOrderResponse, error)
 	GetOrder(ctx context.Context, in *GetOrderRequest, opts ...grpc.CallOption) (*GetOrderResponse, error)
 	ListOrders(ctx context.Context, in *ListOrdersRequest, opts ...grpc.CallOption) (*ListOrdersResponse, error)
@@ -39,6 +41,16 @@ type ordersServiceClient struct {
 
 func NewOrdersServiceClient(cc grpc.ClientConnInterface) OrdersServiceClient {
 	return &ordersServiceClient{cc}
+}
+
+func (c *ordersServiceClient) CancelOrder(ctx context.Context, in *CancelOrderRequest, opts ...grpc.CallOption) (*CancelOrderResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelOrderResponse)
+	err := c.cc.Invoke(ctx, OrdersService_CancelOrder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *ordersServiceClient) CreateOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*CreateOrderResponse, error) {
@@ -75,6 +87,7 @@ func (c *ordersServiceClient) ListOrders(ctx context.Context, in *ListOrdersRequ
 // All implementations must embed UnimplementedOrdersServiceServer
 // for forward compatibility.
 type OrdersServiceServer interface {
+	CancelOrder(context.Context, *CancelOrderRequest) (*CancelOrderResponse, error)
 	CreateOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error)
 	GetOrder(context.Context, *GetOrderRequest) (*GetOrderResponse, error)
 	ListOrders(context.Context, *ListOrdersRequest) (*ListOrdersResponse, error)
@@ -88,6 +101,9 @@ type OrdersServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedOrdersServiceServer struct{}
 
+func (UnimplementedOrdersServiceServer) CancelOrder(context.Context, *CancelOrderRequest) (*CancelOrderResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelOrder not implemented")
+}
 func (UnimplementedOrdersServiceServer) CreateOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateOrder not implemented")
 }
@@ -116,6 +132,24 @@ func RegisterOrdersServiceServer(s grpc.ServiceRegistrar, srv OrdersServiceServe
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&OrdersService_ServiceDesc, srv)
+}
+
+func _OrdersService_CancelOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelOrderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrdersServiceServer).CancelOrder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrdersService_CancelOrder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrdersServiceServer).CancelOrder(ctx, req.(*CancelOrderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _OrdersService_CreateOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -179,6 +213,10 @@ var OrdersService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "orders.v1.OrdersService",
 	HandlerType: (*OrdersServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CancelOrder",
+			Handler:    _OrdersService_CancelOrder_Handler,
+		},
 		{
 			MethodName: "CreateOrder",
 			Handler:    _OrdersService_CreateOrder_Handler,

@@ -9,6 +9,7 @@ import (
 var (
 	ErrInvalidTicketEvent = errors.New("invalid ticket event")
 	ErrNotFound           = errors.New("ticket not found")
+	ErrOrderNotCancelable = errors.New("order cannot be canceled")
 	ErrOrderNotFound      = errors.New("order not found")
 	ErrReserved           = errors.New("ticket is reserved")
 	ErrUnsupportedSubject = errors.New("unsupported ticket event subject")
@@ -57,6 +58,7 @@ type ValidationError struct {
 }
 
 type OrderRepository interface {
+	CancelByIDAndUser(context.Context, string, string) (Order, error)
 	GetByIDAndUser(context.Context, string, string) (Order, error)
 	ReserveTicket(context.Context, TicketReservationInput) (ReservationResult, error)
 	ListByUser(context.Context, string) ([]Order, error)

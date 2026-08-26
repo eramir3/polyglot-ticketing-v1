@@ -16,20 +16,21 @@ port `3000` in local Docker Compose.
 
 Implemented endpoint:
 
-| Method | Path                               | Behavior                                                                 |
-| ------ | ---------------------------------- | ------------------------------------------------------------------------ |
-| `POST` | `/api/auth/signup`                 | Validates a signup request and forwards it to identity through gRPC.     |
-| `POST` | `/api/auth/signin`                 | Signs in with email and password, then sets an HTTP-only session cookie. |
-| `POST` | `/api/auth/signout`                | Revokes the current session and expires the HTTP-only session cookie.    |
-| `GET`  | `/api/auth/currentuser`            | Returns safe metadata for the authenticated user.                        |
-| `GET`  | `/api/auth/verify-email?token=...` | Verifies an email token through identity gRPC.                           |
-| `GET`  | `/api/tickets`                     | Retrieves all tickets through tickets gRPC.                              |
-| `GET`  | `/api/tickets/:id`                 | Retrieves a ticket by ID through tickets gRPC.                           |
-| `POST` | `/api/tickets`                     | Creates a ticket for the authenticated user through tickets gRPC.        |
-| `PUT`  | `/api/tickets/:id`                 | Updates an owned ticket through tickets gRPC.                            |
-| `GET`  | `/api/orders`                      | Retrieves the authenticated user's orders through orders gRPC.           |
-| `GET`  | `/api/orders/:id`                  | Retrieves one owned order through orders gRPC.                           |
-| `POST` | `/api/orders`                      | Creates an order for the authenticated user through orders gRPC.         |
+| Method   | Path                               | Behavior                                                                 |
+| -------- | ---------------------------------- | ------------------------------------------------------------------------ |
+| `POST`   | `/api/auth/signup`                 | Validates a signup request and forwards it to identity through gRPC.     |
+| `POST`   | `/api/auth/signin`                 | Signs in with email and password, then sets an HTTP-only session cookie. |
+| `POST`   | `/api/auth/signout`                | Revokes the current session and expires the HTTP-only session cookie.    |
+| `GET`    | `/api/auth/currentuser`            | Returns safe metadata for the authenticated user.                        |
+| `GET`    | `/api/auth/verify-email?token=...` | Verifies an email token through identity gRPC.                           |
+| `GET`    | `/api/tickets`                     | Retrieves all tickets through tickets gRPC.                              |
+| `GET`    | `/api/tickets/:id`                 | Retrieves a ticket by ID through tickets gRPC.                           |
+| `POST`   | `/api/tickets`                     | Creates a ticket for the authenticated user through tickets gRPC.        |
+| `PUT`    | `/api/tickets/:id`                 | Updates an owned ticket through tickets gRPC.                            |
+| `GET`    | `/api/orders`                      | Retrieves the authenticated user's orders through orders gRPC.           |
+| `GET`    | `/api/orders/:id`                  | Retrieves one owned order through orders gRPC.                           |
+| `POST`   | `/api/orders`                      | Creates an order for the authenticated user through orders gRPC.         |
+| `DELETE` | `/api/orders/:id`                  | Cancels one owned active order through orders gRPC.                      |
 
 The gateway validates HTTP payloads with NestJS DTOs, exposes public HTTP
 errors, and translates structured gRPC errors returned by backend services.
@@ -65,7 +66,8 @@ It has no public HTTP endpoint; the API gateway owns `GET /api/tickets` and
 `orders` is a Go service that exposes gRPC internally on `orders:50053` and
 owns `orders-db`. It consumes retained ticket events from JetStream to maintain
 its local ticket projection. The API gateway exposes authenticated
-`GET /api/orders` and `POST /api/orders`. The list endpoint returns all orders
+`GET /api/orders`, `GET /api/orders/:id`, `POST /api/orders`, and
+`DELETE /api/orders/:id`. The list endpoint returns all orders
 for the session user in descending expiration order. The create endpoint accepts
 `{ "ticketId": "<uuid>" }`, creates a `Created`
 order for the session user, and sets `expiresAt` to 15 minutes after creation.
@@ -75,6 +77,16 @@ or `AwaitingPayment` order reserves the ticket until expiry: a same-user retry
 returns the existing order with `200`, while another user receives
 `409 ALREADY_EXISTS`. `Canceled` releases the ticket, and `Complete` keeps it
 unavailable permanently.
+
+## Cancel Order Flow
+
+1. A signed-in client calls `DELETE /api/orders/:id`.
+2. The gateway obtains the session user ID and calls
+   `orders.v1.OrdersService.CancelOrder` with it and the order ID.
+3. Orders updates only an owned `Created` or `AwaitingPayment` order to
+   `Canceled`; canceling an already canceled order succeeds unchanged.
+4. The gateway returns `200` with the canceled order. Missing and unowned
+   orders return `404`; completed orders return `409 ALREADY_EXISTS`.
 
 ## Get Order Flow
 
