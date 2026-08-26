@@ -37,7 +37,7 @@ func TestServiceCreateRejectsInvalidInput(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, validationErrors, err := service.Create(context.Background(), testCase.input)
+			_, validationErrors, err := service.CreateTicket(context.Background(), testCase.input)
 
 			if err != nil {
 				t.Fatalf("expected no internal error, got %v", err)
@@ -55,7 +55,7 @@ func TestServiceCreateRejectsInvalidInput(t *testing.T) {
 func TestServiceCreateAcceptsMaximumSafePrice(t *testing.T) {
 	service := NewService(fakeRepository{})
 
-	created, validationErrors, err := service.Create(context.Background(), CreateInput{
+	created, validationErrors, err := service.CreateTicket(context.Background(), CreateInput{
 		Title:  "Concert ticket",
 		Price:  MaxPrice,
 		UserID: "user-1",
@@ -80,7 +80,7 @@ func TestServiceListReturnsRepositoryTickets(t *testing.T) {
 		UserID: "user-1",
 	}}})
 
-	listed, err := service.List(context.Background())
+	listed, err := service.ListTickets(context.Background())
 
 	if err != nil {
 		t.Fatalf("expected no internal error, got %v", err)
@@ -98,7 +98,7 @@ func TestServiceGetReturnsTicket(t *testing.T) {
 		UserID: "owner-1",
 	}})
 
-	found, err := service.Get(context.Background(), "ticket-1")
+	found, err := service.GetTicket(context.Background(), "ticket-1")
 
 	if err != nil {
 		t.Fatalf("expected no internal error, got %v", err)
@@ -111,7 +111,7 @@ func TestServiceGetReturnsTicket(t *testing.T) {
 func TestServiceUpdateRejectsInvalidInput(t *testing.T) {
 	service := NewService(fakeRepository{})
 
-	_, validationErrors, err := service.Update(context.Background(), "ticket-1", UpdateInput{
+	_, validationErrors, err := service.UpdateTicket(context.Background(), "ticket-1", UpdateInput{
 		Price:  100,
 		UserID: "owner-1",
 	})
@@ -130,7 +130,7 @@ func TestServiceUpdateRejectsNonOwner(t *testing.T) {
 		UserID: "owner-1",
 	}})
 
-	_, validationErrors, err := service.Update(context.Background(), "ticket-1", UpdateInput{
+	_, validationErrors, err := service.UpdateTicket(context.Background(), "ticket-1", UpdateInput{
 		Title:  "Updated concert ticket",
 		Price:  100,
 		UserID: "other-user",
@@ -150,7 +150,7 @@ func TestServiceUpdateReturnsUpdatedTicket(t *testing.T) {
 		UserID: "owner-1",
 	}})
 
-	updated, validationErrors, err := service.Update(context.Background(), "ticket-1", UpdateInput{
+	updated, validationErrors, err := service.UpdateTicket(context.Background(), "ticket-1", UpdateInput{
 		Title:  "Updated concert ticket",
 		Price:  200,
 		UserID: "owner-1",

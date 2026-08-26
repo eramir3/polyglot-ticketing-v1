@@ -24,7 +24,7 @@ func NewService(repository Repository) *Service {
 	return &Service{repository: repository}
 }
 
-func (service *Service) Create(ctx context.Context, input CreateInput) (Ticket, []ValidationError, error) {
+func (service *Service) CreateTicket(ctx context.Context, input CreateInput) (Ticket, []ValidationError, error) {
 	if validationErrors := validateMutation(input.Title, input.Price, input.UserID); len(validationErrors) > 0 {
 		return Ticket{}, validationErrors, nil
 	}
@@ -33,15 +33,15 @@ func (service *Service) Create(ctx context.Context, input CreateInput) (Ticket, 
 	return created, nil, err
 }
 
-func (service *Service) List(ctx context.Context) ([]Ticket, error) {
+func (service *Service) ListTickets(ctx context.Context) ([]Ticket, error) {
 	return service.repository.List(ctx)
 }
 
-func (service *Service) Get(ctx context.Context, id string) (Ticket, error) {
+func (service *Service) GetTicket(ctx context.Context, id string) (Ticket, error) {
 	return service.repository.FindByID(ctx, id)
 }
 
-func (service *Service) Update(ctx context.Context, id string, input UpdateInput) (Ticket, []ValidationError, error) {
+func (service *Service) UpdateTicket(ctx context.Context, id string, input UpdateInput) (Ticket, []ValidationError, error) {
 	if validationErrors := validateMutation(input.Title, input.Price, input.UserID); len(validationErrors) > 0 {
 		return Ticket{}, validationErrors, nil
 	}

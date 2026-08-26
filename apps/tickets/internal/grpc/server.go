@@ -27,7 +27,7 @@ func (server *Server) CreateTicket(
 	ctx context.Context,
 	request *ticketsv1.CreateTicketRequest,
 ) (*ticketsv1.CreateTicketResponse, error) {
-	created, validationErrors, err := server.service.Create(ctx, ticket.CreateInput{
+	created, validationErrors, err := server.service.CreateTicket(ctx, ticket.CreateInput{
 		Title:  request.GetTitle(),
 		Price:  request.GetPrice(),
 		UserID: request.GetUserId(),
@@ -49,7 +49,7 @@ func (server *Server) UpdateTicket(
 	ctx context.Context,
 	request *ticketsv1.UpdateTicketRequest,
 ) (*ticketsv1.UpdateTicketResponse, error) {
-	updated, validationErrors, err := server.service.Update(ctx, request.GetId(), ticket.UpdateInput{
+	updated, validationErrors, err := server.service.UpdateTicket(ctx, request.GetId(), ticket.UpdateInput{
 		Title:  request.GetTitle(),
 		Price:  request.GetPrice(),
 		UserID: request.GetUserId(),
@@ -83,7 +83,7 @@ func (server *Server) ListTickets(
 	ctx context.Context,
 	_request *ticketsv1.ListTicketsRequest,
 ) (*ticketsv1.ListTicketsResponse, error) {
-	listed, err := server.service.List(ctx)
+	listed, err := server.service.ListTickets(ctx)
 	if err != nil {
 		return nil, structuredError(codes.Internal, []ticket.ValidationError{{
 			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
@@ -105,7 +105,7 @@ func (server *Server) GetTicket(
 	ctx context.Context,
 	request *ticketsv1.GetTicketRequest,
 ) (*ticketsv1.GetTicketResponse, error) {
-	found, err := server.service.Get(ctx, request.GetId())
+	found, err := server.service.GetTicket(ctx, request.GetId())
 	if errors.Is(err, ticket.ErrNotFound) {
 		return nil, structuredError(codes.NotFound, []ticket.ValidationError{{
 			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_NOT_FOUND),
