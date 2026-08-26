@@ -13,31 +13,31 @@ import (
 
 type Service struct {
 	now        func() time.Time
-	repository CreationRepository
+	repository TicketReservationRepository
 }
 
-func NewService(repository CreationRepository) *Service {
+func NewService(repository TicketReservationRepository) *Service {
 	return &Service{now: time.Now, repository: repository}
 }
 
-func (service *Service) Create(
+func (service *Service) ReserveTicket(
 	ctx context.Context,
 	ticketID string,
 	userID string,
-) (Order, []ValidationError, error) {
-	if validationErrors := validateCreate(ticketID, userID); len(validationErrors) > 0 {
-		return Order{}, validationErrors, nil
+) (ReservationResult, []ValidationError, error) {
+	if validationErrors := validateTicketReservation(ticketID, userID); len(validationErrors) > 0 {
+		return ReservationResult{}, validationErrors, nil
 	}
 
-	created, err := service.repository.Create(ctx, CreateInput{
+	reservation, err := service.repository.ReserveTicket(ctx, TicketReservationInput{
 		ExpiresAt: service.now().UTC().Add(ExpirationWindow),
 		TicketID:  ticketID,
 		UserID:    userID,
 	})
-	return created, nil, err
+	return reservation, nil, err
 }
 
-func validateCreate(ticketID string, userID string) []ValidationError {
+func validateTicketReservation(ticketID string, userID string) []ValidationError {
 	if _, err := uuid.Parse(ticketID); err != nil {
 		return []ValidationError{{
 			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT),

@@ -65,7 +65,11 @@ its local ticket projection. The API gateway exposes authenticated
 `POST /api/orders`; it accepts `{ "ticketId": "<uuid>" }`, creates a `Created`
 order for the session user, and sets `expiresAt` to 15 minutes after creation.
 It returns `404` when the ticket has not yet reached the Orders projection; it
-does not read `tickets-db` or synchronously call Tickets.
+does not read `tickets-db` or synchronously call Tickets. An active `Created`
+or `AwaitingPayment` order reserves the ticket until expiry: a same-user retry
+returns the existing order with `200`, while another user receives
+`409 ALREADY_EXISTS`. `Canceled` releases the ticket, and `Complete` keeps it
+unavailable permanently.
 
 ## List Tickets Flow
 
@@ -307,9 +311,9 @@ maintain an orders-owned local `tickets` projection. Its `orders.ticket_id`
 foreign key references that local table in `orders-db`, never `tickets-db`.
 The `orders` table has `id`, `expires_at`, `user_id`, `ticket_id`, and a
 `status` enum with `Created`, `Canceled`, `AwaitingPayment`, and `Complete`.
-Order creation currently allows multiple active orders for the same ticket;
-reservation conflict prevention, expiration processing, and payment remain
-future work.
+Order creation locks the Orders-owned ticket projection while it checks and
+creates a reservation, so concurrent callers cannot both reserve the ticket.
+Expiration processing and payment remain future work.
 
 Additional event subjects, consumers, CI/CD, observability, and deployment
 environments remain open design and implementation work.

@@ -21,6 +21,7 @@ message CreateOrderResponse {
   string user_id = 3;
   string ticket_id = 4;
   OrderStatus status = 5;
+  bool created = 6;
 }
 
 enum OrderStatus {

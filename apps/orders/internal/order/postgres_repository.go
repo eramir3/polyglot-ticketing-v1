@@ -16,22 +16,92 @@ func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
 
-// Create inserts an order only when the referenced ticket is available in the
-// orders-owned projection. The INSERT ... SELECT keeps that check and insert
-// in one database operation.
-func (repository *PostgresRepository) Create(ctx context.Context, input CreateInput) (Order, error) {
+// ReserveTicket serializes reservations for a ticket by locking its orders-owned
+// projection row. This prevents concurrent callers from both inserting an
+// active order for the same ticket.
+func (repository *PostgresRepository) ReserveTicket(ctx context.Context, input TicketReservationInput) (ReservationResult, error) {
+	tx, err := repository.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return ReservationResult{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	var ticketID string
+	err = tx.QueryRow(ctx, `SELECT id::text FROM tickets WHERE id = $1 FOR UPDATE`, input.TicketID).Scan(&ticketID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ReservationResult{}, ErrNotFound
+	}
+	if err != nil {
+		return ReservationResult{}, err
+	}
+
+	existing, found, err := findBlockingOrder(ctx, tx, ticketID)
+	if err != nil {
+		return ReservationResult{}, err
+	}
+	if found {
+		if existing.UserID == input.UserID && existing.Status != StatusComplete {
+			if err := tx.Commit(ctx); err != nil {
+				return ReservationResult{}, err
+			}
+			return ReservationResult{Order: existing}, nil
+		}
+
+		return ReservationResult{}, ErrReserved
+	}
+
+	created, err := insertOrder(ctx, tx, input)
+	if err != nil {
+		return ReservationResult{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return ReservationResult{}, err
+	}
+
+	return ReservationResult{Created: true, Order: created}, nil
+}
+
+func findBlockingOrder(ctx context.Context, tx pgx.Tx, ticketID string) (Order, bool, error) {
+	var found Order
+	var status string
+	err := tx.QueryRow(ctx, `
+		SELECT id, expires_at, user_id, ticket_id, status::text
+		FROM orders
+		WHERE ticket_id = $1
+		  AND (
+			status = 'Complete'
+			OR (status IN ('Created', 'AwaitingPayment') AND expires_at > NOW())
+		  )
+		ORDER BY CASE WHEN status = 'Complete' THEN 0 ELSE 1 END, expires_at DESC
+		LIMIT 1`, ticketID).Scan(
+		&found.ID,
+		&found.ExpiresAt,
+		&found.UserID,
+		&found.TicketID,
+		&status,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Order{}, false, nil
+	}
+	if err != nil {
+		return Order{}, false, err
+	}
+	found.Status = Status(status)
+
+	return found, true, nil
+}
+
+func insertOrder(ctx context.Context, tx pgx.Tx, input TicketReservationInput) (Order, error) {
 	var created Order
 	var status string
-	err := repository.pool.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		INSERT INTO orders (expires_at, user_id, ticket_id, status)
-		SELECT $1, $2, tickets.id, $3
-		FROM tickets
-		WHERE tickets.id = $4
+		VALUES ($1, $2, $3, $4)
 		RETURNING id, expires_at, user_id, ticket_id, status::text`,
 		input.ExpiresAt,
 		input.UserID,
-		StatusCreated,
 		input.TicketID,
+		StatusCreated,
 	).Scan(
 		&created.ID,
 		&created.ExpiresAt,
@@ -39,9 +109,6 @@ func (repository *PostgresRepository) Create(ctx context.Context, input CreateIn
 		&created.TicketID,
 		&status,
 	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Order{}, ErrNotFound
-	}
 	if err != nil {
 		return Order{}, err
 	}

@@ -18,6 +18,7 @@ export interface CreateOrderRequest {
 }
 
 export interface CreateOrderGrpcResponse {
+  created: boolean;
   expiresAt: Timestamp;
   id: string;
   status: GrpcOrderStatus;
@@ -31,6 +32,11 @@ export interface CreateOrderResponse {
   status: OrderStatus;
   ticketId: string;
   userId: string;
+}
+
+export interface OrderCreationResult {
+  created: boolean;
+  order: CreateOrderResponse;
 }
 
 export interface OrdersGrpcService {

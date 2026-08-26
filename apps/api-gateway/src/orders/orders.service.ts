@@ -7,7 +7,7 @@ import { throwGatewayGrpcError } from '../errors/throw-grpc-error';
 import { ORDERS_GRPC_CLIENT } from './orders.constants';
 import {
   CreateOrderGrpcResponse,
-  CreateOrderResponse,
+  OrderCreationResult,
   OrdersGrpcService,
   OrderStatus,
 } from './orders.types';
@@ -28,7 +28,7 @@ export class OrdersService implements OnModuleInit {
   async createOrder(
     ticketId: string,
     userId: string,
-  ): Promise<CreateOrderResponse> {
+  ): Promise<OrderCreationResult> {
     try {
       const response = await firstValueFrom(
         this.ordersService.createOrder({ ticketId, userId }),
@@ -45,13 +45,16 @@ export class OrdersService implements OnModuleInit {
 
 function toCreateOrderResponse(
   response: CreateOrderGrpcResponse,
-): CreateOrderResponse {
+): OrderCreationResult {
   return {
-    expiresAt: toDate(response.expiresAt).toISOString(),
-    id: response.id,
-    status: toOrderStatus(response.status),
-    ticketId: response.ticketId,
-    userId: response.userId,
+    created: response.created,
+    order: {
+      expiresAt: toDate(response.expiresAt).toISOString(),
+      id: response.id,
+      status: toOrderStatus(response.status),
+      ticketId: response.ticketId,
+      userId: response.userId,
+    },
   };
 }
 

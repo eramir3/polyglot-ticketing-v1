@@ -9,6 +9,7 @@ import (
 var (
 	ErrInvalidTicketEvent = errors.New("invalid ticket event")
 	ErrNotFound           = errors.New("ticket not found")
+	ErrReserved           = errors.New("ticket is reserved")
 	ErrUnsupportedSubject = errors.New("unsupported ticket event subject")
 )
 
@@ -37,10 +38,15 @@ type Order struct {
 	UserID    string
 }
 
-type CreateInput struct {
+type TicketReservationInput struct {
 	ExpiresAt time.Time
 	TicketID  string
 	UserID    string
+}
+
+type ReservationResult struct {
+	Created bool
+	Order   Order
 }
 
 type ValidationError struct {
@@ -49,8 +55,8 @@ type ValidationError struct {
 	Message string `json:"message"`
 }
 
-type CreationRepository interface {
-	Create(context.Context, CreateInput) (Order, error)
+type TicketReservationRepository interface {
+	ReserveTicket(context.Context, TicketReservationInput) (ReservationResult, error)
 }
 
 type TicketProjectionRepository interface {

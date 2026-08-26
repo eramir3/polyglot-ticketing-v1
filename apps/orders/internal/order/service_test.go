@@ -6,16 +6,16 @@ import (
 	"time"
 )
 
-func TestServiceCreatesOrderWithFifteenMinuteExpiration(t *testing.T) {
+func TestServiceReservesTicketForFifteenMinutes(t *testing.T) {
 	fixedNow := time.Date(2026, time.August, 25, 19, 0, 0, 0, time.UTC)
-	repository := &fakeCreationRepository{}
+	repository := &fakeTicketReservationRepository{}
 	service := NewService(repository)
 	service.now = func() time.Time { return fixedNow }
 	ticketID := "f446d2f3-4515-4b78-8e6a-81797a2517a3"
 
-	_, validationErrors, err := service.Create(context.Background(), ticketID, "user-1")
+	_, validationErrors, err := service.ReserveTicket(context.Background(), ticketID, "user-1")
 	if err != nil {
-		t.Fatalf("create order: %v", err)
+		t.Fatalf("reserve ticket: %v", err)
 	}
 	if len(validationErrors) != 0 {
 		t.Fatalf("unexpected validation errors: %+v", validationErrors)
@@ -29,7 +29,7 @@ func TestServiceCreatesOrderWithFifteenMinuteExpiration(t *testing.T) {
 }
 
 func TestServiceRejectsInvalidTicketID(t *testing.T) {
-	_, validationErrors, err := NewService(&fakeCreationRepository{}).Create(
+	_, validationErrors, err := NewService(&fakeTicketReservationRepository{}).ReserveTicket(
 		context.Background(),
 		"not-a-uuid",
 		"user-1",
@@ -43,8 +43,8 @@ func TestServiceRejectsInvalidTicketID(t *testing.T) {
 }
 
 func TestServiceReturnsMissingProjectedTicket(t *testing.T) {
-	repository := &fakeCreationRepository{err: ErrNotFound}
-	_, validationErrors, err := NewService(repository).Create(
+	repository := &fakeTicketReservationRepository{err: ErrNotFound}
+	_, validationErrors, err := NewService(repository).ReserveTicket(
 		context.Background(),
 		"f446d2f3-4515-4b78-8e6a-81797a2517a3",
 		"user-1",
@@ -57,15 +57,15 @@ func TestServiceReturnsMissingProjectedTicket(t *testing.T) {
 	}
 }
 
-type fakeCreationRepository struct {
+type fakeTicketReservationRepository struct {
 	err   error
-	input CreateInput
+	input TicketReservationInput
 }
 
-func (repository *fakeCreationRepository) Create(
+func (repository *fakeTicketReservationRepository) ReserveTicket(
 	_ context.Context,
-	input CreateInput,
-) (Order, error) {
+	input TicketReservationInput,
+) (ReservationResult, error) {
 	repository.input = input
-	return Order{}, repository.err
+	return ReservationResult{}, repository.err
 }

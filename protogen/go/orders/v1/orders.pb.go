@@ -136,6 +136,7 @@ type CreateOrderResponse struct {
 	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	TicketId      string                 `protobuf:"bytes,4,opt,name=ticket_id,json=ticketId,proto3" json:"ticket_id,omitempty"`
 	Status        OrderStatus            `protobuf:"varint,5,opt,name=status,proto3,enum=orders.v1.OrderStatus" json:"status,omitempty"`
+	Created       bool                   `protobuf:"varint,6,opt,name=created,proto3" json:"created,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -205,6 +206,13 @@ func (x *CreateOrderResponse) GetStatus() OrderStatus {
 	return OrderStatus_ORDER_STATUS_UNSPECIFIED
 }
 
+func (x *CreateOrderResponse) GetCreated() bool {
+	if x != nil {
+		return x.Created
+	}
+	return false
+}
+
 var File_orders_v1_orders_proto protoreflect.FileDescriptor
 
 const file_orders_v1_orders_proto_rawDesc = "" +
@@ -212,14 +220,15 @@ const file_orders_v1_orders_proto_rawDesc = "" +
 	"\x16orders/v1/orders.proto\x12\torders.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"J\n" +
 	"\x12CreateOrderRequest\x12\x1b\n" +
 	"\tticket_id\x18\x01 \x01(\tR\bticketId\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\"\xc6\x01\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\"\xe0\x01\n" +
 	"\x13CreateOrderResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x129\n" +
 	"\n" +
 	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12\x17\n" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x1b\n" +
 	"\tticket_id\x18\x04 \x01(\tR\bticketId\x12.\n" +
-	"\x06status\x18\x05 \x01(\x0e2\x16.orders.v1.OrderStatusR\x06status*\x9e\x01\n" +
+	"\x06status\x18\x05 \x01(\x0e2\x16.orders.v1.OrderStatusR\x06status\x12\x18\n" +
+	"\acreated\x18\x06 \x01(\bR\acreated*\x9e\x01\n" +
 	"\vOrderStatus\x12\x1c\n" +
 	"\x18ORDER_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14ORDER_STATUS_CREATED\x10\x01\x12\x19\n" +

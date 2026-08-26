@@ -1,4 +1,11 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { CurrentUser } from '../identity/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../identity/authenticated-request';
 import { SessionAuthGuard } from '../identity/guards/session-auth.guard';
@@ -12,10 +19,18 @@ export class OrdersController {
 
   @Post()
   @UseGuards(SessionAuthGuard)
-  createOrder(
+  async createOrder(
     @Body() dto: CreateOrderDto,
     @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) response: StatusResponse,
   ): Promise<CreateOrderResponse> {
-    return this.ordersService.createOrder(dto.ticketId, user.id);
+    const result = await this.ordersService.createOrder(dto.ticketId, user.id);
+    response.status(result.created ? HttpStatus.CREATED : HttpStatus.OK);
+
+    return result.order;
   }
+}
+
+interface StatusResponse {
+  status(code: number): StatusResponse;
 }

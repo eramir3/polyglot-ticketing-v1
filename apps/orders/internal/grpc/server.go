@@ -28,7 +28,7 @@ func (server *Server) CreateOrder(
 	ctx context.Context,
 	request *ordersv1.CreateOrderRequest,
 ) (*ordersv1.CreateOrderResponse, error) {
-	created, validationErrors, err := server.service.Create(
+	reservation, validationErrors, err := server.service.ReserveTicket(
 		ctx,
 		request.GetTicketId(),
 		request.GetUserId(),
@@ -42,6 +42,12 @@ func (server *Server) CreateOrder(
 			Message: "Ticket not found.",
 		}})
 	}
+	if errors.Is(err, order.ErrReserved) {
+		return nil, structuredError(codes.AlreadyExists, []order.ValidationError{{
+			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_ALREADY_EXISTS),
+			Message: "Ticket is currently reserved.",
+		}})
+	}
 	if err != nil {
 		return nil, structuredError(codes.Internal, []order.ValidationError{{
 			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
@@ -49,16 +55,17 @@ func (server *Server) CreateOrder(
 		}})
 	}
 
-	return toCreateOrderResponse(created), nil
+	return toCreateOrderResponse(reservation), nil
 }
 
-func toCreateOrderResponse(created order.Order) *ordersv1.CreateOrderResponse {
+func toCreateOrderResponse(result order.ReservationResult) *ordersv1.CreateOrderResponse {
 	return &ordersv1.CreateOrderResponse{
-		ExpiresAt: timestamppb.New(created.ExpiresAt),
-		Id:        created.ID,
-		Status:    toOrderStatus(created.Status),
-		TicketId:  created.TicketID,
-		UserId:    created.UserID,
+		Created:   result.Created,
+		ExpiresAt: timestamppb.New(result.Order.ExpiresAt),
+		Id:        result.Order.ID,
+		Status:    toOrderStatus(result.Order.Status),
+		TicketId:  result.Order.TicketID,
+		UserId:    result.Order.UserID,
 	}
 }
 
