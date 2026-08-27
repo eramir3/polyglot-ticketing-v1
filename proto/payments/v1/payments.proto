@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package payments.v1;
+
+option go_package = "polyglot-ticketing-v1/protogen/go/payments/v1;paymentsv1";
+
+service PaymentsService {
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+}
+
+message CreatePaymentRequest {
+  string order_id = 1;
+  string user_id = 2;
+}
+
+message CreatePaymentResponse {
+  Payment payment = 1;
+  bool created = 2;
+}
+
+message Payment {
+  string id = 1;
+  string order_id = 2;
+}

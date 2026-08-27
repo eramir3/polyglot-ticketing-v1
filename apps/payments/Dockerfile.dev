@@ -1,0 +1,26 @@
+FROM golang:1.26-alpine AS build
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY apps/payments ./apps/payments
+COPY protogen/go ./protogen/go
+COPY contracts ./contracts
+RUN CGO_ENABLED=0 go build -o /out/payments ./apps/payments/cmd/payments
+RUN CGO_ENABLED=0 go build -o /out/payments-migrate ./apps/payments/cmd/migrate
+
+FROM alpine:3.22
+
+WORKDIR /app
+
+COPY --from=build /out/payments /usr/local/bin/payments
+COPY --from=build /out/payments-migrate /usr/local/bin/payments-migrate
+COPY apps/payments/migrations ./migrations
+
+ENV GRPC_PORT=50054
+
+EXPOSE 50054
+
+CMD ["payments"]

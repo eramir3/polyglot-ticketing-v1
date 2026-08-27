@@ -19,6 +19,10 @@ Implemented foundations:
 - `tickets`: Go gRPC service with Postgres-backed ticket creation,
   owner-authorized updates, and public listing and retrieval. It owns
   `tickets-db`.
+- `orders`: Go gRPC service with a Postgres-backed ticket projection and order
+  reservation lifecycle. It owns `orders-db`.
+- `payments`: Go gRPC service with a Postgres-backed Orders projection. It
+  creates one payment per eligible, owned order and owns `payments-db`.
 - `expiration`: NestJS worker that consumes `OrderCreated` events from NATS
   JetStream, schedules 15-minute expiry jobs in BullMQ/Redis, and publishes
   `ExpirationComplete` events. Orders consumes those events to cancel `Created`
@@ -27,11 +31,11 @@ Implemented foundations:
 - Protovalidate request validation for identity gRPC requests.
 - Standardized errors across the gateway and identity service.
 - Local Docker Compose infrastructure includes NATS JetStream, Redis for the
-  expiration worker, the gateway, identity, `identity-db`, and Mailpit. The
-  Mailpit inbox is available on `localhost:8025`.
+  expiration worker, the gateway, identity, orders, payments, their service
+  databases, and Mailpit. The Mailpit inbox is available on `localhost:8025`.
 
-Planned but not implemented: orders, payments, concert-assistant, Kubernetes
-manifests, GraphQL, and a Kubernetes Gateway API controller.
+Planned but not implemented: concert-assistant, Kubernetes manifests, GraphQL,
+and a Kubernetes Gateway API controller.
 
 ## Architecture Rules
 
@@ -72,8 +76,8 @@ manifests, GraphQL, and a Kubernetes Gateway API controller.
 - Required local configuration is documented in `.env.example`.
 - Run `make help` to list the supported local commands.
 - Build all services: `make build`; test all services: `make test`.
-- Orders tests include a PostgreSQL Testcontainers integration test and require
-  a working Docker container runtime.
+- Orders and Payments tests include PostgreSQL Testcontainers integration tests
+  and require a working Docker container runtime.
 - Build or run an individual service with `make build-<service>` or
   `make serve-<service>` (for example, `make serve-tickets`).
 - Generate contracts with `make generate-proto`.
@@ -83,6 +87,8 @@ manifests, GraphQL, and a Kubernetes Gateway API controller.
   the Compose network on `identity:50051`; Postgres is published on
   `localhost:5432` for local database tooling. Tickets gRPC is internal on
   `tickets:50052`; its Postgres database is published on `localhost:5433`.
+  Orders and Payments gRPC are internal on `orders:50053` and `payments:50054`;
+  their Postgres databases are published on `localhost:5434` and `localhost:5435`.
 
 ## Services And Persistence
 

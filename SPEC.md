@@ -31,6 +31,7 @@ Implemented endpoint:
 | `GET`    | `/api/orders/:id`                  | Retrieves one owned order through orders gRPC.                           |
 | `POST`   | `/api/orders`                      | Creates an order for the authenticated user through orders gRPC.         |
 | `DELETE` | `/api/orders/:id`                  | Cancels one owned active order through orders gRPC.                      |
+| `POST`   | `/api/payments`                    | Creates or returns a payment for an eligible owned order through payments gRPC. |
 
 The gateway validates HTTP payloads with NestJS DTOs, exposes public HTTP
 errors, and translates structured gRPC errors returned by backend services.
@@ -92,6 +93,20 @@ jobs for inspection. When a job runs, it publishes
 `occurredAt`, and `orderId`. Its deterministic Redis job ID and event ID are
 the order ID, so redelivered `OrderCreated` events do not enqueue a second
 timer while the original job is retained.
+
+### Payments
+
+`payments` is a Go gRPC service on `payments:50054` that owns `payments-db`.
+The gateway exposes authenticated `POST /api/payments`, accepting
+`{ "orderId": "<uuid>" }`. It returns a payment with generated `id` and
+`orderId`, using `201` for a new row and `200` when the order already has one.
+Payments consumes retained `OrderCreated` and `OrderCanceled` events from
+`ORDERS_EVENTS` to maintain an Orders projection containing the order ID,
+aggregate version, user ID, price, and status. It creates payments only for an
+owned `Created` projection: unavailable or unowned orders return `404`, while
+canceled or otherwise non-payable orders return `409 ALREADY_EXISTS`. Payments
+does not read `orders-db`, call Orders synchronously, or execute a payment
+provider in this increment.
 
 ## Cancel Order Flow
 
@@ -220,7 +235,7 @@ send another message.
 | Direction                          | Transport                 | Status                          |
 | ---------------------------------- | ------------------------- | ------------------------------- |
 | User application to API gateway    | REST now; GraphQL planned | Gateway REST signup implemented |
-| API gateway to backend services    | gRPC                      | Identity signup implemented     |
+| API gateway to backend services    | gRPC                      | Identity, tickets, orders, and payments |
 | Backend service to backend service | NATS JetStream            | Ticket, order, and expiration events |
 
 Kubernetes Gateway API will provide ingress and routing in a later deployment
@@ -291,14 +306,15 @@ make build
 make test
 make generate-proto
 make serve-tickets
+make serve-payments
 make serve-expiration
 make docker-up
 make docker-up-tools
 ```
 
 The Makefile delegates to the existing Nx, Go, Buf, and Docker Compose
-commands. Gateway integration tests and the Orders expiration-consumer
-integration test use Testcontainers and require a working Docker container
+commands. Gateway integration tests plus the Orders and Payments PostgreSQL
+integration tests use Testcontainers and require a working Docker container
 runtime.
 
 Local ports:
@@ -311,6 +327,8 @@ Local ports:
 | Tickets gRPC      | `tickets:50052` within Compose only  |
 | Tickets Postgres  | `localhost:5433`                     |
 | Orders Postgres   | `localhost:5434`                     |
+| Payments gRPC     | `payments:50054` within Compose only |
+| Payments Postgres | `localhost:5435`                     |
 | NATS JetStream    | `nats://localhost:4222`              |
 | NATS monitoring   | `http://localhost:8222`              |
 | Redis             | `localhost:6379`                      |
@@ -390,7 +408,6 @@ carried by order events but is not exposed through the public order gRPC or
 HTTP API.
 Order creation locks the Orders-owned ticket projection while it checks and
 creates a reservation, so concurrent callers cannot both reserve the ticket.
-Payment remains future work.
 
 Orders publishes `orders.order.created.v1` and `orders.order.canceled.v1`
 events to the `ORDERS_EVENTS` JetStream stream. An order state change and its
@@ -481,3 +498,11 @@ of a scheduled expiration job will be added with the Orders integration.
 Orders validates and explicitly acknowledges the event only after its database
 transaction commits. Invalid expiration payloads are terminally acknowledged;
 transient database or NATS failures are negatively acknowledged for redelivery.
+
+Payments consumes both order subjects through its durable
+`payments-order-projection-v1` JetStream consumer. It records event IDs and
+applies only contiguous aggregate versions to its local projection; malformed
+events are terminated and transient failures or version gaps are negatively
+acknowledged for retry. `orders.order.created.v1` creates a version `0`
+projection, and `orders.order.canceled.v1` advances an existing projection to
+`Canceled`.

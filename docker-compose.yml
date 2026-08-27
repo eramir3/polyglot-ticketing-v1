@@ -10,12 +10,14 @@ services:
       PORT: 3000
       IDENTITY_GRPC_URL: identity:50051
       ORDERS_GRPC_URL: orders:50053
+      PAYMENTS_GRPC_URL: payments:50054
       TICKETS_GRPC_URL: tickets:50052
       TICKETING_USER_APP_ORIGIN: ${TICKETING_USER_APP_ORIGIN:-http://localhost:3001}
     ports:
       - '3000:3000'
     depends_on:
       - identity
+      - payments
       - tickets
 
   tickets:
@@ -180,6 +182,57 @@ services:
     volumes:
       - orders-db-data:/var/lib/postgresql/data
 
+  payments:
+    build:
+      context: .
+      dockerfile: apps/payments/Dockerfile.dev
+    image: payments:dev
+    container_name: payments
+    environment:
+      DATABASE_URL: postgresql://payments:${PAYMENTS_DB_PASSWORD:?PAYMENTS_DB_PASSWORD must be set}@payments-db:5432/payments-db?sslmode=disable
+      GRPC_PORT: 50054
+      NATS_URL: nats://nats:4222
+    depends_on:
+      nats:
+        condition: service_started
+      payments-db:
+        condition: service_healthy
+      payments-migrate:
+        condition: service_completed_successfully
+    expose:
+      - '50054'
+
+  payments-migrate:
+    build:
+      context: .
+      dockerfile: apps/payments/Dockerfile.dev
+    image: payments-migrate:dev
+    container_name: payments-migrate
+    command: ['payments-migrate']
+    environment:
+      DATABASE_URL: postgresql://payments:${PAYMENTS_DB_PASSWORD:?PAYMENTS_DB_PASSWORD must be set}@payments-db:5432/payments-db?sslmode=disable
+    depends_on:
+      payments-db:
+        condition: service_healthy
+    restart: 'no'
+
+  payments-db:
+    image: postgres:17-alpine
+    container_name: payments-db
+    environment:
+      POSTGRES_DB: payments-db
+      POSTGRES_PASSWORD: ${PAYMENTS_DB_PASSWORD:?PAYMENTS_DB_PASSWORD must be set}
+      POSTGRES_USER: payments
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U payments -d payments-db']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - '5435:5432'
+    volumes:
+      - payments-db-data:/var/lib/postgresql/data
+
   identity:
     build:
       context: .
@@ -252,6 +305,7 @@ volumes:
   identity-db-data:
   tickets-db-data:
   orders-db-data:
+  payments-db-data:
   nats-data:
   expiration-redis-data:
   nui-data:

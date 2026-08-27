@@ -1,0 +1,45 @@
+{
+  "name": "payments",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/payments",
+  "projectType": "application",
+  "targets": {
+    "generate-proto": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{workspaceRoot}/protogen/go",
+        "{workspaceRoot}/protogen/ts"
+      ],
+      "options": {
+        "command": "pnpm proto:generate"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["generate-proto"],
+      "outputs": ["{workspaceRoot}/dist/apps/payments"],
+      "options": {
+        "command": "mkdir -p ../../dist/apps/payments && go build -o ../../dist/apps/payments/payments ./cmd/payments",
+        "cwd": "apps/payments"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["generate-proto"],
+      "options": {
+        "command": "go test ./...",
+        "cwd": "apps/payments"
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "go run ./cmd/payments",
+        "cwd": "apps/payments"
+      }
+    }
+  },
+  "tags": []
+}
