@@ -13,7 +13,11 @@ import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 import { createApiGatewayApplication } from '../src/app/app.bootstrap';
 import { createIdentityMicroservice } from '../../identity/src/app/app.bootstrap';
 import { migrateIdentityDatabase } from '../../identity/src/migrate-identity-database';
-import { OrderCanceledSchema } from '../../../protogen/ts/orders/v1/events_pb.js';
+import {
+  OrderCanceledSchema,
+  OrderCreatedSchema,
+} from '../../../protogen/ts/orders/v1/events_pb.js';
+import { OrderStatus } from '../../../protogen/ts/orders/v1/orders_pb.js';
 
 describe('orders endpoints', () => {
   let apiGateway: INestApplication;
@@ -150,6 +154,34 @@ describe('orders endpoints', () => {
       );
       expect(expiresAt).toBeGreaterThanOrEqual(beforeCreation + 14 * 60_000);
       expect(expiresAt).toBeLessThanOrEqual(Date.now() + 16 * 60_000);
+    });
+
+    it('writes one OrderCreated event for the first reservation', async () => {
+      const ticketId = await seedProjectedTicket();
+      const creationCountBefore = await countCreatedOrderEvents();
+
+      const firstCreation = await postOrder({ ticketId }, sessionCookie);
+      const eventsAfterFirstCreation = await createdOrderEvents();
+      const secondCreation = await postOrder({ ticketId }, sessionCookie);
+      const creationCountAfterRetry = await countCreatedOrderEvents();
+
+      expect(firstCreation.status).toBe(201);
+      expect(eventsAfterFirstCreation).toHaveLength(creationCountBefore + 1);
+      const eventRow =
+        eventsAfterFirstCreation[eventsAfterFirstCreation.length - 1];
+      expect(eventRow).toBeDefined();
+      const event = fromBinary(OrderCreatedSchema, eventRow!.payload);
+      expect(event).toMatchObject({
+        eventId: eventRow!.event_id,
+        orderId: (firstCreation.body as OrderResponse).id,
+        orderStatus: OrderStatus.CREATED,
+        userId,
+        ticket: { id: ticketId, price: 10_000n },
+      });
+      expect(event.occurredAt).toBeDefined();
+      expect(event.expiresAt).toBeDefined();
+      expect(secondCreation.status).toBe(200);
+      expect(creationCountAfterRetry).toBe(creationCountBefore + 1);
     });
 
     it('returns the existing order for a same-user retry without extending it', async () => {
@@ -659,8 +691,33 @@ describe('orders endpoints', () => {
     }
   }
 
+  async function createdOrderEvents(): Promise<
+    Array<{ event_id: string; payload: Buffer }>
+  > {
+    const database = new Client({ connectionString: ordersDatabaseUrl });
+    await database.connect();
+    try {
+      const result = await database.query<{
+        event_id: string;
+        payload: Buffer;
+      }>(
+        `SELECT event_id::text, payload
+         FROM outbox_events
+         WHERE subject = 'orders.order.created.v1'
+         ORDER BY created_at ASC, event_id ASC`,
+      );
+      return result.rows;
+    } finally {
+      await database.end();
+    }
+  }
+
   async function countCanceledOrderEvents(): Promise<number> {
     return (await canceledOrderEvents()).length;
+  }
+
+  async function countCreatedOrderEvents(): Promise<number> {
+    return (await createdOrderEvents()).length;
   }
 
   function postOrder(
