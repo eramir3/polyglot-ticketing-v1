@@ -116,6 +116,10 @@ as `Succeeded` or `Failed` based on `PAYMENT_PROCESSOR_OUTCOME` (`success` by
 default, or `failure`) and writes the result event to the same outbox transaction
 as the final status change.
 
+Replacing the simulated processor with a real payment provider is deferred and
+low priority. Publishing an `OrderCompleted` event and exposing payment status
+through the public API are also intentionally deferred, low-priority work.
+
 ## Cancel Order Flow
 
 1. A signed-in client calls `DELETE /api/orders/:id`.
@@ -508,9 +512,10 @@ job. Invalid payloads are terminally acknowledged; transient Redis or NATS
 errors are negatively acknowledged for redelivery. The job delay is
 `max(0, expiresAt - now)`, so delayed source delivery causes immediate
 expiration rather than extending the reservation. BullMQ retries failed
-`ExpirationComplete` publishes five times with exponential backoff. The
-service does not consume cancellation events in this increment; cancellation
-of a scheduled expiration job will be added with the Orders integration.
+`ExpirationComplete` publishes five times with exponential backoff. Expiration
+does not consume `OrderCanceled` events to remove queued BullMQ jobs; that is
+deferred, low-priority work because a later `ExpirationComplete` is a harmless
+Orders no-op for a canceled or completed reservation.
 
 `expiration.expiration.complete.v1` carries
 `expiration.v1.ExpirationComplete` as protobuf binary:

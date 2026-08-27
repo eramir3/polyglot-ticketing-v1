@@ -41,6 +41,11 @@ Implemented foundations:
 Planned but not implemented: concert-assistant, Kubernetes manifests, GraphQL,
 and a Kubernetes Gateway API controller.
 
+Deferred, low-priority work: replace the Payments simulated outcome worker with
+a real provider; publish an `OrderCompleted` event or expose payment status
+publicly; and have Expiration consume `OrderCanceled` to remove queued BullMQ
+expiration jobs.
+
 ## Architecture Rules
 
 - UI clients communicate with the API gateway through REST and, when added,
