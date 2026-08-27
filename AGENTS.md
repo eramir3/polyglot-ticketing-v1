@@ -23,8 +23,9 @@ Implemented foundations:
   reservation lifecycle. It consumes `PaymentCreated` events to move accepted
   reservations to `AwaitingPayment`, and owns `orders-db`.
 - `payments`: Go gRPC service with a Postgres-backed Orders projection. It
-  creates one payment per eligible, owned order, publishes `PaymentCreated`
-  through its transactional outbox, and owns `payments-db`.
+  creates one payment per eligible, owned order, then its simulated processor
+  publishes exactly one payment result through the transactional outbox. It
+  owns `payments-db`.
 - `expiration`: NestJS worker that consumes `OrderCreated` events from NATS
   JetStream, schedules 15-minute expiry jobs in BullMQ/Redis, and publishes
   `ExpirationComplete` events. Orders consumes those events to cancel `Created`

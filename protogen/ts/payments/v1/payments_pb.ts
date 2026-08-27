@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file payments/v1/payments.proto.
  */
 export const file_payments_v1_payments: GenFile = /*@__PURE__*/
-  fileDesc("ChpwYXltZW50cy92MS9wYXltZW50cy5wcm90bxILcGF5bWVudHMudjEiOQoUQ3JlYXRlUGF5bWVudFJlcXVlc3QSEAoIb3JkZXJfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCSJPChVDcmVhdGVQYXltZW50UmVzcG9uc2USJQoHcGF5bWVudBgBIAEoCzIULnBheW1lbnRzLnYxLlBheW1lbnQSDwoHY3JlYXRlZBgCIAEoCCInCgdQYXltZW50EgoKAmlkGAEgASgJEhAKCG9yZGVyX2lkGAIgASgJInkKDlBheW1lbnRDcmVhdGVkEhAKCGV2ZW50X2lkGAEgASgJEi8KC29jY3VycmVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpwYXltZW50X2lkGAMgASgJEhAKCG9yZGVyX2lkGAQgASgJMmkKD1BheW1lbnRzU2VydmljZRJWCg1DcmVhdGVQYXltZW50EiEucGF5bWVudHMudjEuQ3JlYXRlUGF5bWVudFJlcXVlc3QaIi5wYXltZW50cy52MS5DcmVhdGVQYXltZW50UmVzcG9uc2VCOlo4cG9seWdsb3QtdGlja2V0aW5nLXYxL3Byb3RvZ2VuL2dvL3BheW1lbnRzL3YxO3BheW1lbnRzdjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("ChpwYXltZW50cy92MS9wYXltZW50cy5wcm90bxILcGF5bWVudHMudjEiOQoUQ3JlYXRlUGF5bWVudFJlcXVlc3QSEAoIb3JkZXJfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCSJPChVDcmVhdGVQYXltZW50UmVzcG9uc2USJQoHcGF5bWVudBgBIAEoCzIULnBheW1lbnRzLnYxLlBheW1lbnQSDwoHY3JlYXRlZBgCIAEoCCInCgdQYXltZW50EgoKAmlkGAEgASgJEhAKCG9yZGVyX2lkGAIgASgJInkKDlBheW1lbnRDcmVhdGVkEhAKCGV2ZW50X2lkGAEgASgJEi8KC29jY3VycmVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpwYXltZW50X2lkGAMgASgJEhAKCG9yZGVyX2lkGAQgASgJInsKEFBheW1lbnRTdWNjZWVkZWQSEAoIZXZlbnRfaWQYASABKAkSLwoLb2NjdXJyZWRfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCnBheW1lbnRfaWQYAyABKAkSEAoIb3JkZXJfaWQYBCABKAkieAoNUGF5bWVudEZhaWxlZBIQCghldmVudF9pZBgBIAEoCRIvCgtvY2N1cnJlZF9hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKcGF5bWVudF9pZBgDIAEoCRIQCghvcmRlcl9pZBgEIAEoCTJpCg9QYXltZW50c1NlcnZpY2USVgoNQ3JlYXRlUGF5bWVudBIhLnBheW1lbnRzLnYxLkNyZWF0ZVBheW1lbnRSZXF1ZXN0GiIucGF5bWVudHMudjEuQ3JlYXRlUGF5bWVudFJlc3BvbnNlQjpaOHBvbHlnbG90LXRpY2tldGluZy12MS9wcm90b2dlbi9nby9wYXltZW50cy92MTtwYXltZW50c3YxYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message payments.v1.CreatePaymentRequest
@@ -113,6 +113,74 @@ export type PaymentCreated = Message<"payments.v1.PaymentCreated"> & {
  */
 export const PaymentCreatedSchema: GenMessage<PaymentCreated> = /*@__PURE__*/
   messageDesc(file_payments_v1_payments, 3);
+
+/**
+ * PaymentSucceeded records that a payment completed successfully.
+ *
+ * @generated from message payments.v1.PaymentSucceeded
+ */
+export type PaymentSucceeded = Message<"payments.v1.PaymentSucceeded"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 2;
+   */
+  occurredAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: string payment_id = 3;
+   */
+  paymentId: string;
+
+  /**
+   * @generated from field: string order_id = 4;
+   */
+  orderId: string;
+};
+
+/**
+ * Describes the message payments.v1.PaymentSucceeded.
+ * Use `create(PaymentSucceededSchema)` to create a new message.
+ */
+export const PaymentSucceededSchema: GenMessage<PaymentSucceeded> = /*@__PURE__*/
+  messageDesc(file_payments_v1_payments, 4);
+
+/**
+ * PaymentFailed records that a payment could not be completed.
+ *
+ * @generated from message payments.v1.PaymentFailed
+ */
+export type PaymentFailed = Message<"payments.v1.PaymentFailed"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 2;
+   */
+  occurredAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: string payment_id = 3;
+   */
+  paymentId: string;
+
+  /**
+   * @generated from field: string order_id = 4;
+   */
+  orderId: string;
+};
+
+/**
+ * Describes the message payments.v1.PaymentFailed.
+ * Use `create(PaymentFailedSchema)` to create a new message.
+ */
+export const PaymentFailedSchema: GenMessage<PaymentFailed> = /*@__PURE__*/
+  messageDesc(file_payments_v1_payments, 5);
 
 /**
  * @generated from service payments.v1.PaymentsService

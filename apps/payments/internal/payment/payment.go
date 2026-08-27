@@ -3,6 +3,8 @@ package payment
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 )
 
 var (
@@ -11,6 +13,7 @@ var (
 	ErrOrderNotFound        = errors.New("order not found")
 	ErrOrderNotPayable      = errors.New("order cannot be paid")
 	ErrUnsupportedSubject   = errors.New("unsupported order event subject")
+	ErrInvalidOutcome       = errors.New("invalid payment processor outcome")
 )
 
 type OrderStatus string
@@ -20,6 +23,21 @@ const (
 	OrderStatusCanceled        OrderStatus = "Canceled"
 	OrderStatusComplete        OrderStatus = "Complete"
 	OrderStatusCreated         OrderStatus = "Created"
+)
+
+type Status string
+
+const (
+	StatusFailed    Status = "Failed"
+	StatusPending   Status = "Pending"
+	StatusSucceeded Status = "Succeeded"
+)
+
+type ProcessorOutcome string
+
+const (
+	ProcessorOutcomeFailure ProcessorOutcome = "failure"
+	ProcessorOutcomeSuccess ProcessorOutcome = "success"
 )
 
 type Order struct {
@@ -33,6 +51,7 @@ type Order struct {
 type Payment struct {
 	ID      string
 	OrderID string
+	Status  Status
 }
 
 type CreateInput struct {
@@ -50,7 +69,22 @@ type Repository interface {
 	Create(context.Context, CreateInput) (Payment, bool, error)
 }
 
+type SettlementRepository interface {
+	ResolveNextPending(context.Context, ProcessorOutcome) (bool, error)
+}
+
 type OrderProjectionRepository interface {
 	CancelOrderFromEvent(context.Context, string, string, int64) error
 	UpsertOrderFromEvent(context.Context, string, Order) error
+}
+
+func ParseProcessorOutcome(value string) (ProcessorOutcome, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", string(ProcessorOutcomeSuccess):
+		return ProcessorOutcomeSuccess, nil
+	case string(ProcessorOutcomeFailure):
+		return ProcessorOutcomeFailure, nil
+	default:
+		return "", fmt.Errorf("%w: %q", ErrInvalidOutcome, value)
+	}
 }

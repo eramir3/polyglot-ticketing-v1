@@ -32,3 +32,19 @@ message PaymentCreated {
   string payment_id = 3;
   string order_id = 4;
 }
+
+// PaymentSucceeded records that a payment completed successfully.
+message PaymentSucceeded {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  string payment_id = 3;
+  string order_id = 4;
+}
+
+// PaymentFailed records that a payment could not be completed.
+message PaymentFailed {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  string payment_id = 3;
+  string order_id = 4;
+}

@@ -192,6 +192,7 @@ services:
       DATABASE_URL: postgresql://payments:${PAYMENTS_DB_PASSWORD:?PAYMENTS_DB_PASSWORD must be set}@payments-db:5432/payments-db?sslmode=disable
       GRPC_PORT: 50054
       NATS_URL: nats://nats:4222
+      PAYMENT_PROCESSOR_OUTCOME: ${PAYMENT_PROCESSOR_OUTCOME:-success}
     depends_on:
       nats:
         condition: service_started

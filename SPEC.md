@@ -110,7 +110,11 @@ payment and its `PaymentCreated` event are stored in the Payments transactional
 outbox together; the event is published to `PAYMENTS_EVENTS`. Repeating the
 request for an existing owned payment returns it with `200`, including after
 the Orders transition to `AwaitingPayment`. Payments does not read `orders-db`,
-call Orders synchronously, or execute a payment provider in this increment.
+call Orders synchronously, or execute a real payment provider in this increment.
+New payments begin as `Pending`; a background simulated processor resolves them
+as `Succeeded` or `Failed` based on `PAYMENT_PROCESSOR_OUTCOME` (`success` by
+default, or `failure`) and writes the result event to the same outbox transaction
+as the final status change.
 
 ## Cancel Order Flow
 
@@ -453,6 +457,12 @@ the durable `orders-payment-created-v1` consumer. In one transaction it records
 the event ID and moves only a `Created` order to `AwaitingPayment`, incrementing
 the Orders aggregate version. Duplicate and late valid events are acknowledged
 as no-ops; malformed events are terminated and transient failures are retried.
+
+Payments also publishes `payments.payment.succeeded.v1` and
+`payments.payment.failed.v1` to `PAYMENTS_EVENTS`. Their respective
+`payments.v1.PaymentSucceeded` and `payments.v1.PaymentFailed` payloads contain
+`eventId`, `occurredAt`, `paymentId`, and `orderId`. They have no consumer in
+this increment; Orders will consume them in a later change.
 
 The cancellation event has the same delivery envelope and identifies the
 canceled order and ticket:

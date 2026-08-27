@@ -3,6 +3,7 @@ package payment
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -48,9 +49,9 @@ func (repository *PostgresRepository) Create(
 	}
 	var existing Payment
 	err = tx.QueryRow(ctx, `
-		SELECT id::text, order_id::text
+		SELECT id::text, order_id::text, status::text
 		FROM payments
-		WHERE order_id = $1`, input.OrderID).Scan(&existing.ID, &existing.OrderID)
+		WHERE order_id = $1`, input.OrderID).Scan(&existing.ID, &existing.OrderID, &existing.Status)
 	if err == nil {
 		if err := tx.Commit(ctx); err != nil {
 			return Payment{}, false, err
@@ -68,7 +69,7 @@ func (repository *PostgresRepository) Create(
 	err = tx.QueryRow(ctx, `
 		INSERT INTO payments (order_id)
 		VALUES ($1)
-		RETURNING id::text, order_id::text`, input.OrderID).Scan(&created.ID, &created.OrderID)
+		RETURNING id::text, order_id::text, status::text`, input.OrderID).Scan(&created.ID, &created.OrderID, &created.Status)
 	if err != nil {
 		return Payment{}, false, err
 	}
@@ -97,6 +98,95 @@ func insertPaymentCreatedEvent(ctx context.Context, tx pgx.Tx, created Payment) 
 	_, err = tx.Exec(ctx, `
 		INSERT INTO outbox_events (event_id, subject, payload, created_at)
 		VALUES ($1, $2, $3, $4)`, eventID, paymentevents.PaymentCreatedSubject, payload, occurredAt)
+	return err
+}
+
+// ResolveNextPending claims and resolves one payment. The status update and
+// result event use one transaction, leaving a failed transaction Pending for a
+// later processor retry.
+func (repository *PostgresRepository) ResolveNextPending(ctx context.Context, outcome ProcessorOutcome) (bool, error) {
+	tx, err := repository.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback(ctx)
+
+	var pending Payment
+	err = tx.QueryRow(ctx, `
+		SELECT id::text, order_id::text, status::text
+		FROM payments
+		WHERE status = $1
+		ORDER BY id
+		FOR UPDATE SKIP LOCKED
+		LIMIT 1`, StatusPending).Scan(&pending.ID, &pending.OrderID, &pending.Status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, tx.Commit(ctx)
+	}
+	if err != nil {
+		return false, err
+	}
+
+	resolvedStatus, err := statusForOutcome(outcome)
+	if err != nil {
+		return false, err
+	}
+	_, err = tx.Exec(ctx, `
+		UPDATE payments
+		SET status = $2
+		WHERE id = $1`, pending.ID, resolvedStatus)
+	if err != nil {
+		return false, err
+	}
+	pending.Status = resolvedStatus
+	if err := insertPaymentResultEvent(ctx, tx, pending); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func statusForOutcome(outcome ProcessorOutcome) (Status, error) {
+	switch outcome {
+	case ProcessorOutcomeSuccess:
+		return StatusSucceeded, nil
+	case ProcessorOutcomeFailure:
+		return StatusFailed, nil
+	default:
+		return "", fmt.Errorf("%w: %q", ErrInvalidOutcome, outcome)
+	}
+}
+
+func insertPaymentResultEvent(ctx context.Context, tx pgx.Tx, resolved Payment) error {
+	occurredAt := time.Now().UTC()
+	eventID := uuid.NewString()
+	var (
+		payload []byte
+		err     error
+		subject string
+	)
+	switch resolved.Status {
+	case StatusSucceeded:
+		subject = paymentevents.PaymentSucceededSubject
+		payload, err = proto.Marshal(&paymentsv1.PaymentSucceeded{
+			EventId: eventID, OccurredAt: timestamppb.New(occurredAt), PaymentId: resolved.ID, OrderId: resolved.OrderID,
+		})
+	case StatusFailed:
+		subject = paymentevents.PaymentFailedSubject
+		payload, err = proto.Marshal(&paymentsv1.PaymentFailed{
+			EventId: eventID, OccurredAt: timestamppb.New(occurredAt), PaymentId: resolved.ID, OrderId: resolved.OrderID,
+		})
+	default:
+		return fmt.Errorf("cannot publish result for payment status %q", resolved.Status)
+	}
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO outbox_events (event_id, subject, payload, created_at)
+		VALUES ($1, $2, $3, $4)`, eventID, subject, payload, occurredAt)
 	return err
 }
 

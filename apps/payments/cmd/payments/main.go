@@ -30,6 +30,11 @@ func main() {
 	defer pool.Close()
 
 	repository := payment.NewPostgresRepository(pool)
+	outcome, err := payment.ParseProcessorOutcome(os.Getenv("PAYMENT_PROCESSOR_OUTCOME"))
+	if err != nil {
+		slog.Error("invalid payment processor outcome", "error", err)
+		os.Exit(1)
+	}
 	natsURL := environmentVariable("NATS_URL", "nats://localhost:4222")
 	go outbox.NewPublisher(
 		outbox.NewPostgresRepository(pool),
@@ -38,6 +43,7 @@ func main() {
 		slog.Default(),
 	).Run(ctx)
 	go consumer.NewOrderConsumer(repository, natsURL, slog.Default()).Run(ctx)
+	go payment.NewProcessor(repository, outcome, slog.Default()).Run(ctx)
 
 	listener, err := net.Listen("tcp", ":"+environmentVariable("GRPC_PORT", "50054"))
 	if err != nil {

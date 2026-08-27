@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -60,6 +61,94 @@ func TestPostgresRepositoryReturnsExistingPaymentAfterOrderStartsAwaitingPayment
 	existing, wasCreated, err := repository.Create(ctx, CreateInput{OrderID: orderID, UserID: "user-1"})
 	if err != nil || wasCreated || existing != created {
 		t.Fatalf("repeat payment: payment=%+v created=%t err=%v", existing, wasCreated, err)
+	}
+}
+
+func TestPostgresRepositoryResolvesPendingPaymentAndWritesResultEvent(t *testing.T) {
+	testCases := []struct {
+		name            string
+		outcome         ProcessorOutcome
+		expectedStatus  Status
+		expectedSubject string
+	}{
+		{name: "success", outcome: ProcessorOutcomeSuccess, expectedStatus: StatusSucceeded, expectedSubject: paymentevents.PaymentSucceededSubject},
+		{name: "failure", outcome: ProcessorOutcomeFailure, expectedStatus: StatusFailed, expectedSubject: paymentevents.PaymentFailedSubject},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctx := context.Background()
+			pool := startPaymentsPostgres(t, ctx)
+			repository := NewPostgresRepository(pool)
+			orderID := seedProjectedOrder(t, ctx, pool, "user-1", OrderStatusCreated)
+			created, wasCreated, err := repository.Create(ctx, CreateInput{OrderID: orderID, UserID: "user-1"})
+			if err != nil || !wasCreated || created.Status != StatusPending {
+				t.Fatalf("create pending payment: payment=%+v created=%t err=%v", created, wasCreated, err)
+			}
+
+			resolved, err := repository.ResolveNextPending(ctx, testCase.outcome)
+			if err != nil || !resolved {
+				t.Fatalf("resolve pending payment: resolved=%t err=%v", resolved, err)
+			}
+			assertPaymentResult(t, ctx, pool, created, testCase.expectedStatus, testCase.expectedSubject)
+
+			resolved, err = repository.ResolveNextPending(ctx, testCase.outcome)
+			if err != nil || resolved {
+				t.Fatalf("repeat resolution: resolved=%t err=%v", resolved, err)
+			}
+			var eventCount int
+			if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM outbox_events`).Scan(&eventCount); err != nil || eventCount != 2 {
+				t.Fatalf("expected created and one result outbox event, count=%d err=%v", eventCount, err)
+			}
+		})
+	}
+}
+
+func TestPostgresRepositoryResolvesPendingPaymentOnlyOnceConcurrently(t *testing.T) {
+	ctx := context.Background()
+	pool := startPaymentsPostgres(t, ctx)
+	repository := NewPostgresRepository(pool)
+	orderID := seedProjectedOrder(t, ctx, pool, "user-1", OrderStatusCreated)
+	if _, wasCreated, err := repository.Create(ctx, CreateInput{OrderID: orderID, UserID: "user-1"}); err != nil || !wasCreated {
+		t.Fatalf("create pending payment: created=%t err=%v", wasCreated, err)
+	}
+
+	start := make(chan struct{})
+	results := make(chan bool, 2)
+	errors := make(chan error, 2)
+	var workers sync.WaitGroup
+	for range 2 {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			<-start
+			resolved, err := repository.ResolveNextPending(ctx, ProcessorOutcomeSuccess)
+			results <- resolved
+			errors <- err
+		}()
+	}
+	close(start)
+	workers.Wait()
+	close(results)
+	close(errors)
+
+	resolvedCount := 0
+	for resolved := range results {
+		if resolved {
+			resolvedCount++
+		}
+	}
+	for err := range errors {
+		if err != nil {
+			t.Fatalf("resolve pending payment: %v", err)
+		}
+	}
+	if resolvedCount != 1 {
+		t.Fatalf("expected one resolver to claim payment, got %d", resolvedCount)
+	}
+	var resultEventCount int
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM outbox_events WHERE subject = $1`, paymentevents.PaymentSucceededSubject).Scan(&resultEventCount); err != nil || resultEventCount != 1 {
+		t.Fatalf("expected one success outbox event, count=%d err=%v", resultEventCount, err)
 	}
 }
 
@@ -163,5 +252,38 @@ func assertPaymentCreatedOutboxEvent(t *testing.T, ctx context.Context, pool *pg
 	}
 	if event.GetEventId() == "" || event.GetOccurredAt() == nil || event.GetPaymentId() != payment.ID || event.GetOrderId() != payment.OrderID {
 		t.Fatalf("unexpected payment-created event: %+v", &event)
+	}
+}
+
+func assertPaymentResult(
+	t *testing.T,
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	payment Payment,
+	expectedStatus Status,
+	expectedSubject string,
+) {
+	t.Helper()
+	var status string
+	if err := pool.QueryRow(ctx, `SELECT status::text FROM payments WHERE id = $1`, payment.ID).Scan(&status); err != nil || Status(status) != expectedStatus {
+		t.Fatalf("expected payment status %q, got %q err=%v", expectedStatus, status, err)
+	}
+	var payload []byte
+	if err := pool.QueryRow(ctx, `SELECT payload FROM outbox_events WHERE subject = $1`, expectedSubject).Scan(&payload); err != nil {
+		t.Fatalf("read payment result outbox event: %v", err)
+	}
+	switch expectedStatus {
+	case StatusSucceeded:
+		var event paymentsv1.PaymentSucceeded
+		if err := proto.Unmarshal(payload, &event); err != nil || event.GetEventId() == "" || event.GetOccurredAt() == nil || event.GetPaymentId() != payment.ID || event.GetOrderId() != payment.OrderID {
+			t.Fatalf("unexpected payment-succeeded event: event=%+v err=%v", &event, err)
+		}
+	case StatusFailed:
+		var event paymentsv1.PaymentFailed
+		if err := proto.Unmarshal(payload, &event); err != nil || event.GetEventId() == "" || event.GetOccurredAt() == nil || event.GetPaymentId() != payment.ID || event.GetOrderId() != payment.OrderID {
+			t.Fatalf("unexpected payment-failed event: event=%+v err=%v", &event, err)
+		}
+	default:
+		t.Fatalf("unsupported expected payment status %q", expectedStatus)
 	}
 }
