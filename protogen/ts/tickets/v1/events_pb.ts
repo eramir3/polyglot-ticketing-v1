@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file tickets/v1/events.proto.
  */
 export const file_tickets_v1_events: GenFile = /*@__PURE__*/
-  fileDesc("Chd0aWNrZXRzL3YxL2V2ZW50cy5wcm90bxIKdGlja2V0cy52MSJ2Cg1UaWNrZXRDcmVhdGVkEhAKCGV2ZW50X2lkGAEgASgJEi8KC29jY3VycmVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIiCgZ0aWNrZXQYAyABKAsyEi50aWNrZXRzLnYxLlRpY2tldCJ2Cg1UaWNrZXRVcGRhdGVkEhAKCGV2ZW50X2lkGAEgASgJEi8KC29jY3VycmVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIiCgZ0aWNrZXQYAyABKAsyEi50aWNrZXRzLnYxLlRpY2tldEI4WjZwb2x5Z2xvdC10aWNrZXRpbmctdjEvcHJvdG9nZW4vZ28vdGlja2V0cy92MTt0aWNrZXRzdjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_tickets_v1_tickets]);
+  fileDesc("Chd0aWNrZXRzL3YxL2V2ZW50cy5wcm90bxIKdGlja2V0cy52MSKRAQoNVGlja2V0Q3JlYXRlZBIQCghldmVudF9pZBgBIAEoCRIvCgtvY2N1cnJlZF9hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASIgoGdGlja2V0GAMgASgLMhIudGlja2V0cy52MS5UaWNrZXQSGQoRYWdncmVnYXRlX3ZlcnNpb24YBCABKAMikQEKDVRpY2tldFVwZGF0ZWQSEAoIZXZlbnRfaWQYASABKAkSLwoLb2NjdXJyZWRfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiIKBnRpY2tldBgDIAEoCzISLnRpY2tldHMudjEuVGlja2V0EhkKEWFnZ3JlZ2F0ZV92ZXJzaW9uGAQgASgDQjhaNnBvbHlnbG90LXRpY2tldGluZy12MS9wcm90b2dlbi9nby90aWNrZXRzL3YxO3RpY2tldHN2MWIGcHJvdG8z", [file_google_protobuf_timestamp, file_tickets_v1_tickets]);
 
 /**
  * TicketCreated is an immutable snapshot of a ticket at creation time.
@@ -36,6 +36,11 @@ export type TicketCreated = Message<"tickets.v1.TicketCreated"> & {
    * @generated from field: tickets.v1.Ticket ticket = 3;
    */
   ticket?: Ticket | undefined;
+
+  /**
+   * @generated from field: int64 aggregate_version = 4;
+   */
+  aggregateVersion: bigint;
 };
 
 /**
@@ -65,6 +70,11 @@ export type TicketUpdated = Message<"tickets.v1.TicketUpdated"> & {
    * @generated from field: tickets.v1.Ticket ticket = 3;
    */
   ticket?: Ticket | undefined;
+
+  /**
+   * @generated from field: int64 aggregate_version = 4;
+   */
+  aggregateVersion: bigint;
 };
 
 /**

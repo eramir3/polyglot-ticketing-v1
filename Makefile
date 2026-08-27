@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install generate-proto build build-api-gateway build-identity build-tickets build-orders test test-api-gateway test-tickets test-orders serve-api-gateway serve-identity serve-tickets serve-orders docker-build docker-up docker-up-tools docker-down docker-logs docker-ps
+.PHONY: help install generate-proto build build-api-gateway build-identity build-tickets build-orders test test-api-gateway test-tickets test-orders serve-api-gateway serve-identity serve-tickets serve-orders stress-tickets docker-build docker-up docker-up-tools docker-down docker-reset docker-logs docker-ps
 
 help: ## Show available commands.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-22s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -48,6 +48,9 @@ serve-tickets: ## Run the tickets gRPC service locally.
 serve-orders: ## Run the orders ticket-projection service locally.
 	pnpm nx serve orders
 
+stress-tickets: ## Run sequential ticket create/update stress cycles (requires STRESS_COOKIE).
+	node scripts/stress/tickets.js
+
 docker-build: ## Build all Docker Compose service images.
 	docker compose build
 
@@ -59,6 +62,10 @@ docker-up-tools: ## Start optional local development tools, including NUI.
 
 docker-down: ## Stop and remove the local Docker Compose stack.
 	docker compose down
+
+docker-reset: ## Delete all local Compose data, then rebuild and start a fresh stack.
+	docker compose down --volumes
+	docker compose up -d --build
 
 docker-logs: ## Follow logs for the local Docker Compose stack.
 	docker compose logs -f

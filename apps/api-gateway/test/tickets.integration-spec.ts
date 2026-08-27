@@ -177,12 +177,13 @@ describe('tickets endpoints', () => {
       await database.connect();
       try {
         const result = await database.query<{
+          aggregate_version: string;
           id: string;
           price: string;
           title: string;
           user_id: string;
         }>(
-          `SELECT id::text, price::text, title, user_id
+          `SELECT aggregate_version::text, id::text, price::text, title, user_id
          FROM tickets
          WHERE id = $1`,
           [ticket.id],
@@ -190,6 +191,7 @@ describe('tickets endpoints', () => {
 
         expect(result.rows).toEqual([
           {
+            aggregate_version: '0',
             id: ticket.id,
             price: '10000',
             title: 'Metallica',
@@ -216,6 +218,7 @@ describe('tickets endpoints', () => {
           outboxResult.rows[0].payload,
         );
         expect(event).toMatchObject({
+          aggregateVersion: BigInt(0),
           eventId: outboxResult.rows[0].event_id,
           ticket: {
             id: ticket.id,
@@ -442,12 +445,13 @@ describe('tickets endpoints', () => {
       await database.connect();
       try {
         const result = await database.query<{
+          aggregate_version: string;
           id: string;
           price: string;
           title: string;
           user_id: string;
         }>(
-          `SELECT id::text, price::text, title, user_id
+          `SELECT aggregate_version::text, id::text, price::text, title, user_id
          FROM tickets
          WHERE id = $1`,
           [created.id],
@@ -455,6 +459,7 @@ describe('tickets endpoints', () => {
 
         expect(result.rows).toEqual([
           {
+            aggregate_version: '1',
             id: created.id,
             price: '18000',
             title: 'Mastodon Updated',
@@ -481,6 +486,7 @@ describe('tickets endpoints', () => {
           outboxResult.rows[0].payload,
         );
         expect(event).toMatchObject({
+          aggregateVersion: BigInt(1),
           eventId: outboxResult.rows[0].event_id,
           ticket: {
             id: created.id,

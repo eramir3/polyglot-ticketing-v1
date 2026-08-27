@@ -18,8 +18,9 @@ func TestTicketHandlerAppliesCreatedTicket(t *testing.T) {
 	repository := &fakeTicketRepository{}
 	handler := NewTicketHandler(repository)
 	payload := marshalEvent(t, &ticketsv1.TicketCreated{
-		EventId:    "cb33f2be-57b4-4e78-926c-5e1ba53b99d0",
-		OccurredAt: timestamppb.New(time.Now()),
+		EventId:          "cb33f2be-57b4-4e78-926c-5e1ba53b99d0",
+		OccurredAt:       timestamppb.New(time.Now()),
+		AggregateVersion: 0,
 		Ticket: &ticketsv1.Ticket{
 			Id: "f446d2f3-4515-4b78-8e6a-81797a2517a3", Title: "Concert ticket", Price: 100,
 		},
@@ -31,7 +32,7 @@ func TestTicketHandlerAppliesCreatedTicket(t *testing.T) {
 	if repository.eventID != "cb33f2be-57b4-4e78-926c-5e1ba53b99d0" {
 		t.Fatalf("unexpected event ID: %q", repository.eventID)
 	}
-	if repository.ticket != (order.Ticket{ID: "f446d2f3-4515-4b78-8e6a-81797a2517a3", Title: "Concert ticket", Price: 100}) {
+	if repository.ticket != (order.Ticket{AggregateVersion: 0, ID: "f446d2f3-4515-4b78-8e6a-81797a2517a3", Title: "Concert ticket", Price: 100}) {
 		t.Fatalf("unexpected ticket: %+v", repository.ticket)
 	}
 }
@@ -40,8 +41,9 @@ func TestTicketHandlerAppliesUpdatedTicket(t *testing.T) {
 	repository := &fakeTicketRepository{}
 	handler := NewTicketHandler(repository)
 	payload := marshalEvent(t, &ticketsv1.TicketUpdated{
-		EventId:    "2b997858-1973-498a-ad25-e5c0620e73fb",
-		OccurredAt: timestamppb.New(time.Now()),
+		EventId:          "2b997858-1973-498a-ad25-e5c0620e73fb",
+		OccurredAt:       timestamppb.New(time.Now()),
+		AggregateVersion: 1,
 		Ticket: &ticketsv1.Ticket{
 			Id: "f446d2f3-4515-4b78-8e6a-81797a2517a3", Title: "Updated concert ticket", Price: 200,
 		},
@@ -50,7 +52,7 @@ func TestTicketHandlerAppliesUpdatedTicket(t *testing.T) {
 	if err := handler.Handle(context.Background(), ticketevents.TicketUpdatedSubject, payload); err != nil {
 		t.Fatalf("handle ticket-updated event: %v", err)
 	}
-	if repository.ticket != (order.Ticket{ID: "f446d2f3-4515-4b78-8e6a-81797a2517a3", Title: "Updated concert ticket", Price: 200}) {
+	if repository.ticket != (order.Ticket{AggregateVersion: 1, ID: "f446d2f3-4515-4b78-8e6a-81797a2517a3", Title: "Updated concert ticket", Price: 200}) {
 		t.Fatalf("unexpected ticket: %+v", repository.ticket)
 	}
 }

@@ -12,6 +12,7 @@ message TicketCreated {
   string event_id = 1;
   google.protobuf.Timestamp occurred_at = 2;
   Ticket ticket = 3;
+  int64 aggregate_version = 4;
 }
 
 // TicketUpdated is an immutable snapshot of a ticket after an update.
@@ -19,4 +20,5 @@ message TicketUpdated {
   string event_id = 1;
   google.protobuf.Timestamp occurred_at = 2;
   Ticket ticket = 3;
+  int64 aggregate_version = 4;
 }

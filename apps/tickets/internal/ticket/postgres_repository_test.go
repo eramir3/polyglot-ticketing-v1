@@ -14,10 +14,11 @@ func TestMarshalTicketCreatedProducesTicketSnapshot(t *testing.T) {
 	occurredAt := time.Date(2026, time.August, 25, 12, 0, 0, 0, time.UTC)
 	eventID := uuid.NewString()
 	payload, err := marshalTicketCreated(eventID, occurredAt, Ticket{
-		ID:     "ticket-1",
-		Title:  "Concert ticket",
-		Price:  100,
-		UserID: "user-1",
+		AggregateVersion: 0,
+		ID:               "ticket-1",
+		Title:            "Concert ticket",
+		Price:            100,
+		UserID:           "user-1",
 	})
 	if err != nil {
 		t.Fatalf("marshal ticket-created event: %v", err)
@@ -29,6 +30,9 @@ func TestMarshalTicketCreatedProducesTicketSnapshot(t *testing.T) {
 	}
 	if event.GetEventId() != eventID {
 		t.Fatalf("expected event ID %q, got %q", eventID, event.GetEventId())
+	}
+	if event.GetAggregateVersion() != 0 {
+		t.Fatalf("expected aggregate version 0, got %d", event.GetAggregateVersion())
 	}
 	if !event.GetOccurredAt().AsTime().Equal(occurredAt) {
 		t.Fatalf("unexpected occurrence time: %s", event.GetOccurredAt().AsTime())
@@ -45,10 +49,11 @@ func TestMarshalTicketUpdatedProducesTicketSnapshot(t *testing.T) {
 	occurredAt := time.Date(2026, time.August, 25, 12, 0, 0, 0, time.UTC)
 	eventID := uuid.NewString()
 	payload, err := marshalTicketUpdated(eventID, occurredAt, Ticket{
-		ID:     "ticket-1",
-		Title:  "Updated concert ticket",
-		Price:  200,
-		UserID: "user-1",
+		AggregateVersion: 1,
+		ID:               "ticket-1",
+		Title:            "Updated concert ticket",
+		Price:            200,
+		UserID:           "user-1",
 	})
 	if err != nil {
 		t.Fatalf("marshal ticket-updated event: %v", err)
@@ -60,6 +65,9 @@ func TestMarshalTicketUpdatedProducesTicketSnapshot(t *testing.T) {
 	}
 	if event.GetEventId() != eventID {
 		t.Fatalf("expected event ID %q, got %q", eventID, event.GetEventId())
+	}
+	if event.GetAggregateVersion() != 1 {
+		t.Fatalf("expected aggregate version 1, got %d", event.GetAggregateVersion())
 	}
 	if !event.GetOccurredAt().AsTime().Equal(occurredAt) {
 		t.Fatalf("unexpected occurrence time: %s", event.GetOccurredAt().AsTime())

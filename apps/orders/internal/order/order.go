@@ -27,9 +27,10 @@ const (
 )
 
 type Ticket struct {
-	ID    string
-	Title string
-	Price int64
+	AggregateVersion int64
+	ID               string
+	Title            string
+	Price            int64
 }
 
 type Order struct {

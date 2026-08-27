@@ -15,6 +15,7 @@ var (
 )
 
 type Ticket struct {
+	AggregateVersion  int64
 	ID                string
 	Title             string
 	Price             int64

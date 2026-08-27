@@ -24,12 +24,13 @@ const (
 
 // TicketCreated is an immutable snapshot of a ticket at creation time.
 type TicketCreated struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
-	Ticket        *Ticket                `protobuf:"bytes,3,opt,name=ticket,proto3" json:"ticket,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	EventId          string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt       *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	Ticket           *Ticket                `protobuf:"bytes,3,opt,name=ticket,proto3" json:"ticket,omitempty"`
+	AggregateVersion int64                  `protobuf:"varint,4,opt,name=aggregate_version,json=aggregateVersion,proto3" json:"aggregate_version,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *TicketCreated) Reset() {
@@ -83,14 +84,22 @@ func (x *TicketCreated) GetTicket() *Ticket {
 	return nil
 }
 
+func (x *TicketCreated) GetAggregateVersion() int64 {
+	if x != nil {
+		return x.AggregateVersion
+	}
+	return 0
+}
+
 // TicketUpdated is an immutable snapshot of a ticket after an update.
 type TicketUpdated struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
-	Ticket        *Ticket                `protobuf:"bytes,3,opt,name=ticket,proto3" json:"ticket,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	EventId          string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt       *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	Ticket           *Ticket                `protobuf:"bytes,3,opt,name=ticket,proto3" json:"ticket,omitempty"`
+	AggregateVersion int64                  `protobuf:"varint,4,opt,name=aggregate_version,json=aggregateVersion,proto3" json:"aggregate_version,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *TicketUpdated) Reset() {
@@ -144,22 +153,31 @@ func (x *TicketUpdated) GetTicket() *Ticket {
 	return nil
 }
 
+func (x *TicketUpdated) GetAggregateVersion() int64 {
+	if x != nil {
+		return x.AggregateVersion
+	}
+	return 0
+}
+
 var File_tickets_v1_events_proto protoreflect.FileDescriptor
 
 const file_tickets_v1_events_proto_rawDesc = "" +
 	"\n" +
 	"\x17tickets/v1/events.proto\x12\n" +
-	"tickets.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18tickets/v1/tickets.proto\"\x93\x01\n" +
+	"tickets.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18tickets/v1/tickets.proto\"\xc0\x01\n" +
 	"\rTicketCreated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12*\n" +
-	"\x06ticket\x18\x03 \x01(\v2\x12.tickets.v1.TicketR\x06ticket\"\x93\x01\n" +
+	"\x06ticket\x18\x03 \x01(\v2\x12.tickets.v1.TicketR\x06ticket\x12+\n" +
+	"\x11aggregate_version\x18\x04 \x01(\x03R\x10aggregateVersion\"\xc0\x01\n" +
 	"\rTicketUpdated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12*\n" +
-	"\x06ticket\x18\x03 \x01(\v2\x12.tickets.v1.TicketR\x06ticketB8Z6polyglot-ticketing-v1/protogen/go/tickets/v1;ticketsv1b\x06proto3"
+	"\x06ticket\x18\x03 \x01(\v2\x12.tickets.v1.TicketR\x06ticket\x12+\n" +
+	"\x11aggregate_version\x18\x04 \x01(\x03R\x10aggregateVersionB8Z6polyglot-ticketing-v1/protogen/go/tickets/v1;ticketsv1b\x06proto3"
 
 var (
 	file_tickets_v1_events_proto_rawDescOnce sync.Once

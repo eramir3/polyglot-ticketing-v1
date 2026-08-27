@@ -320,6 +320,11 @@ transaction as the ticket mutation, then a background dispatcher publishes them
 at least once with bounded retry backoff. Consumers must be durable, explicitly
 acknowledge messages, and deduplicate by `event_id`.
 
+Tickets owns an internal `aggregate_version` for each ticket. It starts at `0`
+when the ticket is created and increments after every successful owner ticket
+update. Reservation and cancellation do not change it. The version is carried
+by ticket events but is not exposed through the public ticket gRPC or HTTP API.
+
 `tickets.ticket.created.v1` carries the protobuf
 `tickets.v1.TicketCreated` payload. Its JSON representation is:
 
@@ -327,6 +332,7 @@ acknowledge messages, and deduplicate by `event_id`.
 {
   "eventId": "e6b565df-10dc-4a8e-baf7-12bed1e9e9d2",
   "occurredAt": "2026-08-25T15:42:18.123Z",
+  "aggregateVersion": "0",
   "ticket": {
     "id": "8c91c1d3-910b-4dc4-b6f2-efb060b2a0ac",
     "title": "Metallica — Bogotá",
@@ -340,12 +346,16 @@ JetStream receives protobuf binary, not JSON. The `int64` `price` is shown as
 a string in protobuf JSON to preserve JavaScript integer precision.
 
 `tickets.ticket.updated.v1` carries `tickets.v1.TicketUpdated`, which has the
-same JSON shape and represents the ticket snapshot after the update.
+same JSON shape and represents the ticket snapshot after the update with its
+incremented `aggregateVersion`.
 
 Orders consumes both ticket event subjects through its durable
 `orders-ticket-projection-v1` JetStream consumer, replaying retained events to
 maintain an orders-owned local `tickets` projection. Its `orders.ticket_id`
 foreign key references that local table in `orders-db`, never `tickets-db`.
+Orders applies a ticket event only when its `aggregateVersion` is greater than
+the version already projected, so delayed older snapshots cannot overwrite a
+newer ticket state.
 The `orders` table has `id`, `expires_at`, `user_id`, `ticket_id`, and a
 `status` enum with `Created`, `Canceled`, `AwaitingPayment`, and `Complete`.
 Order creation locks the Orders-owned ticket projection while it checks and

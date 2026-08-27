@@ -8,6 +8,7 @@ RUN go mod download
 COPY apps/orders ./apps/orders
 COPY protogen/go ./protogen/go
 COPY contracts ./contracts
+COPY internal ./internal
 RUN CGO_ENABLED=0 go build -o /out/orders ./apps/orders/cmd/orders
 RUN CGO_ENABLED=0 go build -o /out/orders-migrate ./apps/orders/cmd/migrate
 

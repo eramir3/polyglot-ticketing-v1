@@ -8,6 +8,7 @@ RUN go mod download
 COPY apps/tickets ./apps/tickets
 COPY protogen/go ./protogen/go
 COPY contracts ./contracts
+COPY internal ./internal
 RUN CGO_ENABLED=0 go build -o /out/tickets ./apps/tickets/cmd/tickets
 RUN CGO_ENABLED=0 go build -o /out/tickets-migrate ./apps/tickets/cmd/migrate
 

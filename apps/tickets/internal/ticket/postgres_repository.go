@@ -35,11 +35,11 @@ func (repository *PostgresRepository) Create(ctx context.Context, input CreateIn
 		ctx,
 		`INSERT INTO tickets (title, price, user_id)
 		 VALUES ($1, $2, $3)
-		RETURNING id, title, price, user_id, COALESCE(reserved_by_order_id::text, '')`,
+		RETURNING id, title, price, user_id, COALESCE(reserved_by_order_id::text, ''), aggregate_version`,
 		input.Title,
 		input.Price,
 		input.UserID,
-	).Scan(&created.ID, &created.Title, &created.Price, &created.UserID, &created.ReservedByOrderID)
+	).Scan(&created.ID, &created.Title, &created.Price, &created.UserID, &created.ReservedByOrderID, &created.AggregateVersion)
 	if err != nil {
 		return Ticket{}, err
 	}
@@ -66,8 +66,9 @@ func (repository *PostgresRepository) Create(ctx context.Context, input CreateIn
 
 func marshalTicketCreated(eventID string, occurredAt time.Time, created Ticket) ([]byte, error) {
 	return proto.Marshal(&ticketsv1.TicketCreated{
-		EventId:    eventID,
-		OccurredAt: timestamppb.New(occurredAt),
+		EventId:          eventID,
+		OccurredAt:       timestamppb.New(occurredAt),
+		AggregateVersion: created.AggregateVersion,
 		Ticket: &ticketsv1.Ticket{
 			Id:     created.ID,
 			Title:  created.Title,
@@ -79,8 +80,9 @@ func marshalTicketCreated(eventID string, occurredAt time.Time, created Ticket) 
 
 func marshalTicketUpdated(eventID string, occurredAt time.Time, updated Ticket) ([]byte, error) {
 	return proto.Marshal(&ticketsv1.TicketUpdated{
-		EventId:    eventID,
-		OccurredAt: timestamppb.New(occurredAt),
+		EventId:          eventID,
+		OccurredAt:       timestamppb.New(occurredAt),
+		AggregateVersion: updated.AggregateVersion,
 		Ticket: &ticketsv1.Ticket{
 			Id:     updated.ID,
 			Title:  updated.Title,
@@ -94,11 +96,11 @@ func (repository *PostgresRepository) FindByID(ctx context.Context, id string) (
 	var found Ticket
 	err := repository.pool.QueryRow(
 		ctx,
-		`SELECT id, title, price, user_id, COALESCE(reserved_by_order_id::text, '')
+		`SELECT id, title, price, user_id, COALESCE(reserved_by_order_id::text, ''), aggregate_version
 		 FROM tickets
 		 WHERE id = $1`,
 		id,
-	).Scan(&found.ID, &found.Title, &found.Price, &found.UserID, &found.ReservedByOrderID)
+	).Scan(&found.ID, &found.Title, &found.Price, &found.UserID, &found.ReservedByOrderID, &found.AggregateVersion)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Ticket{}, ErrNotFound
 	}
@@ -109,7 +111,7 @@ func (repository *PostgresRepository) FindByID(ctx context.Context, id string) (
 func (repository *PostgresRepository) List(ctx context.Context) ([]Ticket, error) {
 	rows, err := repository.pool.Query(
 		ctx,
-		`SELECT id, title, price, user_id, COALESCE(reserved_by_order_id::text, '')
+		`SELECT id, title, price, user_id, COALESCE(reserved_by_order_id::text, ''), aggregate_version
 		 FROM tickets
 		 ORDER BY title ASC, id ASC`,
 	)
@@ -121,7 +123,7 @@ func (repository *PostgresRepository) List(ctx context.Context) ([]Ticket, error
 	tickets := make([]Ticket, 0)
 	for rows.Next() {
 		var listed Ticket
-		if err := rows.Scan(&listed.ID, &listed.Title, &listed.Price, &listed.UserID, &listed.ReservedByOrderID); err != nil {
+		if err := rows.Scan(&listed.ID, &listed.Title, &listed.Price, &listed.UserID, &listed.ReservedByOrderID, &listed.AggregateVersion); err != nil {
 			return nil, err
 		}
 
@@ -158,14 +160,14 @@ func (repository *PostgresRepository) Update(ctx context.Context, id string, inp
 	err = tx.QueryRow(
 		ctx,
 		`UPDATE tickets
-		 SET title = $1, price = $2
+		 SET title = $1, price = $2, aggregate_version = aggregate_version + 1
 		 WHERE id = $3 AND user_id = $4
-		 RETURNING id, title, price, user_id, COALESCE(reserved_by_order_id::text, '')`,
+		 RETURNING id, title, price, user_id, COALESCE(reserved_by_order_id::text, ''), aggregate_version`,
 		input.Title,
 		input.Price,
 		id,
 		input.UserID,
-	).Scan(&updated.ID, &updated.Title, &updated.Price, &updated.UserID, &updated.ReservedByOrderID)
+	).Scan(&updated.ID, &updated.Title, &updated.Price, &updated.UserID, &updated.ReservedByOrderID, &updated.AggregateVersion)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Ticket{}, ErrNotFound
 	}

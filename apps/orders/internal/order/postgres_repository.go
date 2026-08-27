@@ -35,13 +35,14 @@ func (repository *PostgresRepository) ReserveTicket(ctx context.Context, input T
 
 	var projectedTicket Ticket
 	err = tx.QueryRow(ctx, `
-		SELECT id::text, title, price
+		SELECT id::text, title, price, aggregate_version
 		FROM tickets
 		WHERE id = $1
 		FOR UPDATE`, input.TicketID).Scan(
 		&projectedTicket.ID,
 		&projectedTicket.Title,
 		&projectedTicket.Price,
+		&projectedTicket.AggregateVersion,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ReservationResult{}, ErrNotFound
@@ -339,8 +340,9 @@ func (repository *PostgresRepository) ListByUser(ctx context.Context, userID str
 	return orders, nil
 }
 
-// UpsertTicketFromEvent records the event and applies the ticket projection in
-// one transaction. Redelivered event IDs are intentionally no-ops.
+// UpsertTicketFromEvent records the event and applies a newer ticket snapshot
+// in one transaction. Redelivered or stale event snapshots are intentionally
+// no-ops.
 func (repository *PostgresRepository) UpsertTicketFromEvent(
 	ctx context.Context,
 	eventID string,
@@ -366,13 +368,17 @@ func (repository *PostgresRepository) UpsertTicketFromEvent(
 	}
 
 	_, err = tx.Exec(ctx, `
-		INSERT INTO tickets (id, title, price)
-		VALUES ($1, $2, $3)
+		INSERT INTO tickets (id, title, price, aggregate_version)
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (id) DO UPDATE
-		SET title = EXCLUDED.title, price = EXCLUDED.price`,
+		SET title = EXCLUDED.title,
+		    price = EXCLUDED.price,
+		    aggregate_version = EXCLUDED.aggregate_version
+		WHERE EXCLUDED.aggregate_version > tickets.aggregate_version`,
 		ticket.ID,
 		ticket.Title,
 		ticket.Price,
+		ticket.AggregateVersion,
 	)
 	if err != nil {
 		return err

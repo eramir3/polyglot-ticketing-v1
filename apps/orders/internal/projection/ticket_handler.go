@@ -26,13 +26,13 @@ func (handler *TicketHandler) Handle(ctx context.Context, subject string, payloa
 		if err := proto.Unmarshal(payload, &event); err != nil {
 			return order.ErrInvalidTicketEvent
 		}
-		return handler.apply(ctx, event.GetEventId(), event.GetTicket())
+		return handler.apply(ctx, event.GetEventId(), event.GetAggregateVersion(), event.GetTicket())
 	case ticketevents.TicketUpdatedSubject:
 		var event ticketsv1.TicketUpdated
 		if err := proto.Unmarshal(payload, &event); err != nil {
 			return order.ErrInvalidTicketEvent
 		}
-		return handler.apply(ctx, event.GetEventId(), event.GetTicket())
+		return handler.apply(ctx, event.GetEventId(), event.GetAggregateVersion(), event.GetTicket())
 	default:
 		return order.ErrUnsupportedSubject
 	}
@@ -41,17 +41,20 @@ func (handler *TicketHandler) Handle(ctx context.Context, subject string, payloa
 func (handler *TicketHandler) apply(
 	ctx context.Context,
 	eventID string,
+	aggregateVersion int64,
 	ticket *ticketsv1.Ticket,
 ) error {
 	if strings.TrimSpace(eventID) == "" || ticket == nil ||
 		strings.TrimSpace(ticket.GetId()) == "" ||
-		strings.TrimSpace(ticket.GetTitle()) == "" || ticket.GetPrice() <= 0 {
+		strings.TrimSpace(ticket.GetTitle()) == "" || ticket.GetPrice() <= 0 ||
+		aggregateVersion < 0 {
 		return order.ErrInvalidTicketEvent
 	}
 
 	return handler.repository.UpsertTicketFromEvent(ctx, eventID, order.Ticket{
-		ID:    ticket.GetId(),
-		Title: ticket.GetTitle(),
-		Price: ticket.GetPrice(),
+		AggregateVersion: aggregateVersion,
+		ID:               ticket.GetId(),
+		Title:            ticket.GetTitle(),
+		Price:            ticket.GetPrice(),
 	})
 }
