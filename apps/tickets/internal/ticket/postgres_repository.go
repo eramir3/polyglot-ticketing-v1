@@ -175,17 +175,7 @@ func (repository *PostgresRepository) Update(ctx context.Context, id string, inp
 		return Ticket{}, err
 	}
 
-	occurredAt := time.Now().UTC()
-	eventID := uuid.NewString()
-	payload, err := marshalTicketUpdated(eventID, occurredAt, updated)
-	if err != nil {
-		return Ticket{}, err
-	}
-
-	_, err = tx.Exec(ctx, `
-		INSERT INTO outbox_events (event_id, subject, payload, created_at)
-		VALUES ($1, $2, $3, $4)`, eventID, ticketevents.TicketUpdatedSubject, payload, occurredAt)
-	if err != nil {
+	if err := insertTicketUpdatedEvent(ctx, tx, updated); err != nil {
 		return Ticket{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -195,8 +185,8 @@ func (repository *PostgresRepository) Update(ctx context.Context, id string, inp
 	return updated, nil
 }
 
-// ReserveTicketFromOrder records the created event and locks the ticket in one
-// transaction.
+// ReserveTicketFromOrder records the created event, locks the ticket, and
+// publishes its updated snapshot in one transaction.
 func (repository *PostgresRepository) ReserveTicketFromOrder(
 	ctx context.Context,
 	eventID string,
@@ -236,11 +226,27 @@ func (repository *PostgresRepository) ReserveTicketFromOrder(
 		return ErrReserved
 	}
 
-	_, err = tx.Exec(ctx, `
+	var updated Ticket
+	err = tx.QueryRow(ctx, `
 		UPDATE tickets
-		SET reserved_by_order_id = $2
-		WHERE id = $1`, ticketID, orderID)
+		SET reserved_by_order_id = $2,
+		    aggregate_version = aggregate_version + 1
+		WHERE id = $1
+		RETURNING id, title, price, user_id, COALESCE(reserved_by_order_id::text, ''), aggregate_version`,
+		ticketID,
+		orderID,
+	).Scan(
+		&updated.ID,
+		&updated.Title,
+		&updated.Price,
+		&updated.UserID,
+		&updated.ReservedByOrderID,
+		&updated.AggregateVersion,
+	)
 	if err != nil {
+		return err
+	}
+	if err := insertTicketUpdatedEvent(ctx, tx, updated); err != nil {
 		return err
 	}
 
@@ -285,15 +291,45 @@ func (repository *PostgresRepository) UnreserveTicketFromOrder(
 		return ErrOrderReservationPending
 	}
 
-	_, err = tx.Exec(ctx, `
+	var updated Ticket
+	err = tx.QueryRow(ctx, `
 		UPDATE tickets
-		SET reserved_by_order_id = NULL
-		WHERE id = $1 AND reserved_by_order_id = $2`, ticketID, orderID)
+		SET reserved_by_order_id = NULL,
+		    aggregate_version = aggregate_version + 1
+		WHERE id = $1 AND reserved_by_order_id = $2
+		RETURNING id, title, price, user_id, COALESCE(reserved_by_order_id::text, ''), aggregate_version`,
+		ticketID,
+		orderID,
+	).Scan(
+		&updated.ID,
+		&updated.Title,
+		&updated.Price,
+		&updated.UserID,
+		&updated.ReservedByOrderID,
+		&updated.AggregateVersion,
+	)
 	if err != nil {
+		return err
+	}
+	if err := insertTicketUpdatedEvent(ctx, tx, updated); err != nil {
 		return err
 	}
 
 	return tx.Commit(ctx)
+}
+
+func insertTicketUpdatedEvent(ctx context.Context, tx pgx.Tx, updated Ticket) error {
+	occurredAt := time.Now().UTC()
+	eventID := uuid.NewString()
+	payload, err := marshalTicketUpdated(eventID, occurredAt, updated)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO outbox_events (event_id, subject, payload, created_at)
+		VALUES ($1, $2, $3, $4)`, eventID, ticketevents.TicketUpdatedSubject, payload, occurredAt)
+	return err
 }
 
 func recordProcessedEvent(ctx context.Context, tx pgx.Tx, eventID string) (bool, error) {

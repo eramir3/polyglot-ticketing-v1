@@ -314,16 +314,19 @@ configuration persists in the local `nui-data` Docker volume.
 | concert-assistant | Python RAG        | `concert-assistant-db` |
 
 Tickets publishes `tickets.ticket.created.v1` and `tickets.ticket.updated.v1`
-events to the `TICKETS_EVENTS` JetStream stream. Ticket creation and updates
-write their respective events to the tickets-owned Postgres outbox in the same
-transaction as the ticket mutation, then a background dispatcher publishes them
-at least once with bounded retry backoff. Consumers must be durable, explicitly
-acknowledge messages, and deduplicate by `event_id`.
+events to the `TICKETS_EVENTS` JetStream stream. Ticket creation, owner
+updates, and reservation changes write their respective events to the
+Tickets-owned Postgres outbox in the same transaction as the ticket mutation,
+then a background dispatcher publishes them at least once with bounded retry
+backoff. Consumers must be durable, explicitly acknowledge messages, and
+deduplicate by `event_id`.
 
 Tickets owns an internal `aggregate_version` for each ticket. It starts at `0`
 when the ticket is created and increments after every successful owner ticket
-update. Reservation and cancellation do not change it. The version is carried
-by ticket events but is not exposed through the public ticket gRPC or HTTP API.
+update, reservation, or unreservation. Each of those changes emits a
+`TicketUpdated` event. Redelivered order events do not increment the version or
+emit another event. The version is carried by ticket events but is not exposed
+through the public ticket gRPC or HTTP API.
 
 `tickets.ticket.created.v1` carries the protobuf
 `tickets.v1.TicketCreated` payload. Its JSON representation is:

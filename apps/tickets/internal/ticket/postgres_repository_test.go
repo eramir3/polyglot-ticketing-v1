@@ -79,3 +79,24 @@ func TestMarshalTicketUpdatedProducesTicketSnapshot(t *testing.T) {
 		t.Fatalf("unexpected ticket snapshot: %+v", event.GetTicket())
 	}
 }
+
+func TestMarshalTicketUpdatedPreservesReservationChangeVersion(t *testing.T) {
+	payload, err := marshalTicketUpdated("reservation-event", time.Now().UTC(), Ticket{
+		AggregateVersion: 2,
+		ID:               "ticket-1",
+		Title:            "Concert ticket",
+		Price:            100,
+		UserID:           "user-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal reservation ticket-updated event: %v", err)
+	}
+
+	var event ticketsv1.TicketUpdated
+	if err := proto.Unmarshal(payload, &event); err != nil {
+		t.Fatalf("unmarshal reservation ticket-updated event: %v", err)
+	}
+	if event.GetAggregateVersion() != 2 {
+		t.Fatalf("expected aggregate version 2, got %d", event.GetAggregateVersion())
+	}
+}
