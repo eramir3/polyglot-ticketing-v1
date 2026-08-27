@@ -288,6 +288,66 @@ func (repository *PostgresRepository) CancelByIDAndUser(
 	return Order{}, ErrOrderNotCancelable
 }
 
+// ApplyExpirationComplete records an expiration delivery before conditionally
+// canceling a Created order. The state transition and its outbox event share a
+// transaction, so redelivery cannot publish a second OrderCanceled event.
+func (repository *PostgresRepository) ApplyExpirationComplete(
+	ctx context.Context,
+	eventID string,
+	orderID string,
+) error {
+	tx, err := repository.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var insertedEventID string
+	err = tx.QueryRow(ctx, `
+		INSERT INTO processed_events (event_id)
+		VALUES ($1)
+		ON CONFLICT DO NOTHING
+		RETURNING event_id::text`, eventID).Scan(&insertedEventID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return tx.Commit(ctx)
+	}
+
+	var canceled Order
+	var canceledStatus string
+	err = tx.QueryRow(ctx, `
+		UPDATE orders
+		SET status = $2,
+		    aggregate_version = aggregate_version + 1
+		WHERE id = $1 AND status = 'Created'
+		RETURNING id::text, expires_at, user_id, ticket_id::text, status::text, aggregate_version`,
+		orderID,
+		StatusCanceled,
+	).Scan(
+		&canceled.ID,
+		&canceled.ExpiresAt,
+		&canceled.UserID,
+		&canceled.TicketID,
+		&canceledStatus,
+		&canceled.AggregateVersion,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return tx.Commit(ctx)
+	}
+	if err != nil {
+		return err
+	}
+
+	canceled.Status = Status(canceledStatus)
+	if err := insertOrderCanceledEvent(ctx, tx, canceled); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
 func insertOrderCanceledEvent(ctx context.Context, tx pgx.Tx, canceled Order) error {
 	occurredAt := time.Now().UTC()
 	eventID := uuid.NewString()

@@ -21,7 +21,8 @@ Implemented foundations:
   `tickets-db`.
 - `expiration`: NestJS worker that consumes `OrderCreated` events from NATS
   JetStream, schedules 15-minute expiry jobs in BullMQ/Redis, and publishes
-  `ExpirationComplete` events. It has no Postgres database or HTTP/gRPC API.
+  `ExpirationComplete` events. Orders consumes those events to cancel `Created`
+  reservations. Expiration has no Postgres database or HTTP/gRPC API.
 - Shared protobuf contracts in `proto/`, generated with Buf and Protobuf-ES.
 - Protovalidate request validation for identity gRPC requests.
 - Standardized errors across the gateway and identity service.

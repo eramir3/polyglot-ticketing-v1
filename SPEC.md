@@ -65,7 +65,8 @@ It has no public HTTP endpoint; the API gateway owns `GET /api/tickets` and
 
 `orders` is a Go service that exposes gRPC internally on `orders:50053` and
 owns `orders-db`. It consumes retained ticket events from JetStream to maintain
-its local ticket projection. The API gateway exposes authenticated
+its local ticket projection and expiration-complete events to cancel eligible
+reservations. The API gateway exposes authenticated
 `GET /api/orders`, `GET /api/orders/:id`, `POST /api/orders`, and
 `DELETE /api/orders/:id`. The list endpoint returns all orders
 for the session user in descending expiration order. The create endpoint accepts
@@ -410,6 +411,16 @@ order and ticket reservation:
 }
 ```
 
+Orders also consumes `expiration.expiration.complete.v1` from
+`EXPIRATION_EVENTS` through the durable `orders-expiration-complete-v1`
+consumer. It records each expiration event ID in its transactional
+`processed_events` table. A `Created` order becomes `Canceled` and writes an
+`OrderCanceled` outbox event in the same transaction. `Canceled`, `Complete`,
+and `AwaitingPayment` orders, as well as missing orders, are acknowledged as
+idempotent no-ops. `AwaitingPayment` intentionally remains eligible for a
+late future `PaymentSucceeded` event to mark it `Complete`; a future
+`PaymentFailed` event will cancel it.
+
 The cancellation event has the same delivery envelope and identifies the
 canceled order and ticket:
 
@@ -462,3 +473,7 @@ of a scheduled expiration job will be added with the Orders integration.
   "orderId": "8c91c1d3-910b-4dc4-b6f2-efb060b2a0ac"
 }
 ```
+
+Orders validates and explicitly acknowledges the event only after its database
+transaction commits. Invalid expiration payloads are terminally acknowledged;
+transient database or NATS failures are negatively acknowledged for redelivery.

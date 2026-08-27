@@ -7,13 +7,14 @@ import (
 )
 
 var (
-	ErrInvalidTicketEvent    = errors.New("invalid ticket event")
-	ErrNotFound              = errors.New("ticket not found")
-	ErrOrderNotCancelable    = errors.New("order cannot be canceled")
-	ErrOrderNotFound         = errors.New("order not found")
-	ErrReserved              = errors.New("ticket is reserved")
-	ErrTicketEventVersionGap = errors.New("ticket event version gap")
-	ErrUnsupportedSubject    = errors.New("unsupported ticket event subject")
+	ErrInvalidTicketEvent     = errors.New("invalid ticket event")
+	ErrInvalidExpirationEvent = errors.New("invalid expiration event")
+	ErrNotFound               = errors.New("ticket not found")
+	ErrOrderNotCancelable     = errors.New("order cannot be canceled")
+	ErrOrderNotFound          = errors.New("order not found")
+	ErrReserved               = errors.New("ticket is reserved")
+	ErrTicketEventVersionGap  = errors.New("ticket event version gap")
+	ErrUnsupportedSubject     = errors.New("unsupported ticket event subject")
 )
 
 const ExpirationWindow = 15 * time.Minute
@@ -69,4 +70,9 @@ type OrderRepository interface {
 
 type TicketProjectionRepository interface {
 	UpsertTicketFromEvent(context.Context, string, Ticket) error
+}
+
+// ExpirationEventRepository applies an expiration event exactly once.
+type ExpirationEventRepository interface {
+	ApplyExpirationComplete(context.Context, string, string) error
 }
