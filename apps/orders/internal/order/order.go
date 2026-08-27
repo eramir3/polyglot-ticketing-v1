@@ -82,3 +82,9 @@ type ExpirationEventRepository interface {
 type PaymentEventRepository interface {
 	ApplyPaymentCreated(context.Context, string, string) error
 }
+
+// PaymentResultEventRepository applies payment result events exactly once.
+type PaymentResultEventRepository interface {
+	ApplyPaymentFailed(context.Context, string, string) error
+	ApplyPaymentSucceeded(context.Context, string, string) error
+}

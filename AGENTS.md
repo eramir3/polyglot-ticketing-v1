@@ -20,8 +20,9 @@ Implemented foundations:
   owner-authorized updates, and public listing and retrieval. It owns
   `tickets-db`.
 - `orders`: Go gRPC service with a Postgres-backed ticket projection and order
-  reservation lifecycle. It consumes `PaymentCreated` events to move accepted
-  reservations to `AwaitingPayment`, and owns `orders-db`.
+  reservation lifecycle. It consumes payment events to move accepted
+  reservations to `AwaitingPayment`, `Complete`, or `Canceled`, and owns
+  `orders-db`.
 - `payments`: Go gRPC service with a Postgres-backed Orders projection. It
   creates one payment per eligible, owned order, then its simulated processor
   publishes exactly one payment result through the transactional outbox. It

@@ -52,6 +52,16 @@ func main() {
 		natsURL,
 		slog.Default(),
 	).Run(ctx)
+	go consumer.NewPaymentSucceededConsumer(
+		repository,
+		natsURL,
+		slog.Default(),
+	).Run(ctx)
+	go consumer.NewPaymentFailedConsumer(
+		repository,
+		natsURL,
+		slog.Default(),
+	).Run(ctx)
 
 	listener, err := net.Listen("tcp", ":"+environmentVariable("GRPC_PORT", "50053"))
 	if err != nil {

@@ -67,8 +67,8 @@ It has no public HTTP endpoint; the API gateway owns `GET /api/tickets` and
 `orders` is a Go service that exposes gRPC internally on `orders:50053` and
 owns `orders-db`. It consumes retained ticket events from JetStream to maintain
 its local ticket projection, expiration-complete events to cancel eligible
-reservations, and payment-created events to move accepted reservations to
-`AwaitingPayment`. The API gateway exposes authenticated
+reservations, and payment events to move accepted reservations through payment
+completion or cancellation. The API gateway exposes authenticated
 `GET /api/orders`, `GET /api/orders/:id`, `POST /api/orders`, and
 `DELETE /api/orders/:id`. The list endpoint returns all orders
 for the session user in descending expiration order. The create endpoint accepts
@@ -446,9 +446,9 @@ consumer. It records each expiration event ID in its transactional
 `processed_events` table. A `Created` order becomes `Canceled` and writes an
 `OrderCanceled` outbox event in the same transaction. `Canceled`, `Complete`,
 and `AwaitingPayment` orders, as well as missing orders, are acknowledged as
-idempotent no-ops. `AwaitingPayment` intentionally remains eligible for a
-late future `PaymentSucceeded` event to mark it `Complete`; a future
-`PaymentFailed` event will cancel it.
+idempotent no-ops. `AwaitingPayment` remains eligible for a late
+`PaymentSucceeded` event to mark it `Complete` or a `PaymentFailed` event to
+cancel it.
 
 Payments publishes `payments.payment.created.v1` to `PAYMENTS_EVENTS` after it
 stores a new payment. The `payments.v1.PaymentCreated` protobuf payload carries
@@ -461,8 +461,14 @@ as no-ops; malformed events are terminated and transient failures are retried.
 Payments also publishes `payments.payment.succeeded.v1` and
 `payments.payment.failed.v1` to `PAYMENTS_EVENTS`. Their respective
 `payments.v1.PaymentSucceeded` and `payments.v1.PaymentFailed` payloads contain
-`eventId`, `occurredAt`, `paymentId`, and `orderId`. They have no consumer in
-this increment; Orders will consume them in a later change.
+`eventId`, `occurredAt`, `paymentId`, and `orderId`. Orders consumes them through
+the independent `orders-payment-succeeded-v1` and `orders-payment-failed-v1`
+durable consumers. A success moves a `Created` or `AwaitingPayment` order to
+`Complete`, so an early result can complete an order before `PaymentCreated`
+arrives. A failure moves either eligible state to `Canceled` and writes one
+`OrderCanceled` outbox event. Duplicate, late, missing, already canceled, and
+already complete orders are acknowledged as no-ops; malformed events terminate
+and transient failures retry.
 
 The cancellation event has the same delivery envelope and identifies the
 canceled order and ticket:
