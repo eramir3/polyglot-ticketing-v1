@@ -16,6 +16,7 @@ message OrderCreated {
   string user_id = 5;
   google.protobuf.Timestamp expires_at = 6;
   OrderTicket ticket = 7;
+  int64 aggregate_version = 8;
 }
 
 message OrderTicket {
@@ -29,6 +30,7 @@ message OrderCanceled {
   google.protobuf.Timestamp occurred_at = 2;
   string order_id = 3;
   OrderCanceledTicket ticket = 4;
+  int64 aggregate_version = 5;
 }
 
 message OrderCanceledTicket {

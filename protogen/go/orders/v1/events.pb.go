@@ -24,16 +24,17 @@ const (
 
 // OrderCreated is an immutable snapshot of a newly created order reservation.
 type OrderCreated struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
-	OrderId       string                 `protobuf:"bytes,3,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	OrderStatus   OrderStatus            `protobuf:"varint,4,opt,name=order_status,json=orderStatus,proto3,enum=orders.v1.OrderStatus" json:"order_status,omitempty"`
-	UserId        string                 `protobuf:"bytes,5,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	Ticket        *OrderTicket           `protobuf:"bytes,7,opt,name=ticket,proto3" json:"ticket,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	EventId          string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt       *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	OrderId          string                 `protobuf:"bytes,3,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	OrderStatus      OrderStatus            `protobuf:"varint,4,opt,name=order_status,json=orderStatus,proto3,enum=orders.v1.OrderStatus" json:"order_status,omitempty"`
+	UserId           string                 `protobuf:"bytes,5,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ExpiresAt        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	Ticket           *OrderTicket           `protobuf:"bytes,7,opt,name=ticket,proto3" json:"ticket,omitempty"`
+	AggregateVersion int64                  `protobuf:"varint,8,opt,name=aggregate_version,json=aggregateVersion,proto3" json:"aggregate_version,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *OrderCreated) Reset() {
@@ -115,6 +116,13 @@ func (x *OrderCreated) GetTicket() *OrderTicket {
 	return nil
 }
 
+func (x *OrderCreated) GetAggregateVersion() int64 {
+	if x != nil {
+		return x.AggregateVersion
+	}
+	return 0
+}
+
 type OrderTicket struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -169,13 +177,14 @@ func (x *OrderTicket) GetPrice() int64 {
 
 // OrderCanceled records that an order reservation was canceled.
 type OrderCanceled struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
-	OrderId       string                 `protobuf:"bytes,3,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	Ticket        *OrderCanceledTicket   `protobuf:"bytes,4,opt,name=ticket,proto3" json:"ticket,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	EventId          string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt       *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	OrderId          string                 `protobuf:"bytes,3,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	Ticket           *OrderCanceledTicket   `protobuf:"bytes,4,opt,name=ticket,proto3" json:"ticket,omitempty"`
+	AggregateVersion int64                  `protobuf:"varint,5,opt,name=aggregate_version,json=aggregateVersion,proto3" json:"aggregate_version,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *OrderCanceled) Reset() {
@@ -236,6 +245,13 @@ func (x *OrderCanceled) GetTicket() *OrderCanceledTicket {
 	return nil
 }
 
+func (x *OrderCanceled) GetAggregateVersion() int64 {
+	if x != nil {
+		return x.AggregateVersion
+	}
+	return 0
+}
+
 type OrderCanceledTicket struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -284,7 +300,7 @@ var File_orders_v1_events_proto protoreflect.FileDescriptor
 
 const file_orders_v1_events_proto_rawDesc = "" +
 	"\n" +
-	"\x16orders/v1/events.proto\x12\torders.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16orders/v1/orders.proto\"\xc0\x02\n" +
+	"\x16orders/v1/events.proto\x12\torders.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16orders/v1/orders.proto\"\xed\x02\n" +
 	"\fOrderCreated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -294,16 +310,18 @@ const file_orders_v1_events_proto_rawDesc = "" +
 	"\auser_id\x18\x05 \x01(\tR\x06userId\x129\n" +
 	"\n" +
 	"expires_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12.\n" +
-	"\x06ticket\x18\a \x01(\v2\x16.orders.v1.OrderTicketR\x06ticket\"3\n" +
+	"\x06ticket\x18\a \x01(\v2\x16.orders.v1.OrderTicketR\x06ticket\x12+\n" +
+	"\x11aggregate_version\x18\b \x01(\x03R\x10aggregateVersion\"3\n" +
 	"\vOrderTicket\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05price\x18\x02 \x01(\x03R\x05price\"\xba\x01\n" +
+	"\x05price\x18\x02 \x01(\x03R\x05price\"\xe7\x01\n" +
 	"\rOrderCanceled\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x19\n" +
 	"\border_id\x18\x03 \x01(\tR\aorderId\x126\n" +
-	"\x06ticket\x18\x04 \x01(\v2\x1e.orders.v1.OrderCanceledTicketR\x06ticket\"%\n" +
+	"\x06ticket\x18\x04 \x01(\v2\x1e.orders.v1.OrderCanceledTicketR\x06ticket\x12+\n" +
+	"\x11aggregate_version\x18\x05 \x01(\x03R\x10aggregateVersion\"%\n" +
 	"\x13OrderCanceledTicket\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02idB6Z4polyglot-ticketing-v1/protogen/go/orders/v1;ordersv1b\x06proto3"
 

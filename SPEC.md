@@ -360,6 +360,10 @@ acknowledged so JetStream retries it; duplicate and delayed older snapshots are
 acknowledged as no-ops.
 The `orders` table has `id`, `expires_at`, `user_id`, `ticket_id`, and a
 `status` enum with `Created`, `Canceled`, `AwaitingPayment`, and `Complete`.
+Orders owns an internal `aggregate_version` that starts at `0` when the order
+is created and increments after every successful order state transition. It is
+carried by order events but is not exposed through the public order gRPC or
+HTTP API.
 Order creation locks the Orders-owned ticket projection while it checks and
 creates a reservation, so concurrent callers cannot both reserve the ticket.
 Expiration processing and payment remain future work.
@@ -379,6 +383,7 @@ order and ticket reservation:
   "orderStatus": "ORDER_STATUS_CREATED",
   "userId": "user_01K...",
   "expiresAt": "2026-08-26T15:57:18.123Z",
+  "aggregateVersion": "0",
   "ticket": {
     "id": "7f301729-a359-4f4f-b71b-ea0a55b6ee71",
     "price": "10000"
@@ -394,6 +399,7 @@ canceled order and ticket:
   "eventId": "e88c1272-0ff4-4f8f-bd1d-64f322ef7b6a",
   "occurredAt": "2026-08-26T15:43:02.456Z",
   "orderId": "8c91c1d3-910b-4dc4-b6f2-efb060b2a0ac",
+  "aggregateVersion": "1",
   "ticket": {
     "id": "7f301729-a359-4f4f-b71b-ea0a55b6ee71"
   }

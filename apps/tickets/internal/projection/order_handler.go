@@ -39,6 +39,7 @@ func (handler *OrderHandler) handleCreated(ctx context.Context, payload []byte) 
 		event.GetOccurredAt() == nil || event.GetOccurredAt().CheckValid() != nil ||
 		strings.TrimSpace(event.GetOrderId()) == "" ||
 		strings.TrimSpace(event.GetUserId()) == "" ||
+		event.GetAggregateVersion() < 0 ||
 		event.GetOrderStatus() != ordersv1.OrderStatus_ORDER_STATUS_CREATED ||
 		event.GetExpiresAt() == nil || event.GetExpiresAt().CheckValid() != nil ||
 		event.GetTicket() == nil || strings.TrimSpace(event.GetTicket().GetId()) == "" ||
@@ -62,6 +63,7 @@ func (handler *OrderHandler) handleCanceled(ctx context.Context, payload []byte)
 	if strings.TrimSpace(event.GetEventId()) == "" ||
 		event.GetOccurredAt() == nil || event.GetOccurredAt().CheckValid() != nil ||
 		strings.TrimSpace(event.GetOrderId()) == "" ||
+		event.GetAggregateVersion() < 0 ||
 		event.GetTicket() == nil || strings.TrimSpace(event.GetTicket().GetId()) == "" {
 		return ticket.ErrInvalidOrderEvent
 	}

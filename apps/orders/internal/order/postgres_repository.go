@@ -96,12 +96,13 @@ func insertOrderCreatedEvent(ctx context.Context, tx pgx.Tx, created Order, tick
 
 func marshalOrderCreated(eventID string, occurredAt time.Time, created Order, ticket Ticket) ([]byte, error) {
 	return proto.Marshal(&ordersv1.OrderCreated{
-		EventId:     eventID,
-		OccurredAt:  timestamppb.New(occurredAt),
-		OrderId:     created.ID,
-		OrderStatus: toProtoOrderStatus(created.Status),
-		UserId:      created.UserID,
-		ExpiresAt:   timestamppb.New(created.ExpiresAt),
+		EventId:          eventID,
+		OccurredAt:       timestamppb.New(occurredAt),
+		OrderId:          created.ID,
+		OrderStatus:      toProtoOrderStatus(created.Status),
+		UserId:           created.UserID,
+		ExpiresAt:        timestamppb.New(created.ExpiresAt),
+		AggregateVersion: created.AggregateVersion,
 		Ticket: &ordersv1.OrderTicket{
 			Id:    ticket.ID,
 			Price: ticket.Price,
@@ -128,7 +129,7 @@ func findBlockingOrder(ctx context.Context, tx pgx.Tx, ticketID string) (Order, 
 	var found Order
 	var status string
 	err := tx.QueryRow(ctx, `
-		SELECT id, expires_at, user_id, ticket_id, status::text
+		SELECT id, expires_at, user_id, ticket_id, status::text, aggregate_version
 		FROM orders
 		WHERE ticket_id = $1
 		  AND (
@@ -142,6 +143,7 @@ func findBlockingOrder(ctx context.Context, tx pgx.Tx, ticketID string) (Order, 
 		&found.UserID,
 		&found.TicketID,
 		&status,
+		&found.AggregateVersion,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Order{}, false, nil
@@ -160,7 +162,7 @@ func insertOrder(ctx context.Context, tx pgx.Tx, input TicketReservationInput) (
 	err := tx.QueryRow(ctx, `
 		INSERT INTO orders (expires_at, user_id, ticket_id, status)
 		VALUES ($1, $2, $3, $4)
-		RETURNING id, expires_at, user_id, ticket_id, status::text`,
+		RETURNING id, expires_at, user_id, ticket_id, status::text, aggregate_version`,
 		input.ExpiresAt,
 		input.UserID,
 		input.TicketID,
@@ -171,6 +173,7 @@ func insertOrder(ctx context.Context, tx pgx.Tx, input TicketReservationInput) (
 		&created.UserID,
 		&created.TicketID,
 		&status,
+		&created.AggregateVersion,
 	)
 	if err != nil {
 		return Order{}, err
@@ -188,7 +191,7 @@ func (repository *PostgresRepository) GetByIDAndUser(
 	var found Order
 	var status string
 	err := repository.pool.QueryRow(ctx, `
-		SELECT id::text, expires_at, user_id, ticket_id::text, status::text
+		SELECT id::text, expires_at, user_id, ticket_id::text, status::text, aggregate_version
 		FROM orders
 		WHERE id = $1 AND user_id = $2`, orderID, userID).Scan(
 		&found.ID,
@@ -196,6 +199,7 @@ func (repository *PostgresRepository) GetByIDAndUser(
 		&found.UserID,
 		&found.TicketID,
 		&status,
+		&found.AggregateVersion,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Order{}, ErrOrderNotFound
@@ -223,11 +227,12 @@ func (repository *PostgresRepository) CancelByIDAndUser(
 	var canceledStatus string
 	err = tx.QueryRow(ctx, `
 		UPDATE orders
-		SET status = $3
+		SET status = $3,
+		    aggregate_version = aggregate_version + 1
 		WHERE id = $1
 		  AND user_id = $2
 		  AND status IN ('Created', 'AwaitingPayment')
-		RETURNING id::text, expires_at, user_id, ticket_id::text, status::text`,
+		RETURNING id::text, expires_at, user_id, ticket_id::text, status::text, aggregate_version`,
 		orderID,
 		userID,
 		StatusCanceled,
@@ -237,6 +242,7 @@ func (repository *PostgresRepository) CancelByIDAndUser(
 		&canceled.UserID,
 		&canceled.TicketID,
 		&canceledStatus,
+		&canceled.AggregateVersion,
 	)
 	if err == nil {
 		canceled.Status = Status(canceledStatus)
@@ -255,7 +261,7 @@ func (repository *PostgresRepository) CancelByIDAndUser(
 	var found Order
 	var foundStatus string
 	err = tx.QueryRow(ctx, `
-		SELECT id::text, expires_at, user_id, ticket_id::text, status::text
+		SELECT id::text, expires_at, user_id, ticket_id::text, status::text, aggregate_version
 		FROM orders
 		WHERE id = $1 AND user_id = $2`, orderID, userID).Scan(
 		&found.ID,
@@ -263,6 +269,7 @@ func (repository *PostgresRepository) CancelByIDAndUser(
 		&found.UserID,
 		&found.TicketID,
 		&foundStatus,
+		&found.AggregateVersion,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Order{}, ErrOrderNotFound
@@ -297,9 +304,10 @@ func insertOrderCanceledEvent(ctx context.Context, tx pgx.Tx, canceled Order) er
 
 func marshalOrderCanceled(eventID string, occurredAt time.Time, canceled Order) ([]byte, error) {
 	return proto.Marshal(&ordersv1.OrderCanceled{
-		EventId:    eventID,
-		OccurredAt: timestamppb.New(occurredAt),
-		OrderId:    canceled.ID,
+		EventId:          eventID,
+		OccurredAt:       timestamppb.New(occurredAt),
+		OrderId:          canceled.ID,
+		AggregateVersion: canceled.AggregateVersion,
 		Ticket: &ordersv1.OrderCanceledTicket{
 			Id: canceled.TicketID,
 		},
@@ -308,7 +316,7 @@ func marshalOrderCanceled(eventID string, occurredAt time.Time, canceled Order) 
 
 func (repository *PostgresRepository) ListByUser(ctx context.Context, userID string) ([]Order, error) {
 	rows, err := repository.pool.Query(ctx, `
-		SELECT id::text, expires_at, user_id, ticket_id::text, status::text
+		SELECT id::text, expires_at, user_id, ticket_id::text, status::text, aggregate_version
 		FROM orders
 		WHERE user_id = $1
 		ORDER BY expires_at DESC, id DESC`, userID)
@@ -327,6 +335,7 @@ func (repository *PostgresRepository) ListByUser(ctx context.Context, userID str
 			&found.UserID,
 			&found.TicketID,
 			&status,
+			&found.AggregateVersion,
 		); err != nil {
 			return nil, err
 		}

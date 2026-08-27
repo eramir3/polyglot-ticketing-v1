@@ -16,11 +16,12 @@ func TestMarshalOrderCreatedProducesReservationSnapshot(t *testing.T) {
 	expiresAt := occurredAt.Add(ExpirationWindow)
 	eventID := uuid.NewString()
 	payload, err := marshalOrderCreated(eventID, occurredAt, Order{
-		ExpiresAt: expiresAt,
-		ID:        "f446d2f3-4515-4b78-8e6a-81797a2517a3",
-		Status:    StatusCreated,
-		TicketID:  "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d",
-		UserID:    "user-1",
+		AggregateVersion: 0,
+		ExpiresAt:        expiresAt,
+		ID:               "f446d2f3-4515-4b78-8e6a-81797a2517a3",
+		Status:           StatusCreated,
+		TicketID:         "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d",
+		UserID:           "user-1",
 	}, Ticket{
 		ID:    "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d",
 		Price: 10_000,
@@ -38,7 +39,8 @@ func TestMarshalOrderCreatedProducesReservationSnapshot(t *testing.T) {
 	}
 	if event.GetOrderId() != "f446d2f3-4515-4b78-8e6a-81797a2517a3" ||
 		event.GetOrderStatus() != ordersv1.OrderStatus_ORDER_STATUS_CREATED ||
-		event.GetUserId() != "user-1" || !event.GetExpiresAt().AsTime().Equal(expiresAt) {
+		event.GetUserId() != "user-1" || !event.GetExpiresAt().AsTime().Equal(expiresAt) ||
+		event.GetAggregateVersion() != 0 {
 		t.Fatalf("unexpected order snapshot: %+v", &event)
 	}
 	if event.GetTicket().GetId() != "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d" ||
@@ -51,9 +53,10 @@ func TestMarshalOrderCanceledProducesReservationSnapshot(t *testing.T) {
 	occurredAt := time.Date(2026, time.August, 26, 12, 0, 0, 0, time.UTC)
 	eventID := uuid.NewString()
 	payload, err := marshalOrderCanceled(eventID, occurredAt, Order{
-		ID:       "f446d2f3-4515-4b78-8e6a-81797a2517a3",
-		Status:   StatusCanceled,
-		TicketID: "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d",
+		AggregateVersion: 1,
+		ID:               "f446d2f3-4515-4b78-8e6a-81797a2517a3",
+		Status:           StatusCanceled,
+		TicketID:         "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d",
 	})
 	if err != nil {
 		t.Fatalf("marshal order-canceled event: %v", err)
@@ -66,8 +69,8 @@ func TestMarshalOrderCanceledProducesReservationSnapshot(t *testing.T) {
 	if event.GetEventId() != eventID || !event.GetOccurredAt().AsTime().Equal(occurredAt) {
 		t.Fatalf("unexpected event envelope: %+v", &event)
 	}
-	if event.GetOrderId() != "f446d2f3-4515-4b78-8e6a-81797a2517a3" {
-		t.Fatalf("unexpected order ID: %q", event.GetOrderId())
+	if event.GetOrderId() != "f446d2f3-4515-4b78-8e6a-81797a2517a3" || event.GetAggregateVersion() != 1 {
+		t.Fatalf("unexpected order event: %+v", &event)
 	}
 	if event.GetTicket().GetId() != "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d" {
 		t.Fatalf("unexpected ticket snapshot: %+v", event.GetTicket())

@@ -35,11 +35,12 @@ type Ticket struct {
 }
 
 type Order struct {
-	ExpiresAt time.Time
-	ID        string
-	Status    Status
-	TicketID  string
-	UserID    string
+	AggregateVersion int64
+	ExpiresAt        time.Time
+	ID               string
+	Status           Status
+	TicketID         string
+	UserID           string
 }
 
 type TicketReservationInput struct {

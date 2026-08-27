@@ -18,12 +18,13 @@ func TestOrderHandlerReservesTicketFromOrderCreated(t *testing.T) {
 	repository := &fakeOrderReservationRepository{}
 	handler := NewOrderHandler(repository)
 	payload := marshalOrderEvent(t, &ordersv1.OrderCreated{
-		EventId:     "cb33f2be-57b4-4e78-926c-5e1ba53b99d0",
-		OccurredAt:  timestamppb.New(time.Now()),
-		OrderId:     "f446d2f3-4515-4b78-8e6a-81797a2517a3",
-		OrderStatus: ordersv1.OrderStatus_ORDER_STATUS_CREATED,
-		UserId:      "user-1",
-		ExpiresAt:   timestamppb.New(time.Now().Add(15 * time.Minute)),
+		EventId:          "cb33f2be-57b4-4e78-926c-5e1ba53b99d0",
+		OccurredAt:       timestamppb.New(time.Now()),
+		OrderId:          "f446d2f3-4515-4b78-8e6a-81797a2517a3",
+		OrderStatus:      ordersv1.OrderStatus_ORDER_STATUS_CREATED,
+		UserId:           "user-1",
+		ExpiresAt:        timestamppb.New(time.Now().Add(15 * time.Minute)),
+		AggregateVersion: 0,
 		Ticket: &ordersv1.OrderTicket{
 			Id:    "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d",
 			Price: 10_000,
@@ -55,9 +56,10 @@ func TestOrderHandlerUnreservesTicketFromOrderCanceled(t *testing.T) {
 	repository := &fakeOrderReservationRepository{}
 	handler := NewOrderHandler(repository)
 	payload := marshalOrderEvent(t, &ordersv1.OrderCanceled{
-		EventId:    "cb33f2be-57b4-4e78-926c-5e1ba53b99d0",
-		OccurredAt: timestamppb.New(time.Now()),
-		OrderId:    "f446d2f3-4515-4b78-8e6a-81797a2517a3",
+		EventId:          "cb33f2be-57b4-4e78-926c-5e1ba53b99d0",
+		OccurredAt:       timestamppb.New(time.Now()),
+		OrderId:          "f446d2f3-4515-4b78-8e6a-81797a2517a3",
+		AggregateVersion: 1,
 		Ticket: &ordersv1.OrderCanceledTicket{
 			Id: "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d",
 		},
@@ -81,6 +83,56 @@ func TestOrderHandlerRejectsInvalidOrderCanceledEvent(t *testing.T) {
 	)
 	if !errors.Is(err, ticket.ErrInvalidOrderEvent) {
 		t.Fatalf("expected ErrInvalidOrderEvent, got %v", err)
+	}
+}
+
+func TestOrderHandlerRejectsNegativeAggregateVersion(t *testing.T) {
+	testCases := []struct {
+		name    string
+		subject string
+		event   proto.Message
+	}{
+		{
+			name:    "created",
+			subject: orderevents.OrderCreatedSubject,
+			event: &ordersv1.OrderCreated{
+				EventId:          "cb33f2be-57b4-4e78-926c-5e1ba53b99d0",
+				OccurredAt:       timestamppb.New(time.Now()),
+				OrderId:          "f446d2f3-4515-4b78-8e6a-81797a2517a3",
+				OrderStatus:      ordersv1.OrderStatus_ORDER_STATUS_CREATED,
+				UserId:           "user-1",
+				ExpiresAt:        timestamppb.New(time.Now().Add(15 * time.Minute)),
+				AggregateVersion: -1,
+				Ticket: &ordersv1.OrderTicket{
+					Id:    "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d",
+					Price: 10_000,
+				},
+			},
+		},
+		{
+			name:    "canceled",
+			subject: orderevents.OrderCanceledSubject,
+			event: &ordersv1.OrderCanceled{
+				EventId:          "cb33f2be-57b4-4e78-926c-5e1ba53b99d0",
+				OccurredAt:       timestamppb.New(time.Now()),
+				OrderId:          "f446d2f3-4515-4b78-8e6a-81797a2517a3",
+				AggregateVersion: -1,
+				Ticket:           &ordersv1.OrderCanceledTicket{Id: "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d"},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := NewOrderHandler(&fakeOrderReservationRepository{}).Handle(
+				context.Background(),
+				testCase.subject,
+				marshalOrderEvent(t, testCase.event),
+			)
+			if !errors.Is(err, ticket.ErrInvalidOrderEvent) {
+				t.Fatalf("expected ErrInvalidOrderEvent, got %v", err)
+			}
+		})
 	}
 }
 
