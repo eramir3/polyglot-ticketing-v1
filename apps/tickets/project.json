@@ -28,7 +28,7 @@
       "executor": "nx:run-commands",
       "dependsOn": ["generate-proto"],
       "options": {
-        "command": "go test ./...",
+        "command": "go test ./... ../../internal/outbox",
         "cwd": "apps/tickets"
       }
     },
