@@ -46,6 +46,35 @@ services:
     volumes:
       - nats-data:/data
 
+  redis:
+    image: redis:7.4-alpine
+    container_name: expiration-redis
+    command: ['redis-server', '--appendonly', 'yes']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - '6379:6379'
+    volumes:
+      - expiration-redis-data:/data
+
+  expiration:
+    build:
+      context: .
+      dockerfile: apps/expiration/Dockerfile.dev
+    image: expiration:dev
+    container_name: expiration
+    environment:
+      NATS_URL: nats://nats:4222
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      nats:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
   nui:
     image: ghcr.io/nats-nui/nui:latest
     container_name: nui
@@ -212,4 +241,5 @@ volumes:
   tickets-db-data:
   orders-db-data:
   nats-data:
+  expiration-redis-data:
   nui-data:

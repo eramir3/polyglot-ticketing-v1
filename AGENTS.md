@@ -19,15 +19,18 @@ Implemented foundations:
 - `tickets`: Go gRPC service with Postgres-backed ticket creation,
   owner-authorized updates, and public listing and retrieval. It owns
   `tickets-db`.
+- `expiration`: NestJS worker that consumes `OrderCreated` events from NATS
+  JetStream, schedules 15-minute expiry jobs in BullMQ/Redis, and publishes
+  `ExpirationComplete` events. It has no Postgres database or HTTP/gRPC API.
 - Shared protobuf contracts in `proto/`, generated with Buf and Protobuf-ES.
 - Protovalidate request validation for identity gRPC requests.
 - Standardized errors across the gateway and identity service.
-- Local Docker Compose infrastructure for the gateway, identity, `identity-db`,
-  and Mailpit. The Mailpit inbox is available on `localhost:8025`.
+- Local Docker Compose infrastructure includes NATS JetStream, Redis for the
+  expiration worker, the gateway, identity, `identity-db`, and Mailpit. The
+  Mailpit inbox is available on `localhost:8025`.
 
-Planned but not implemented: orders, payments, expiration,
-concert-assistant, NATS JetStream, Kubernetes manifests, GraphQL, and a
-Kubernetes Gateway API controller.
+Planned but not implemented: orders, payments, concert-assistant, Kubernetes
+manifests, GraphQL, and a Kubernetes Gateway API controller.
 
 ## Architecture Rules
 
@@ -36,8 +39,8 @@ Kubernetes Gateway API controller.
 - The API gateway communicates with backend services synchronously through
   gRPC.
 - Backend services will communicate asynchronously through NATS JetStream.
-- Each service owns its database. A service must not read or write another
-  service's database.
+- Each service owns its persistence, when it has any. A service must not read
+  or write another service's database or Redis data.
 - Shared protobuf and event contracts are public interfaces. Version them
   carefully and preserve backward compatibility once consumers exist.
 - The API gateway is the public HTTP error boundary. Identity is gRPC-only;
@@ -78,12 +81,13 @@ Kubernetes Gateway API controller.
   `localhost:5432` for local database tooling. Tickets gRPC is internal on
   `tickets:50052`; its Postgres database is published on `localhost:5433`.
 
-## Planned Services And Databases
+## Services And Persistence
 
 - `tickets` (Go) owns `tickets-db`.
 - `orders` (Go) owns `orders-db`.
 - `payments` (Go) owns `payments-db`.
-- `expiration` (NestJS/BullMQ) owns `expiration-db`.
+- `expiration` (NestJS/BullMQ) uses Redis exclusively for delayed jobs; it
+  owns no Postgres database.
 - `identity` (NestJS/Better Auth) owns `identity-db`.
 - `concert-assistant` (Python RAG) owns `concert-assistant-db`.
 

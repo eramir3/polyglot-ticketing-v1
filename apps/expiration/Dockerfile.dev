@@ -1,0 +1,16 @@
+FROM node:24-alpine
+
+WORKDIR /app
+
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json buf.yaml buf.gen.yaml buf.lock ./
+COPY apps/expiration ./apps/expiration
+COPY proto ./proto
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm nx build expiration
+
+ENV NODE_ENV=development
+
+CMD ["node", "dist/apps/expiration/apps/expiration/src/main.js"]

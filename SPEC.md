@@ -79,6 +79,19 @@ returns the existing order with `200`, while another user receives
 Tickets removes its ticket edit lock asynchronously once it consumes the
 cancellation event. `Complete` keeps the ticket unavailable permanently.
 
+### Expiration
+
+`expiration` is a NestJS background service with no HTTP or gRPC listener. It
+consumes retained `orders.order.created.v1` events from `ORDERS_EVENTS` through
+the durable `expiration-order-created-v1` consumer. It schedules a BullMQ job
+in Redis for the event's `expiresAt` deadline, retaining completed and failed
+jobs for inspection. When a job runs, it publishes
+`expiration.expiration.complete.v1` to `EXPIRATION_EVENTS` with an
+`expiration.v1.ExpirationComplete` protobuf payload containing `eventId`,
+`occurredAt`, and `orderId`. Its deterministic Redis job ID and event ID are
+the order ID, so redelivered `OrderCreated` events do not enqueue a second
+timer while the original job is retained.
+
 ## Cancel Order Flow
 
 1. A signed-in client calls `DELETE /api/orders/:id`.
@@ -207,7 +220,7 @@ send another message.
 | ---------------------------------- | ------------------------- | ------------------------------- |
 | User application to API gateway    | REST now; GraphQL planned | Gateway REST signup implemented |
 | API gateway to backend services    | gRPC                      | Identity signup implemented     |
-| Backend service to backend service | NATS JetStream            | Ticket and order projections    |
+| Backend service to backend service | NATS JetStream            | Ticket, order, and expiration events |
 
 Kubernetes Gateway API will provide ingress and routing in a later deployment
 phase. No Kubernetes controller or manifests are implemented yet.
@@ -267,6 +280,7 @@ Required values are listed in `.env.example`:
 - `TICKETS_DB_PASSWORD`
 - `ORDERS_DB_PASSWORD`
 - `NATS_URL` (defaults to `nats://localhost:4222` when running tickets locally)
+- `REDIS_URL` (defaults to `redis://localhost:6379` when running expiration locally)
 
 Common commands:
 
@@ -276,6 +290,7 @@ make build
 make test
 make generate-proto
 make serve-tickets
+make serve-expiration
 make docker-up
 make docker-up-tools
 ```
@@ -296,6 +311,7 @@ Local ports:
 | Orders Postgres   | `localhost:5434`                     |
 | NATS JetStream    | `nats://localhost:4222`              |
 | NATS monitoring   | `http://localhost:8222`              |
+| Redis             | `localhost:6379`                      |
 | NUI               | `http://localhost:31311`             |
 | Mailpit inbox     | `http://localhost:8025`              |
 
@@ -303,14 +319,14 @@ NUI is optional local development tooling. Start it with `make docker-up-tools`,
 then add a connection to `nats://nats:4222` from the NUI web interface. Its
 configuration persists in the local `nui-data` Docker volume.
 
-## Planned Services
+## Services
 
-| Service           | Technology        | Database               |
+| Service           | Technology        | Persistence            |
 | ----------------- | ----------------- | ---------------------- |
 | tickets           | Go                | `tickets-db`           |
 | orders            | Go                | `orders-db`            |
 | payments          | Go                | `payments-db`          |
-| expiration        | NestJS and BullMQ | `expiration-db`        |
+| expiration        | NestJS and BullMQ | Redis                  |
 | concert-assistant | Python RAG        | `concert-assistant-db` |
 
 Tickets publishes `tickets.ticket.created.v1` and `tickets.ticket.updated.v1`
@@ -369,7 +385,7 @@ carried by order events but is not exposed through the public order gRPC or
 HTTP API.
 Order creation locks the Orders-owned ticket projection while it checks and
 creates a reservation, so concurrent callers cannot both reserve the ticket.
-Expiration processing and payment remain future work.
+Payment remains future work.
 
 Orders publishes `orders.order.created.v1` and `orders.order.canceled.v1`
 events to the `ORDERS_EVENTS` JetStream stream. An order state change and its
@@ -425,3 +441,24 @@ can be discarded safely and remain future work.
 
 Additional event subjects, consumers, CI/CD, observability, and deployment
 environments remain open design and implementation work.
+
+Expiration consumes `orders.order.created.v1` with a durable, explicit-ack
+consumer. It acknowledges the source event only after BullMQ accepts a delayed
+job. Invalid payloads are terminally acknowledged; transient Redis or NATS
+errors are negatively acknowledged for redelivery. The job delay is
+`max(0, expiresAt - now)`, so delayed source delivery causes immediate
+expiration rather than extending the reservation. BullMQ retries failed
+`ExpirationComplete` publishes five times with exponential backoff. The
+service does not consume cancellation events in this increment; cancellation
+of a scheduled expiration job will be added with the Orders integration.
+
+`expiration.expiration.complete.v1` carries
+`expiration.v1.ExpirationComplete` as protobuf binary:
+
+```json
+{
+  "eventId": "8c91c1d3-910b-4dc4-b6f2-efb060b2a0ac",
+  "occurredAt": "2026-08-26T15:57:00.000Z",
+  "orderId": "8c91c1d3-910b-4dc4-b6f2-efb060b2a0ac"
+}
+```

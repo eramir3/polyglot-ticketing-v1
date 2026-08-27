@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package expiration.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "polyglot-ticketing-v1/protogen/go/expiration/v1;expirationv1";
+
+// ExpirationComplete records that an order's expiration deadline has elapsed.
+message ExpirationComplete {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  string order_id = 3;
+}

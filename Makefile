@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install generate-proto build build-api-gateway build-identity build-tickets build-orders test test-api-gateway test-tickets test-orders serve-api-gateway serve-identity serve-tickets serve-orders stress-tickets docker-build docker-up docker-up-tools docker-down docker-reset docker-logs docker-ps
+.PHONY: help install generate-proto build build-api-gateway build-identity build-tickets build-orders build-expiration test test-api-gateway test-tickets test-orders test-expiration serve-api-gateway serve-identity serve-tickets serve-orders serve-expiration stress-tickets docker-build docker-up docker-up-tools docker-down docker-reset docker-logs docker-ps
 
 help: ## Show available commands.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-22s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -11,7 +11,7 @@ install: ## Install workspace dependencies.
 generate-proto: ## Generate TypeScript and Go protobuf bindings.
 	pnpm proto:generate
 
-build: build-api-gateway build-identity build-tickets build-orders ## Build every service.
+build: build-api-gateway build-identity build-tickets build-orders build-expiration ## Build every service.
 
 build-api-gateway: ## Build the API gateway.
 	pnpm nx build api-gateway
@@ -25,7 +25,10 @@ build-tickets: ## Build the tickets service.
 build-orders: ## Build the orders service.
 	pnpm nx build orders
 
-test: test-api-gateway test-tickets test-orders ## Run all executable tests.
+build-expiration: ## Build the expiration service.
+	pnpm nx build expiration
+
+test: test-api-gateway test-tickets test-orders test-expiration ## Run all executable tests.
 
 test-api-gateway: ## Run API gateway integration tests (requires Docker for Testcontainers).
 	pnpm nx run api-gateway:integration
@@ -35,6 +38,9 @@ test-tickets: ## Run tickets Go tests.
 
 test-orders: ## Run orders Go tests.
 	pnpm nx test orders
+
+test-expiration: ## Run expiration service tests.
+	pnpm nx test expiration
 
 serve-api-gateway: ## Run the API gateway locally.
 	pnpm nx serve api-gateway
@@ -47,6 +53,9 @@ serve-tickets: ## Run the tickets gRPC service locally.
 
 serve-orders: ## Run the orders ticket-projection service locally.
 	pnpm nx serve orders
+
+serve-expiration: ## Run the expiration service locally.
+	pnpm nx serve expiration
 
 stress-tickets: ## Run sequential ticket create/update stress cycles (requires STRESS_COOKIE).
 	node scripts/stress/tickets.js

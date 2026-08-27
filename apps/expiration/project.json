@@ -1,0 +1,50 @@
+{
+  "name": "expiration",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/expiration/src",
+  "projectType": "application",
+  "targets": {
+    "generate-proto": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/protogen/ts", "{workspaceRoot}/proto-deps"],
+      "options": {
+        "command": "pnpm proto:generate"
+      }
+    },
+    "build": {
+      "executor": "@nx/js:tsc",
+      "dependsOn": ["generate-proto"],
+      "options": {
+        "main": "apps/expiration/src/main.ts",
+        "outputPath": "dist/apps/expiration",
+        "rootDir": ".",
+        "tsConfig": "apps/expiration/tsconfig.app.json",
+        "generatePackageJson": true
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "expiration:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "expiration:build:development"
+        }
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["generate-proto"],
+      "options": {
+        "command": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config apps/expiration/jest.config.js --runInBand"
+      }
+    }
+  },
+  "tags": []
+}

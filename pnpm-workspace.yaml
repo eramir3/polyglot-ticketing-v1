@@ -5,7 +5,12 @@ allowBuilds:
   '@nestjs/core': false
   '@parcel/watcher': true
   less: false
+  msgpackr-extract: false
   protobufjs: false
   '@bufbuild/buf': true
   cpu-features: false
   ssh2: false
+minimumReleaseAgeExclude:
+  - '@nestjs/bull-shared@12.0.0'
+  - '@nestjs/bullmq@12.0.0'
+  - bullmq@6.3.1
