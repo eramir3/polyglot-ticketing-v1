@@ -30,6 +30,13 @@ type OrderConsumer struct {
 	url         string
 }
 
+type orderEventDelivery interface {
+	Ack(...nats.AckOpt) error
+	Nak(...nats.AckOpt) error
+	NakWithDelay(time.Duration, ...nats.AckOpt) error
+	Term(...nats.AckOpt) error
+}
+
 func NewOrderCreatedConsumer(repository ticket.ReservationRepository, url string, logger *slog.Logger) *OrderConsumer {
 	return newOrderConsumer(repository, orderCreatedDurableName, orderevents.OrderCreatedSubject, url, logger)
 }
@@ -103,30 +110,39 @@ func (consumer *OrderConsumer) consume(ctx context.Context) error {
 }
 
 func (consumer *OrderConsumer) handleMessage(ctx context.Context, message *nats.Msg) {
-	err := consumer.handler.Handle(ctx, message.Subject, message.Data)
+	consumer.handleDelivery(ctx, message.Subject, message.Data, message)
+}
+
+func (consumer *OrderConsumer) handleDelivery(
+	ctx context.Context,
+	subject string,
+	payload []byte,
+	delivery orderEventDelivery,
+) {
+	err := consumer.handler.Handle(ctx, subject, payload)
 	if err == nil {
-		if err := message.Ack(); err != nil {
+		if err := delivery.Ack(); err != nil {
 			consumer.logger.Warn("failed to acknowledge order event", "error", err)
 		}
 		return
 	}
 	if errors.Is(err, ticket.ErrInvalidOrderEvent) || errors.Is(err, ticket.ErrUnsupportedOrderEvent) {
-		consumer.logger.Error("terminal order event", "subject", message.Subject, "error", err)
-		if termErr := message.Term(); termErr != nil {
+		consumer.logger.Error("terminal order event", "subject", subject, "error", err)
+		if termErr := delivery.Term(); termErr != nil {
 			consumer.logger.Warn("failed to terminate order event", "error", termErr)
 		}
 		return
 	}
 	if errors.Is(err, ticket.ErrOrderReservationPending) {
-		consumer.logger.Warn("ticket order reservation is not available yet; event will be retried", "subject", message.Subject, "error", err)
-		if nakErr := message.NakWithDelay(orderReservationRetryDelay); nakErr != nil {
+		consumer.logger.Warn("ticket order reservation is not available yet; event will be retried", "subject", subject, "error", err)
+		if nakErr := delivery.NakWithDelay(orderReservationRetryDelay); nakErr != nil {
 			consumer.logger.Warn("failed to delay order event retry", "error", nakErr)
 		}
 		return
 	}
 
-	consumer.logger.Warn("ticket order event failed; event will be retried", "subject", message.Subject, "error", err)
-	if nakErr := message.Nak(); nakErr != nil {
+	consumer.logger.Warn("ticket order event failed; event will be retried", "subject", subject, "error", err)
+	if nakErr := delivery.Nak(); nakErr != nil {
 		consumer.logger.Warn("failed to negatively acknowledge order event", "error", nakErr)
 	}
 }

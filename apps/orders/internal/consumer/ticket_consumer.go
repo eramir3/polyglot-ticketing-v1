@@ -25,6 +25,12 @@ type TicketConsumer struct {
 	url     string
 }
 
+type ticketEventDelivery interface {
+	Ack(...nats.AckOpt) error
+	Nak(...nats.AckOpt) error
+	Term(...nats.AckOpt) error
+}
+
 func NewTicketConsumer(repository order.TicketProjectionRepository, url string, logger *slog.Logger) *TicketConsumer {
 	return &TicketConsumer{
 		handler: projection.NewTicketHandler(repository),
@@ -82,23 +88,32 @@ func (consumer *TicketConsumer) consume(ctx context.Context) error {
 }
 
 func (consumer *TicketConsumer) handleMessage(ctx context.Context, message *nats.Msg) {
-	err := consumer.handler.Handle(ctx, message.Subject, message.Data)
+	consumer.handleDelivery(ctx, message.Subject, message.Data, message)
+}
+
+func (consumer *TicketConsumer) handleDelivery(
+	ctx context.Context,
+	subject string,
+	payload []byte,
+	delivery ticketEventDelivery,
+) {
+	err := consumer.handler.Handle(ctx, subject, payload)
 	if err == nil {
-		if err := message.Ack(); err != nil {
+		if err := delivery.Ack(); err != nil {
 			consumer.logger.Warn("failed to acknowledge ticket event", "error", err)
 		}
 		return
 	}
 	if errors.Is(err, order.ErrInvalidTicketEvent) || errors.Is(err, order.ErrUnsupportedSubject) {
-		consumer.logger.Error("terminal ticket event", "subject", message.Subject, "error", err)
-		if termErr := message.Term(); termErr != nil {
+		consumer.logger.Error("terminal ticket event", "subject", subject, "error", err)
+		if termErr := delivery.Term(); termErr != nil {
 			consumer.logger.Warn("failed to terminate ticket event", "error", termErr)
 		}
 		return
 	}
 
-	consumer.logger.Warn("ticket projection failed; event will be retried", "subject", message.Subject, "error", err)
-	if nakErr := message.Nak(); nakErr != nil {
+	consumer.logger.Warn("ticket projection failed; event will be retried", "subject", subject, "error", err)
+	if nakErr := delivery.Nak(); nakErr != nil {
 		consumer.logger.Warn("failed to negatively acknowledge ticket event", "error", nakErr)
 	}
 }
