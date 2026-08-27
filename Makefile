@@ -36,7 +36,7 @@ test-api-gateway: ## Run API gateway integration tests (requires Docker for Test
 test-tickets: ## Run tickets Go tests.
 	pnpm nx test tickets
 
-test-orders: ## Run orders Go tests.
+test-orders: ## Run Orders Go tests (requires Docker for PostgreSQL Testcontainers).
 	pnpm nx test orders
 
 test-expiration: ## Run expiration service tests.
@@ -66,8 +66,8 @@ docker-build: ## Build all Docker Compose service images.
 docker-up: ## Start the local Docker Compose stack and rebuild images.
 	docker compose up -d --build
 
-docker-up-tools: ## Start optional local development tools, including NUI.
-	docker compose --profile tools up -d nui
+docker-up-tools: ## Start optional local development tools, including NUI and Redis Insight.
+	docker compose --profile tools up -d nui redisinsight
 
 docker-down: ## Stop and remove the local Docker Compose stack.
 	docker compose down

@@ -72,6 +72,8 @@ manifests, GraphQL, and a Kubernetes Gateway API controller.
 - Required local configuration is documented in `.env.example`.
 - Run `make help` to list the supported local commands.
 - Build all services: `make build`; test all services: `make test`.
+- Orders tests include a PostgreSQL Testcontainers integration test and require
+  a working Docker container runtime.
 - Build or run an individual service with `make build-<service>` or
   `make serve-<service>` (for example, `make serve-tickets`).
 - Generate contracts with `make generate-proto`.

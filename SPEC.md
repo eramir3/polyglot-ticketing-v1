@@ -297,8 +297,9 @@ make docker-up-tools
 ```
 
 The Makefile delegates to the existing Nx, Go, Buf, and Docker Compose
-commands. Gateway integration tests use Testcontainers and require a working
-Docker container runtime.
+commands. Gateway integration tests and the Orders expiration-consumer
+integration test use Testcontainers and require a working Docker container
+runtime.
 
 Local ports:
 
@@ -313,12 +314,15 @@ Local ports:
 | NATS JetStream    | `nats://localhost:4222`              |
 | NATS monitoring   | `http://localhost:8222`              |
 | Redis             | `localhost:6379`                      |
+| Redis Insight     | `http://localhost:5540`               |
 | NUI               | `http://localhost:31311`             |
 | Mailpit inbox     | `http://localhost:8025`              |
 
-NUI is optional local development tooling. Start it with `make docker-up-tools`,
-then add a connection to `nats://nats:4222` from the NUI web interface. Its
-configuration persists in the local `nui-data` Docker volume.
+NUI and Redis Insight are optional local development tools. Start them with
+`make docker-up-tools`. In NUI, add a connection to `nats://nats:4222`. In
+Redis Insight, add a standalone database connection to `redis:6379`; it shares
+the Compose network with Redis. Their configurations persist in the local
+`nui-data` and `redisinsight-data` Docker volumes.
 
 ## Services
 
