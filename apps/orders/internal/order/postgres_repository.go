@@ -212,9 +212,15 @@ func (repository *PostgresRepository) CancelByIDAndUser(
 	orderID string,
 	userID string,
 ) (Order, error) {
+	tx, err := repository.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return Order{}, err
+	}
+	defer tx.Rollback(ctx)
+
 	var canceled Order
 	var canceledStatus string
-	err := repository.pool.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		UPDATE orders
 		SET status = $3
 		WHERE id = $1
@@ -233,21 +239,70 @@ func (repository *PostgresRepository) CancelByIDAndUser(
 	)
 	if err == nil {
 		canceled.Status = Status(canceledStatus)
+		if err := insertOrderCanceledEvent(ctx, tx, canceled); err != nil {
+			return Order{}, err
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return Order{}, err
+		}
 		return canceled, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return Order{}, err
 	}
 
-	found, err := repository.GetByIDAndUser(ctx, orderID, userID)
+	var found Order
+	var foundStatus string
+	err = tx.QueryRow(ctx, `
+		SELECT id::text, expires_at, user_id, ticket_id::text, status::text
+		FROM orders
+		WHERE id = $1 AND user_id = $2`, orderID, userID).Scan(
+		&found.ID,
+		&found.ExpiresAt,
+		&found.UserID,
+		&found.TicketID,
+		&foundStatus,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Order{}, ErrOrderNotFound
+	}
 	if err != nil {
 		return Order{}, err
 	}
+	found.Status = Status(foundStatus)
 	if found.Status == StatusCanceled {
+		if err := tx.Commit(ctx); err != nil {
+			return Order{}, err
+		}
 		return found, nil
 	}
 
 	return Order{}, ErrOrderNotCancelable
+}
+
+func insertOrderCanceledEvent(ctx context.Context, tx pgx.Tx, canceled Order) error {
+	occurredAt := time.Now().UTC()
+	eventID := uuid.NewString()
+	payload, err := marshalOrderCanceled(eventID, occurredAt, canceled)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO outbox_events (event_id, subject, payload, created_at)
+		VALUES ($1, $2, $3, $4)`, eventID, orderevents.OrderCanceledSubject, payload, occurredAt)
+	return err
+}
+
+func marshalOrderCanceled(eventID string, occurredAt time.Time, canceled Order) ([]byte, error) {
+	return proto.Marshal(&ordersv1.OrderCanceled{
+		EventId:    eventID,
+		OccurredAt: timestamppb.New(occurredAt),
+		OrderId:    canceled.ID,
+		Ticket: &ordersv1.OrderCanceledTicket{
+			Id: canceled.TicketID,
+		},
+	})
 }
 
 func (repository *PostgresRepository) ListByUser(ctx context.Context, userID string) ([]Order, error) {

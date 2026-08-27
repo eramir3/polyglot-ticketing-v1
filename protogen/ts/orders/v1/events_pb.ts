@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file orders/v1/events.proto.
  */
 export const file_orders_v1_events: GenFile = /*@__PURE__*/
-  fileDesc("ChZvcmRlcnMvdjEvZXZlbnRzLnByb3RvEglvcmRlcnMudjEi+gEKDE9yZGVyQ3JlYXRlZBIQCghldmVudF9pZBgBIAEoCRIvCgtvY2N1cnJlZF9hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEAoIb3JkZXJfaWQYAyABKAkSLAoMb3JkZXJfc3RhdHVzGAQgASgOMhYub3JkZXJzLnYxLk9yZGVyU3RhdHVzEg8KB3VzZXJfaWQYBSABKAkSLgoKZXhwaXJlc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJgoGdGlja2V0GAcgASgLMhYub3JkZXJzLnYxLk9yZGVyVGlja2V0IigKC09yZGVyVGlja2V0EgoKAmlkGAEgASgJEg0KBXByaWNlGAIgASgDQjZaNHBvbHlnbG90LXRpY2tldGluZy12MS9wcm90b2dlbi9nby9vcmRlcnMvdjE7b3JkZXJzdjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_orders_v1_orders]);
+  fileDesc("ChZvcmRlcnMvdjEvZXZlbnRzLnByb3RvEglvcmRlcnMudjEi+gEKDE9yZGVyQ3JlYXRlZBIQCghldmVudF9pZBgBIAEoCRIvCgtvY2N1cnJlZF9hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEAoIb3JkZXJfaWQYAyABKAkSLAoMb3JkZXJfc3RhdHVzGAQgASgOMhYub3JkZXJzLnYxLk9yZGVyU3RhdHVzEg8KB3VzZXJfaWQYBSABKAkSLgoKZXhwaXJlc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJgoGdGlja2V0GAcgASgLMhYub3JkZXJzLnYxLk9yZGVyVGlja2V0IigKC09yZGVyVGlja2V0EgoKAmlkGAEgASgJEg0KBXByaWNlGAIgASgDIpQBCg1PcmRlckNhbmNlbGVkEhAKCGV2ZW50X2lkGAEgASgJEi8KC29jY3VycmVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghvcmRlcl9pZBgDIAEoCRIuCgZ0aWNrZXQYBCABKAsyHi5vcmRlcnMudjEuT3JkZXJDYW5jZWxlZFRpY2tldCIhChNPcmRlckNhbmNlbGVkVGlja2V0EgoKAmlkGAEgASgJQjZaNHBvbHlnbG90LXRpY2tldGluZy12MS9wcm90b2dlbi9nby9vcmRlcnMvdjE7b3JkZXJzdjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_orders_v1_orders]);
 
 /**
  * OrderCreated is an immutable snapshot of a newly created order reservation.
@@ -86,4 +86,55 @@ export type OrderTicket = Message<"orders.v1.OrderTicket"> & {
  */
 export const OrderTicketSchema: GenMessage<OrderTicket> = /*@__PURE__*/
   messageDesc(file_orders_v1_events, 1);
+
+/**
+ * OrderCanceled records that an order reservation was canceled.
+ *
+ * @generated from message orders.v1.OrderCanceled
+ */
+export type OrderCanceled = Message<"orders.v1.OrderCanceled"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 2;
+   */
+  occurredAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: string order_id = 3;
+   */
+  orderId: string;
+
+  /**
+   * @generated from field: orders.v1.OrderCanceledTicket ticket = 4;
+   */
+  ticket?: OrderCanceledTicket | undefined;
+};
+
+/**
+ * Describes the message orders.v1.OrderCanceled.
+ * Use `create(OrderCanceledSchema)` to create a new message.
+ */
+export const OrderCanceledSchema: GenMessage<OrderCanceled> = /*@__PURE__*/
+  messageDesc(file_orders_v1_events, 2);
+
+/**
+ * @generated from message orders.v1.OrderCanceledTicket
+ */
+export type OrderCanceledTicket = Message<"orders.v1.OrderCanceledTicket"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message orders.v1.OrderCanceledTicket.
+ * Use `create(OrderCanceledTicketSchema)` to create a new message.
+ */
+export const OrderCanceledTicketSchema: GenMessage<OrderCanceledTicket> = /*@__PURE__*/
+  messageDesc(file_orders_v1_events, 3);
 

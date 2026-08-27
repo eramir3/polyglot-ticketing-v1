@@ -10,33 +10,54 @@ import (
 
 	"polyglot-ticketing-v1/apps/tickets/internal/projection"
 	"polyglot-ticketing-v1/apps/tickets/internal/ticket"
+	orderevents "polyglot-ticketing-v1/contracts/orders"
 )
 
 const (
-	orderDurableName       = "tickets-order-reservation-v1"
-	orderStreamName        = "ORDERS_EVENTS"
-	orderConnectTimeout    = 5 * time.Second
-	orderReconnectInterval = time.Second
+	orderCanceledDurableName   = "tickets-order-cancellation-v1"
+	orderCreatedDurableName    = "tickets-order-reservation-v1"
+	orderStreamName            = "ORDERS_EVENTS"
+	orderConnectTimeout        = 5 * time.Second
+	orderReconnectInterval     = time.Second
+	orderReservationRetryDelay = time.Second
 )
 
 type OrderConsumer struct {
-	handler *projection.OrderHandler
-	logger  *slog.Logger
-	url     string
+	durableName string
+	handler     *projection.OrderHandler
+	logger      *slog.Logger
+	subject     string
+	url         string
 }
 
-func NewOrderConsumer(repository ticket.ReservationRepository, url string, logger *slog.Logger) *OrderConsumer {
+func NewOrderCreatedConsumer(repository ticket.ReservationRepository, url string, logger *slog.Logger) *OrderConsumer {
+	return newOrderConsumer(repository, orderCreatedDurableName, orderevents.OrderCreatedSubject, url, logger)
+}
+
+func NewOrderCanceledConsumer(repository ticket.ReservationRepository, url string, logger *slog.Logger) *OrderConsumer {
+	return newOrderConsumer(repository, orderCanceledDurableName, orderevents.OrderCanceledSubject, url, logger)
+}
+
+func newOrderConsumer(
+	repository ticket.ReservationRepository,
+	durableName string,
+	subject string,
+	url string,
+	logger *slog.Logger,
+) *OrderConsumer {
 	return &OrderConsumer{
-		handler: projection.NewOrderHandler(repository),
-		logger:  logger,
-		url:     url,
+		durableName: durableName,
+		handler:     projection.NewOrderHandler(repository),
+		logger:      logger,
+		subject:     subject,
+		url:         url,
 	}
 }
 
 func (consumer *OrderConsumer) Run(ctx context.Context) {
 	for ctx.Err() == nil {
 		if err := consumer.consume(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			consumer.logger.Warn("order reservation consumer stopped", "error", err)
+			consumer.logger.Warn("order consumer stopped", "error", err)
 		}
 		if !waitForOrderRetry(ctx) {
 			return
@@ -56,8 +77,8 @@ func (consumer *OrderConsumer) consume(ctx context.Context) error {
 		return err
 	}
 	subscription, err := js.PullSubscribe(
-		"orders.order.created.v1",
-		orderDurableName,
+		consumer.subject,
+		consumer.durableName,
 		nats.BindStream(orderStreamName),
 		nats.DeliverAll(),
 		nats.ManualAck(),
@@ -96,8 +117,15 @@ func (consumer *OrderConsumer) handleMessage(ctx context.Context, message *nats.
 		}
 		return
 	}
+	if errors.Is(err, ticket.ErrOrderReservationPending) {
+		consumer.logger.Warn("ticket order reservation is not available yet; event will be retried", "subject", message.Subject, "error", err)
+		if nakErr := message.NakWithDelay(orderReservationRetryDelay); nakErr != nil {
+			consumer.logger.Warn("failed to delay order event retry", "error", nakErr)
+		}
+		return
+	}
 
-	consumer.logger.Warn("ticket reservation failed; event will be retried", "subject", message.Subject, "error", err)
+	consumer.logger.Warn("ticket order event failed; event will be retried", "subject", message.Subject, "error", err)
 	if nakErr := message.Nak(); nakErr != nil {
 		consumer.logger.Warn("failed to negatively acknowledge order event", "error", nakErr)
 	}

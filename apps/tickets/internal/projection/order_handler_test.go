@@ -51,10 +51,43 @@ func TestOrderHandlerRejectsInvalidOrderCreatedEvent(t *testing.T) {
 	}
 }
 
+func TestOrderHandlerUnreservesTicketFromOrderCanceled(t *testing.T) {
+	repository := &fakeOrderReservationRepository{}
+	handler := NewOrderHandler(repository)
+	payload := marshalOrderEvent(t, &ordersv1.OrderCanceled{
+		EventId:    "cb33f2be-57b4-4e78-926c-5e1ba53b99d0",
+		OccurredAt: timestamppb.New(time.Now()),
+		OrderId:    "f446d2f3-4515-4b78-8e6a-81797a2517a3",
+		Ticket: &ordersv1.OrderCanceledTicket{
+			Id: "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d",
+		},
+	})
+
+	if err := handler.Handle(context.Background(), orderevents.OrderCanceledSubject, payload); err != nil {
+		t.Fatalf("handle order-canceled event: %v", err)
+	}
+	if repository.canceledEventID != "cb33f2be-57b4-4e78-926c-5e1ba53b99d0" ||
+		repository.canceledOrderID != "f446d2f3-4515-4b78-8e6a-81797a2517a3" ||
+		repository.canceledTicketID != "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d" {
+		t.Fatalf("unexpected cancellation: %+v", repository)
+	}
+}
+
+func TestOrderHandlerRejectsInvalidOrderCanceledEvent(t *testing.T) {
+	err := NewOrderHandler(&fakeOrderReservationRepository{}).Handle(
+		context.Background(),
+		orderevents.OrderCanceledSubject,
+		marshalOrderEvent(t, &ordersv1.OrderCanceled{}),
+	)
+	if !errors.Is(err, ticket.ErrInvalidOrderEvent) {
+		t.Fatalf("expected ErrInvalidOrderEvent, got %v", err)
+	}
+}
+
 func TestOrderHandlerRejectsUnsupportedSubject(t *testing.T) {
 	err := NewOrderHandler(&fakeOrderReservationRepository{}).Handle(
 		context.Background(),
-		"orders.order.canceled.v1",
+		"orders.order.completed.v1",
 		nil,
 	)
 	if !errors.Is(err, ticket.ErrUnsupportedOrderEvent) {
@@ -72,9 +105,12 @@ func marshalOrderEvent(t *testing.T, event proto.Message) []byte {
 }
 
 type fakeOrderReservationRepository struct {
-	eventID  string
-	orderID  string
-	ticketID string
+	canceledEventID  string
+	canceledOrderID  string
+	canceledTicketID string
+	eventID          string
+	orderID          string
+	ticketID         string
 }
 
 func (repository *fakeOrderReservationRepository) ReserveTicketFromOrder(
@@ -86,5 +122,17 @@ func (repository *fakeOrderReservationRepository) ReserveTicketFromOrder(
 	repository.eventID = eventID
 	repository.orderID = orderID
 	repository.ticketID = ticketID
+	return nil
+}
+
+func (repository *fakeOrderReservationRepository) UnreserveTicketFromOrder(
+	_ context.Context,
+	eventID string,
+	orderID string,
+	ticketID string,
+) error {
+	repository.canceledEventID = eventID
+	repository.canceledOrderID = orderID
+	repository.canceledTicketID = ticketID
 	return nil
 }

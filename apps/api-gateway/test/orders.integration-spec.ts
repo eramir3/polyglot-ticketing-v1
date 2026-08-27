@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { createConnection, createServer } from 'node:net';
 import { join } from 'node:path';
 import { INestApplication, INestMicroservice } from '@nestjs/common';
+import { fromBinary } from '@bufbuild/protobuf';
 import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
@@ -12,6 +13,7 @@ import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 import { createApiGatewayApplication } from '../src/app/app.bootstrap';
 import { createIdentityMicroservice } from '../../identity/src/app/app.bootstrap';
 import { migrateIdentityDatabase } from '../../identity/src/migrate-identity-database';
+import { OrderCanceledSchema } from '../../../protogen/ts/orders/v1/events_pb.js';
 
 describe('orders endpoints', () => {
   let apiGateway: INestApplication;
@@ -400,6 +402,39 @@ describe('orders endpoints', () => {
       });
     });
 
+    it('writes one OrderCanceled event for the first cancellation', async () => {
+      const ticketId = await seedProjectedTicket();
+      const created = await postOrder({ ticketId }, sessionCookie);
+      const cancellationCountBefore = await countCanceledOrderEvents();
+
+      const firstCancellation = await deleteOrder(
+        (created.body as OrderResponse).id,
+        sessionCookie,
+      );
+      const eventsAfterFirstCancellation = await canceledOrderEvents();
+      const secondCancellation = await deleteOrder(
+        (created.body as OrderResponse).id,
+        sessionCookie,
+      );
+      const cancellationCountAfterRetry = await countCanceledOrderEvents();
+
+      expect(firstCancellation.status).toBe(200);
+      expect(eventsAfterFirstCancellation).toHaveLength(
+        cancellationCountBefore + 1,
+      );
+      const eventRow =
+        eventsAfterFirstCancellation[eventsAfterFirstCancellation.length - 1];
+      expect(eventRow).toBeDefined();
+      const event = fromBinary(OrderCanceledSchema, eventRow!.payload);
+      expect(event).toMatchObject({
+        eventId: eventRow!.event_id,
+        orderId: (created.body as OrderResponse).id,
+        ticket: { id: ticketId },
+      });
+      expect(secondCancellation.status).toBe(200);
+      expect(cancellationCountAfterRetry).toBe(cancellationCountBefore + 1);
+    });
+
     it('cancels an AwaitingPayment order belonging to the authenticated user', async () => {
       const ticketId = await seedProjectedTicket();
       const created = await postOrder({ ticketId }, sessionCookie);
@@ -601,6 +636,31 @@ describe('orders endpoints', () => {
       await database.end();
     }
     return id;
+  }
+
+  async function canceledOrderEvents(): Promise<
+    Array<{ event_id: string; payload: Buffer }>
+  > {
+    const database = new Client({ connectionString: ordersDatabaseUrl });
+    await database.connect();
+    try {
+      const result = await database.query<{
+        event_id: string;
+        payload: Buffer;
+      }>(
+        `SELECT event_id::text, payload
+         FROM outbox_events
+         WHERE subject = 'orders.order.canceled.v1'
+         ORDER BY created_at ASC, event_id ASC`,
+      );
+      return result.rows;
+    } finally {
+      await database.end();
+    }
+  }
+
+  async function countCanceledOrderEvents(): Promise<number> {
+    return (await canceledOrderEvents()).length;
   }
 
   function postOrder(

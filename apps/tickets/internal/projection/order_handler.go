@@ -20,15 +20,23 @@ func NewOrderHandler(repository ticket.ReservationRepository) *OrderHandler {
 }
 
 func (handler *OrderHandler) Handle(ctx context.Context, subject string, payload []byte) error {
-	if subject != orderevents.OrderCreatedSubject {
+	switch subject {
+	case orderevents.OrderCreatedSubject:
+		return handler.handleCreated(ctx, payload)
+	case orderevents.OrderCanceledSubject:
+		return handler.handleCanceled(ctx, payload)
+	default:
 		return ticket.ErrUnsupportedOrderEvent
 	}
+}
 
+func (handler *OrderHandler) handleCreated(ctx context.Context, payload []byte) error {
 	var event ordersv1.OrderCreated
 	if err := proto.Unmarshal(payload, &event); err != nil {
 		return ticket.ErrInvalidOrderEvent
 	}
 	if strings.TrimSpace(event.GetEventId()) == "" ||
+		event.GetOccurredAt() == nil || event.GetOccurredAt().CheckValid() != nil ||
 		strings.TrimSpace(event.GetOrderId()) == "" ||
 		strings.TrimSpace(event.GetUserId()) == "" ||
 		event.GetOrderStatus() != ordersv1.OrderStatus_ORDER_STATUS_CREATED ||
@@ -39,6 +47,26 @@ func (handler *OrderHandler) Handle(ctx context.Context, subject string, payload
 	}
 
 	return handler.repository.ReserveTicketFromOrder(
+		ctx,
+		event.GetEventId(),
+		event.GetOrderId(),
+		event.GetTicket().GetId(),
+	)
+}
+
+func (handler *OrderHandler) handleCanceled(ctx context.Context, payload []byte) error {
+	var event ordersv1.OrderCanceled
+	if err := proto.Unmarshal(payload, &event); err != nil {
+		return ticket.ErrInvalidOrderEvent
+	}
+	if strings.TrimSpace(event.GetEventId()) == "" ||
+		event.GetOccurredAt() == nil || event.GetOccurredAt().CheckValid() != nil ||
+		strings.TrimSpace(event.GetOrderId()) == "" ||
+		event.GetTicket() == nil || strings.TrimSpace(event.GetTicket().GetId()) == "" {
+		return ticket.ErrInvalidOrderEvent
+	}
+
+	return handler.repository.UnreserveTicketFromOrder(
 		ctx,
 		event.GetEventId(),
 		event.GetOrderId(),

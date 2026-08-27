@@ -38,7 +38,8 @@ func main() {
 		slog.Default(),
 	)
 	go publisher.Run(ctx)
-	go consumer.NewOrderConsumer(repository, natsURL, slog.Default()).Run(ctx)
+	go consumer.NewOrderCreatedConsumer(repository, natsURL, slog.Default()).Run(ctx)
+	go consumer.NewOrderCanceledConsumer(repository, natsURL, slog.Default()).Run(ctx)
 
 	listener, err := net.Listen("tcp", ":"+environmentVariable("GRPC_PORT", "50052"))
 	if err != nil {

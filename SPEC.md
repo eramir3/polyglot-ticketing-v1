@@ -75,8 +75,9 @@ It returns `404` when the ticket has not yet reached the Orders projection; it
 does not read `tickets-db` or synchronously call Tickets. An active `Created`
 or `AwaitingPayment` order reserves the ticket until expiry: a same-user retry
 returns the existing order with `200`, while another user receives
-`409 ALREADY_EXISTS`. `Canceled` releases the ticket, and `Complete` keeps it
-unavailable permanently.
+`409 ALREADY_EXISTS`. `Canceled` releases the Orders reservation immediately;
+Tickets removes its ticket edit lock asynchronously once it consumes the
+cancellation event. `Complete` keeps the ticket unavailable permanently.
 
 ## Cancel Order Flow
 
@@ -84,7 +85,9 @@ unavailable permanently.
 2. The gateway obtains the session user ID and calls
    `orders.v1.OrdersService.CancelOrder` with it and the order ID.
 3. Orders updates only an owned `Created` or `AwaitingPayment` order to
-   `Canceled`; canceling an already canceled order succeeds unchanged.
+   `Canceled` and writes an `OrderCanceled` event to its outbox in the same
+   transaction. Canceling an already canceled order succeeds unchanged and
+   does not write a second event.
 4. The gateway returns `200` with the canceled order. Missing and unowned
    orders return `404`; completed orders return `409 ALREADY_EXISTS`.
 
@@ -349,11 +352,12 @@ Order creation locks the Orders-owned ticket projection while it checks and
 creates a reservation, so concurrent callers cannot both reserve the ticket.
 Expiration processing and payment remain future work.
 
-Orders publishes `orders.order.created.v1` events to the `ORDERS_EVENTS`
-JetStream stream. A newly created order and its event are written to the
-Orders-owned Postgres outbox in the same transaction; the dispatcher publishes
-at least once with bounded retry backoff. The event carries an `event_id` and
-`occurred_at` delivery envelope, plus the order and ticket reservation:
+Orders publishes `orders.order.created.v1` and `orders.order.canceled.v1`
+events to the `ORDERS_EVENTS` JetStream stream. An order state change and its
+event are written to the Orders-owned Postgres outbox in the same transaction;
+the dispatcher publishes at least once with bounded retry backoff. The created
+event carries an `event_id` and `occurred_at` delivery envelope, plus the
+order and ticket reservation:
 
 ```json
 {
@@ -370,12 +374,33 @@ at least once with bounded retry backoff. The event carries an `event_id` and
 }
 ```
 
-Tickets consumes the subject through its durable
-`tickets-order-reservation-v1` consumer and deduplicates `event_id` values in
-its own database. After processing, it records the reserving order ID and
-rejects later ticket updates with `403 FORBIDDEN`. The restriction is
-asynchronous and takes effect after event consumption. Releasing it on order
-cancellation is deferred until an `OrderCanceled` event is added.
+The cancellation event has the same delivery envelope and identifies the
+canceled order and ticket:
+
+```json
+{
+  "eventId": "e88c1272-0ff4-4f8f-bd1d-64f322ef7b6a",
+  "occurredAt": "2026-08-26T15:43:02.456Z",
+  "orderId": "8c91c1d3-910b-4dc4-b6f2-efb060b2a0ac",
+  "ticket": {
+    "id": "7f301729-a359-4f4f-b71b-ea0a55b6ee71"
+  }
+}
+```
+
+Tickets consumes the subjects through separate durable
+`tickets-order-reservation-v1` and `tickets-order-cancellation-v1` consumers,
+deduplicating `event_id` values in its own database. `OrderCreated` records its
+order ID in `reserved_by_order_id`, which causes later ticket updates to return
+`403 FORBIDDEN`. `OrderCanceled` clears that lock only when the same order owns
+it. If cancellation arrives before creation, Tickets sends a delayed negative
+acknowledgment so JetStream retries it after creation is processed. These
+changes are asynchronous and take effect after event consumption.
+
+Cancellation retries do not yet have a maximum-delivery policy, dead-letter
+stream, or durable parking/reconciliation workflow. Those mechanisms are
+required before cancellation messages whose matching reservation never arrives
+can be discarded safely and remain future work.
 
 Additional event subjects, consumers, CI/CD, observability, and deployment
 environments remain open design and implementation work.

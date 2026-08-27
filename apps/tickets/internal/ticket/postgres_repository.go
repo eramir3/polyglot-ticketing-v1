@@ -193,8 +193,8 @@ func (repository *PostgresRepository) Update(ctx context.Context, id string, inp
 	return updated, nil
 }
 
-// ReserveTicketFromOrder records the reservation event and locks the ticket in
-// one transaction. Redelivered event IDs are intentionally no-ops.
+// ReserveTicketFromOrder records the created event and locks the ticket in one
+// transaction.
 func (repository *PostgresRepository) ReserveTicketFromOrder(
 	ctx context.Context,
 	eventID string,
@@ -207,16 +207,11 @@ func (repository *PostgresRepository) ReserveTicketFromOrder(
 	}
 	defer tx.Rollback(ctx)
 
-	var insertedEventID string
-	err = tx.QueryRow(ctx, `
-		INSERT INTO processed_events (event_id)
-		VALUES ($1)
-		ON CONFLICT DO NOTHING
-		RETURNING event_id::text`, eventID).Scan(&insertedEventID)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	processed, err := recordProcessedEvent(ctx, tx, eventID)
+	if err != nil {
 		return err
 	}
-	if errors.Is(err, pgx.ErrNoRows) {
+	if !processed {
 		return tx.Commit(ctx)
 	}
 
@@ -248,4 +243,69 @@ func (repository *PostgresRepository) ReserveTicketFromOrder(
 	}
 
 	return tx.Commit(ctx)
+}
+
+// UnreserveTicketFromOrder clears the ticket marker only when the canceled
+// order still owns that reservation.
+func (repository *PostgresRepository) UnreserveTicketFromOrder(
+	ctx context.Context,
+	eventID string,
+	orderID string,
+	ticketID string,
+) error {
+	tx, err := repository.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	processed, err := recordProcessedEvent(ctx, tx, eventID)
+	if err != nil {
+		return err
+	}
+	if !processed {
+		return tx.Commit(ctx)
+	}
+
+	var reservedByOrderID *string
+	err = tx.QueryRow(ctx, `
+		SELECT reserved_by_order_id::text
+		FROM tickets
+		WHERE id = $1
+		FOR UPDATE`, ticketID).Scan(&reservedByOrderID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if reservedByOrderID == nil || *reservedByOrderID != orderID {
+		return ErrOrderReservationPending
+	}
+
+	_, err = tx.Exec(ctx, `
+		UPDATE tickets
+		SET reserved_by_order_id = NULL
+		WHERE id = $1 AND reserved_by_order_id = $2`, ticketID, orderID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+func recordProcessedEvent(ctx context.Context, tx pgx.Tx, eventID string) (bool, error) {
+	var insertedEventID string
+	err := tx.QueryRow(ctx, `
+		INSERT INTO processed_events (event_id)
+		VALUES ($1)
+		ON CONFLICT DO NOTHING
+		RETURNING event_id::text`, eventID).Scan(&insertedEventID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }

@@ -1,4 +1,7 @@
 // Package orderevents defines public routing contracts for order events.
 package orderevents
 
-const OrderCreatedSubject = "orders.order.created.v1"
+const (
+	OrderCanceledSubject = "orders.order.canceled.v1"
+	OrderCreatedSubject  = "orders.order.created.v1"
+)

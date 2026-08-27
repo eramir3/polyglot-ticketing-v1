@@ -22,3 +22,15 @@ message OrderTicket {
   string id = 1;
   int64 price = 2;
 }
+
+// OrderCanceled records that an order reservation was canceled.
+message OrderCanceled {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  string order_id = 3;
+  OrderCanceledTicket ticket = 4;
+}
+
+message OrderCanceledTicket {
+  string id = 1;
+}

@@ -167,6 +167,119 @@ func (x *OrderTicket) GetPrice() int64 {
 	return 0
 }
 
+// OrderCanceled records that an order reservation was canceled.
+type OrderCanceled struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	OrderId       string                 `protobuf:"bytes,3,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	Ticket        *OrderCanceledTicket   `protobuf:"bytes,4,opt,name=ticket,proto3" json:"ticket,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OrderCanceled) Reset() {
+	*x = OrderCanceled{}
+	mi := &file_orders_v1_events_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OrderCanceled) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OrderCanceled) ProtoMessage() {}
+
+func (x *OrderCanceled) ProtoReflect() protoreflect.Message {
+	mi := &file_orders_v1_events_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OrderCanceled.ProtoReflect.Descriptor instead.
+func (*OrderCanceled) Descriptor() ([]byte, []int) {
+	return file_orders_v1_events_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *OrderCanceled) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *OrderCanceled) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *OrderCanceled) GetOrderId() string {
+	if x != nil {
+		return x.OrderId
+	}
+	return ""
+}
+
+func (x *OrderCanceled) GetTicket() *OrderCanceledTicket {
+	if x != nil {
+		return x.Ticket
+	}
+	return nil
+}
+
+type OrderCanceledTicket struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OrderCanceledTicket) Reset() {
+	*x = OrderCanceledTicket{}
+	mi := &file_orders_v1_events_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OrderCanceledTicket) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OrderCanceledTicket) ProtoMessage() {}
+
+func (x *OrderCanceledTicket) ProtoReflect() protoreflect.Message {
+	mi := &file_orders_v1_events_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OrderCanceledTicket.ProtoReflect.Descriptor instead.
+func (*OrderCanceledTicket) Descriptor() ([]byte, []int) {
+	return file_orders_v1_events_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *OrderCanceledTicket) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 var File_orders_v1_events_proto protoreflect.FileDescriptor
 
 const file_orders_v1_events_proto_rawDesc = "" +
@@ -184,7 +297,15 @@ const file_orders_v1_events_proto_rawDesc = "" +
 	"\x06ticket\x18\a \x01(\v2\x16.orders.v1.OrderTicketR\x06ticket\"3\n" +
 	"\vOrderTicket\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05price\x18\x02 \x01(\x03R\x05priceB6Z4polyglot-ticketing-v1/protogen/go/orders/v1;ordersv1b\x06proto3"
+	"\x05price\x18\x02 \x01(\x03R\x05price\"\xba\x01\n" +
+	"\rOrderCanceled\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
+	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12\x19\n" +
+	"\border_id\x18\x03 \x01(\tR\aorderId\x126\n" +
+	"\x06ticket\x18\x04 \x01(\v2\x1e.orders.v1.OrderCanceledTicketR\x06ticket\"%\n" +
+	"\x13OrderCanceledTicket\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02idB6Z4polyglot-ticketing-v1/protogen/go/orders/v1;ordersv1b\x06proto3"
 
 var (
 	file_orders_v1_events_proto_rawDescOnce sync.Once
@@ -198,23 +319,27 @@ func file_orders_v1_events_proto_rawDescGZIP() []byte {
 	return file_orders_v1_events_proto_rawDescData
 }
 
-var file_orders_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_orders_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_orders_v1_events_proto_goTypes = []any{
 	(*OrderCreated)(nil),          // 0: orders.v1.OrderCreated
 	(*OrderTicket)(nil),           // 1: orders.v1.OrderTicket
-	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
-	(OrderStatus)(0),              // 3: orders.v1.OrderStatus
+	(*OrderCanceled)(nil),         // 2: orders.v1.OrderCanceled
+	(*OrderCanceledTicket)(nil),   // 3: orders.v1.OrderCanceledTicket
+	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(OrderStatus)(0),              // 5: orders.v1.OrderStatus
 }
 var file_orders_v1_events_proto_depIdxs = []int32{
-	2, // 0: orders.v1.OrderCreated.occurred_at:type_name -> google.protobuf.Timestamp
-	3, // 1: orders.v1.OrderCreated.order_status:type_name -> orders.v1.OrderStatus
-	2, // 2: orders.v1.OrderCreated.expires_at:type_name -> google.protobuf.Timestamp
+	4, // 0: orders.v1.OrderCreated.occurred_at:type_name -> google.protobuf.Timestamp
+	5, // 1: orders.v1.OrderCreated.order_status:type_name -> orders.v1.OrderStatus
+	4, // 2: orders.v1.OrderCreated.expires_at:type_name -> google.protobuf.Timestamp
 	1, // 3: orders.v1.OrderCreated.ticket:type_name -> orders.v1.OrderTicket
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	4, // 4: orders.v1.OrderCanceled.occurred_at:type_name -> google.protobuf.Timestamp
+	3, // 5: orders.v1.OrderCanceled.ticket:type_name -> orders.v1.OrderCanceledTicket
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_orders_v1_events_proto_init() }
@@ -229,7 +354,7 @@ func file_orders_v1_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_orders_v1_events_proto_rawDesc), len(file_orders_v1_events_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

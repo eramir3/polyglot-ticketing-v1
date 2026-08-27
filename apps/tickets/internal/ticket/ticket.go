@@ -6,11 +6,12 @@ import (
 )
 
 var (
-	ErrForbidden             = errors.New("ticket access forbidden")
-	ErrInvalidOrderEvent     = errors.New("invalid order event")
-	ErrNotFound              = errors.New("ticket not found")
-	ErrReserved              = errors.New("ticket is reserved")
-	ErrUnsupportedOrderEvent = errors.New("unsupported order event subject")
+	ErrForbidden               = errors.New("ticket access forbidden")
+	ErrInvalidOrderEvent       = errors.New("invalid order event")
+	ErrNotFound                = errors.New("ticket not found")
+	ErrOrderReservationPending = errors.New("order reservation is not available yet")
+	ErrReserved                = errors.New("ticket is reserved")
+	ErrUnsupportedOrderEvent   = errors.New("unsupported order event subject")
 )
 
 type Ticket struct {
@@ -42,4 +43,5 @@ type Repository interface {
 
 type ReservationRepository interface {
 	ReserveTicketFromOrder(context.Context, string, string, string) error
+	UnreserveTicketFromOrder(context.Context, string, string, string) error
 }
