@@ -9,6 +9,7 @@ import (
 var (
 	ErrInvalidTicketEvent     = errors.New("invalid ticket event")
 	ErrInvalidExpirationEvent = errors.New("invalid expiration event")
+	ErrInvalidPaymentEvent    = errors.New("invalid payment event")
 	ErrNotFound               = errors.New("ticket not found")
 	ErrOrderNotCancelable     = errors.New("order cannot be canceled")
 	ErrOrderNotFound          = errors.New("order not found")
@@ -75,4 +76,9 @@ type TicketProjectionRepository interface {
 // ExpirationEventRepository applies an expiration event exactly once.
 type ExpirationEventRepository interface {
 	ApplyExpirationComplete(context.Context, string, string) error
+}
+
+// PaymentEventRepository applies a PaymentCreated event exactly once.
+type PaymentEventRepository interface {
+	ApplyPaymentCreated(context.Context, string, string) error
 }

@@ -348,6 +348,44 @@ func (repository *PostgresRepository) ApplyExpirationComplete(
 	return tx.Commit(ctx)
 }
 
+// ApplyPaymentCreated records a payment delivery before conditionally moving a
+// Created order to AwaitingPayment. Late and duplicate deliveries are no-ops.
+func (repository *PostgresRepository) ApplyPaymentCreated(
+	ctx context.Context,
+	eventID string,
+	orderID string,
+) error {
+	tx, err := repository.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var insertedEventID string
+	err = tx.QueryRow(ctx, `
+		INSERT INTO processed_events (event_id)
+		VALUES ($1)
+		ON CONFLICT DO NOTHING
+		RETURNING event_id::text`, eventID).Scan(&insertedEventID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return tx.Commit(ctx)
+	}
+
+	_, err = tx.Exec(ctx, `
+		UPDATE orders
+		SET status = $2,
+		    aggregate_version = aggregate_version + 1
+		WHERE id = $1 AND status = 'Created'`, orderID, StatusAwaitingPayment)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
 func insertOrderCanceledEvent(ctx context.Context, tx pgx.Tx, canceled Order) error {
 	occurredAt := time.Now().UTC()
 	eventID := uuid.NewString()

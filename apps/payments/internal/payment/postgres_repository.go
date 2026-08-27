@@ -3,9 +3,16 @@ package payment
 import (
 	"context"
 	"errors"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	paymentevents "polyglot-ticketing-v1/contracts/payments"
+	paymentsv1 "polyglot-ticketing-v1/protogen/go/payments/v1"
 )
 
 type PostgresRepository struct {
@@ -39,6 +46,20 @@ func (repository *PostgresRepository) Create(
 	if err != nil {
 		return Payment{}, false, err
 	}
+	var existing Payment
+	err = tx.QueryRow(ctx, `
+		SELECT id::text, order_id::text
+		FROM payments
+		WHERE order_id = $1`, input.OrderID).Scan(&existing.ID, &existing.OrderID)
+	if err == nil {
+		if err := tx.Commit(ctx); err != nil {
+			return Payment{}, false, err
+		}
+		return existing, false, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return Payment{}, false, err
+	}
 	if OrderStatus(orderStatus) != OrderStatusCreated {
 		return Payment{}, false, ErrOrderNotPayable
 	}
@@ -47,30 +68,36 @@ func (repository *PostgresRepository) Create(
 	err = tx.QueryRow(ctx, `
 		INSERT INTO payments (order_id)
 		VALUES ($1)
-		ON CONFLICT (order_id) DO NOTHING
 		RETURNING id::text, order_id::text`, input.OrderID).Scan(&created.ID, &created.OrderID)
-	if err == nil {
-		if err := tx.Commit(ctx); err != nil {
-			return Payment{}, false, err
-		}
-		return created, true, nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return Payment{}, false, err
 	}
-
-	var existing Payment
-	err = tx.QueryRow(ctx, `
-		SELECT id::text, order_id::text
-		FROM payments
-		WHERE order_id = $1`, input.OrderID).Scan(&existing.ID, &existing.OrderID)
-	if err != nil {
+	if err := insertPaymentCreatedEvent(ctx, tx, created); err != nil {
 		return Payment{}, false, err
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return Payment{}, false, err
 	}
-	return existing, false, nil
+	return created, true, nil
+}
+
+func insertPaymentCreatedEvent(ctx context.Context, tx pgx.Tx, created Payment) error {
+	occurredAt := time.Now().UTC()
+	eventID := uuid.NewString()
+	payload, err := proto.Marshal(&paymentsv1.PaymentCreated{
+		EventId:    eventID,
+		OccurredAt: timestamppb.New(occurredAt),
+		PaymentId:  created.ID,
+		OrderId:    created.OrderID,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO outbox_events (event_id, subject, payload, created_at)
+		VALUES ($1, $2, $3, $4)`, eventID, paymentevents.PaymentCreatedSubject, payload, occurredAt)
+	return err
 }
 
 // UpsertOrderFromEvent records a contiguous OrderCreated snapshot in the

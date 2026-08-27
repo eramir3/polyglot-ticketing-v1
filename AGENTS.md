@@ -20,9 +20,11 @@ Implemented foundations:
   owner-authorized updates, and public listing and retrieval. It owns
   `tickets-db`.
 - `orders`: Go gRPC service with a Postgres-backed ticket projection and order
-  reservation lifecycle. It owns `orders-db`.
+  reservation lifecycle. It consumes `PaymentCreated` events to move accepted
+  reservations to `AwaitingPayment`, and owns `orders-db`.
 - `payments`: Go gRPC service with a Postgres-backed Orders projection. It
-  creates one payment per eligible, owned order and owns `payments-db`.
+  creates one payment per eligible, owned order, publishes `PaymentCreated`
+  through its transactional outbox, and owns `payments-db`.
 - `expiration`: NestJS worker that consumes `OrderCreated` events from NATS
   JetStream, schedules 15-minute expiry jobs in BullMQ/Redis, and publishes
   `ExpirationComplete` events. Orders consumes those events to cancel `Created`

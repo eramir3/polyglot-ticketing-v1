@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package payments.v1;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "polyglot-ticketing-v1/protogen/go/payments/v1;paymentsv1";
 
 service PaymentsService {
@@ -21,4 +23,12 @@ message CreatePaymentResponse {
 message Payment {
   string id = 1;
   string order_id = 2;
+}
+
+// PaymentCreated records that Payments accepted an order for processing.
+message PaymentCreated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  string payment_id = 3;
+  string order_id = 4;
 }

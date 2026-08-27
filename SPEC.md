@@ -66,8 +66,9 @@ It has no public HTTP endpoint; the API gateway owns `GET /api/tickets` and
 
 `orders` is a Go service that exposes gRPC internally on `orders:50053` and
 owns `orders-db`. It consumes retained ticket events from JetStream to maintain
-its local ticket projection and expiration-complete events to cancel eligible
-reservations. The API gateway exposes authenticated
+its local ticket projection, expiration-complete events to cancel eligible
+reservations, and payment-created events to move accepted reservations to
+`AwaitingPayment`. The API gateway exposes authenticated
 `GET /api/orders`, `GET /api/orders/:id`, `POST /api/orders`, and
 `DELETE /api/orders/:id`. The list endpoint returns all orders
 for the session user in descending expiration order. The create endpoint accepts
@@ -104,9 +105,12 @@ Payments consumes retained `OrderCreated` and `OrderCanceled` events from
 `ORDERS_EVENTS` to maintain an Orders projection containing the order ID,
 aggregate version, user ID, price, and status. It creates payments only for an
 owned `Created` projection: unavailable or unowned orders return `404`, while
-canceled or otherwise non-payable orders return `409 ALREADY_EXISTS`. Payments
-does not read `orders-db`, call Orders synchronously, or execute a payment
-provider in this increment.
+canceled or otherwise non-payable orders return `409 ALREADY_EXISTS`. A new
+payment and its `PaymentCreated` event are stored in the Payments transactional
+outbox together; the event is published to `PAYMENTS_EVENTS`. Repeating the
+request for an existing owned payment returns it with `200`, including after
+the Orders transition to `AwaitingPayment`. Payments does not read `orders-db`,
+call Orders synchronously, or execute a payment provider in this increment.
 
 ## Cancel Order Flow
 
@@ -441,6 +445,14 @@ and `AwaitingPayment` orders, as well as missing orders, are acknowledged as
 idempotent no-ops. `AwaitingPayment` intentionally remains eligible for a
 late future `PaymentSucceeded` event to mark it `Complete`; a future
 `PaymentFailed` event will cancel it.
+
+Payments publishes `payments.payment.created.v1` to `PAYMENTS_EVENTS` after it
+stores a new payment. The `payments.v1.PaymentCreated` protobuf payload carries
+`eventId`, `occurredAt`, `paymentId`, and `orderId`. Orders consumes it through
+the durable `orders-payment-created-v1` consumer. In one transaction it records
+the event ID and moves only a `Created` order to `AwaitingPayment`, incrementing
+the Orders aggregate version. Duplicate and late valid events are acknowledged
+as no-ops; malformed events are terminated and transient failures are retried.
 
 The cancellation event has the same delivery envelope and identifies the
 canceled order and ticket:

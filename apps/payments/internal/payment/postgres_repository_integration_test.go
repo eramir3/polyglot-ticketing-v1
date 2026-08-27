@@ -15,6 +15,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	"google.golang.org/protobuf/proto"
+
+	paymentevents "polyglot-ticketing-v1/contracts/payments"
+	paymentsv1 "polyglot-ticketing-v1/protogen/go/payments/v1"
 )
 
 func TestPostgresRepositoryCreatesOnePaymentForEligibleOrder(t *testing.T) {
@@ -26,6 +30,31 @@ func TestPostgresRepositoryCreatesOnePaymentForEligibleOrder(t *testing.T) {
 	created, wasCreated, err := repository.Create(ctx, CreateInput{OrderID: orderID, UserID: "user-1"})
 	if err != nil || !wasCreated || created.OrderID != orderID || created.ID == "" {
 		t.Fatalf("create payment: payment=%+v created=%t err=%v", created, wasCreated, err)
+	}
+	assertPaymentCreatedOutboxEvent(t, ctx, pool, created)
+
+	existing, wasCreated, err := repository.Create(ctx, CreateInput{OrderID: orderID, UserID: "user-1"})
+	if err != nil || wasCreated || existing != created {
+		t.Fatalf("repeat payment: payment=%+v created=%t err=%v", existing, wasCreated, err)
+	}
+	var eventCount int
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM outbox_events`).Scan(&eventCount); err != nil || eventCount != 1 {
+		t.Fatalf("expected one outbox event, count=%d err=%v", eventCount, err)
+	}
+}
+
+func TestPostgresRepositoryReturnsExistingPaymentAfterOrderStartsAwaitingPayment(t *testing.T) {
+	ctx := context.Background()
+	pool := startPaymentsPostgres(t, ctx)
+	repository := NewPostgresRepository(pool)
+	orderID := seedProjectedOrder(t, ctx, pool, "user-1", OrderStatusCreated)
+
+	created, wasCreated, err := repository.Create(ctx, CreateInput{OrderID: orderID, UserID: "user-1"})
+	if err != nil || !wasCreated {
+		t.Fatalf("create payment: payment=%+v created=%t err=%v", created, wasCreated, err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE orders SET status = 'AwaitingPayment' WHERE id = $1`, orderID); err != nil {
+		t.Fatalf("transition projected order: %v", err)
 	}
 
 	existing, wasCreated, err := repository.Create(ctx, CreateInput{OrderID: orderID, UserID: "user-1"})
@@ -116,4 +145,23 @@ func seedProjectedOrder(
 		t.Fatalf("seed projected order: %v", err)
 	}
 	return orderID
+}
+
+func assertPaymentCreatedOutboxEvent(t *testing.T, ctx context.Context, pool *pgxpool.Pool, payment Payment) {
+	t.Helper()
+	var subject string
+	var payload []byte
+	if err := pool.QueryRow(ctx, `SELECT subject, payload FROM outbox_events`).Scan(&subject, &payload); err != nil {
+		t.Fatalf("read payment-created outbox event: %v", err)
+	}
+	if subject != paymentevents.PaymentCreatedSubject {
+		t.Fatalf("expected subject %q, got %q", paymentevents.PaymentCreatedSubject, subject)
+	}
+	var event paymentsv1.PaymentCreated
+	if err := proto.Unmarshal(payload, &event); err != nil {
+		t.Fatalf("unmarshal payment-created event: %v", err)
+	}
+	if event.GetEventId() == "" || event.GetOccurredAt() == nil || event.GetPaymentId() != payment.ID || event.GetOrderId() != payment.OrderID {
+		t.Fatalf("unexpected payment-created event: %+v", &event)
+	}
 }

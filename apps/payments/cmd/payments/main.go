@@ -14,6 +14,7 @@ import (
 	"polyglot-ticketing-v1/apps/payments/internal/consumer"
 	grpcserver "polyglot-ticketing-v1/apps/payments/internal/grpc"
 	"polyglot-ticketing-v1/apps/payments/internal/payment"
+	"polyglot-ticketing-v1/internal/outbox"
 	paymentsv1 "polyglot-ticketing-v1/protogen/go/payments/v1"
 )
 
@@ -30,6 +31,12 @@ func main() {
 
 	repository := payment.NewPostgresRepository(pool)
 	natsURL := environmentVariable("NATS_URL", "nats://localhost:4222")
+	go outbox.NewPublisher(
+		outbox.NewPostgresRepository(pool),
+		outbox.Config{StreamName: "PAYMENTS_EVENTS", Subjects: []string{"payments.>"}},
+		natsURL,
+		slog.Default(),
+	).Run(ctx)
 	go consumer.NewOrderConsumer(repository, natsURL, slog.Default()).Run(ctx)
 
 	listener, err := net.Listen("tcp", ":"+environmentVariable("GRPC_PORT", "50054"))

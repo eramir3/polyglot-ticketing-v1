@@ -4,13 +4,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file payments/v1/payments.proto.
  */
 export const file_payments_v1_payments: GenFile = /*@__PURE__*/
-  fileDesc("ChpwYXltZW50cy92MS9wYXltZW50cy5wcm90bxILcGF5bWVudHMudjEiOQoUQ3JlYXRlUGF5bWVudFJlcXVlc3QSEAoIb3JkZXJfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCSJPChVDcmVhdGVQYXltZW50UmVzcG9uc2USJQoHcGF5bWVudBgBIAEoCzIULnBheW1lbnRzLnYxLlBheW1lbnQSDwoHY3JlYXRlZBgCIAEoCCInCgdQYXltZW50EgoKAmlkGAEgASgJEhAKCG9yZGVyX2lkGAIgASgJMmkKD1BheW1lbnRzU2VydmljZRJWCg1DcmVhdGVQYXltZW50EiEucGF5bWVudHMudjEuQ3JlYXRlUGF5bWVudFJlcXVlc3QaIi5wYXltZW50cy52MS5DcmVhdGVQYXltZW50UmVzcG9uc2VCOlo4cG9seWdsb3QtdGlja2V0aW5nLXYxL3Byb3RvZ2VuL2dvL3BheW1lbnRzL3YxO3BheW1lbnRzdjFiBnByb3RvMw");
+  fileDesc("ChpwYXltZW50cy92MS9wYXltZW50cy5wcm90bxILcGF5bWVudHMudjEiOQoUQ3JlYXRlUGF5bWVudFJlcXVlc3QSEAoIb3JkZXJfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCSJPChVDcmVhdGVQYXltZW50UmVzcG9uc2USJQoHcGF5bWVudBgBIAEoCzIULnBheW1lbnRzLnYxLlBheW1lbnQSDwoHY3JlYXRlZBgCIAEoCCInCgdQYXltZW50EgoKAmlkGAEgASgJEhAKCG9yZGVyX2lkGAIgASgJInkKDlBheW1lbnRDcmVhdGVkEhAKCGV2ZW50X2lkGAEgASgJEi8KC29jY3VycmVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpwYXltZW50X2lkGAMgASgJEhAKCG9yZGVyX2lkGAQgASgJMmkKD1BheW1lbnRzU2VydmljZRJWCg1DcmVhdGVQYXltZW50EiEucGF5bWVudHMudjEuQ3JlYXRlUGF5bWVudFJlcXVlc3QaIi5wYXltZW50cy52MS5DcmVhdGVQYXltZW50UmVzcG9uc2VCOlo4cG9seWdsb3QtdGlja2V0aW5nLXYxL3Byb3RvZ2VuL2dvL3BheW1lbnRzL3YxO3BheW1lbnRzdjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message payments.v1.CreatePaymentRequest
@@ -77,6 +79,40 @@ export type Payment = Message<"payments.v1.Payment"> & {
  */
 export const PaymentSchema: GenMessage<Payment> = /*@__PURE__*/
   messageDesc(file_payments_v1_payments, 2);
+
+/**
+ * PaymentCreated records that Payments accepted an order for processing.
+ *
+ * @generated from message payments.v1.PaymentCreated
+ */
+export type PaymentCreated = Message<"payments.v1.PaymentCreated"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 2;
+   */
+  occurredAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: string payment_id = 3;
+   */
+  paymentId: string;
+
+  /**
+   * @generated from field: string order_id = 4;
+   */
+  orderId: string;
+};
+
+/**
+ * Describes the message payments.v1.PaymentCreated.
+ * Use `create(PaymentCreatedSchema)` to create a new message.
+ */
+export const PaymentCreatedSchema: GenMessage<PaymentCreated> = /*@__PURE__*/
+  messageDesc(file_payments_v1_payments, 3);
 
 /**
  * @generated from service payments.v1.PaymentsService

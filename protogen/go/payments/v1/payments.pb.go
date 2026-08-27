@@ -9,6 +9,7 @@ package paymentsv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -177,11 +178,80 @@ func (x *Payment) GetOrderId() string {
 	return ""
 }
 
+// PaymentCreated records that Payments accepted an order for processing.
+type PaymentCreated struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	PaymentId     string                 `protobuf:"bytes,3,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
+	OrderId       string                 `protobuf:"bytes,4,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PaymentCreated) Reset() {
+	*x = PaymentCreated{}
+	mi := &file_payments_v1_payments_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PaymentCreated) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PaymentCreated) ProtoMessage() {}
+
+func (x *PaymentCreated) ProtoReflect() protoreflect.Message {
+	mi := &file_payments_v1_payments_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PaymentCreated.ProtoReflect.Descriptor instead.
+func (*PaymentCreated) Descriptor() ([]byte, []int) {
+	return file_payments_v1_payments_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PaymentCreated) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *PaymentCreated) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *PaymentCreated) GetPaymentId() string {
+	if x != nil {
+		return x.PaymentId
+	}
+	return ""
+}
+
+func (x *PaymentCreated) GetOrderId() string {
+	if x != nil {
+		return x.OrderId
+	}
+	return ""
+}
+
 var File_payments_v1_payments_proto protoreflect.FileDescriptor
 
 const file_payments_v1_payments_proto_rawDesc = "" +
 	"\n" +
-	"\x1apayments/v1/payments.proto\x12\vpayments.v1\"J\n" +
+	"\x1apayments/v1/payments.proto\x12\vpayments.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"J\n" +
 	"\x14CreatePaymentRequest\x12\x19\n" +
 	"\border_id\x18\x01 \x01(\tR\aorderId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\"a\n" +
@@ -190,7 +260,14 @@ const file_payments_v1_payments_proto_rawDesc = "" +
 	"\acreated\x18\x02 \x01(\bR\acreated\"4\n" +
 	"\aPayment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\border_id\x18\x02 \x01(\tR\aorderId2i\n" +
+	"\border_id\x18\x02 \x01(\tR\aorderId\"\xa2\x01\n" +
+	"\x0ePaymentCreated\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
+	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12\x1d\n" +
+	"\n" +
+	"payment_id\x18\x03 \x01(\tR\tpaymentId\x12\x19\n" +
+	"\border_id\x18\x04 \x01(\tR\aorderId2i\n" +
 	"\x0fPaymentsService\x12V\n" +
 	"\rCreatePayment\x12!.payments.v1.CreatePaymentRequest\x1a\".payments.v1.CreatePaymentResponseB:Z8polyglot-ticketing-v1/protogen/go/payments/v1;paymentsv1b\x06proto3"
 
@@ -206,21 +283,24 @@ func file_payments_v1_payments_proto_rawDescGZIP() []byte {
 	return file_payments_v1_payments_proto_rawDescData
 }
 
-var file_payments_v1_payments_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_payments_v1_payments_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_payments_v1_payments_proto_goTypes = []any{
 	(*CreatePaymentRequest)(nil),  // 0: payments.v1.CreatePaymentRequest
 	(*CreatePaymentResponse)(nil), // 1: payments.v1.CreatePaymentResponse
 	(*Payment)(nil),               // 2: payments.v1.Payment
+	(*PaymentCreated)(nil),        // 3: payments.v1.PaymentCreated
+	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
 }
 var file_payments_v1_payments_proto_depIdxs = []int32{
 	2, // 0: payments.v1.CreatePaymentResponse.payment:type_name -> payments.v1.Payment
-	0, // 1: payments.v1.PaymentsService.CreatePayment:input_type -> payments.v1.CreatePaymentRequest
-	1, // 2: payments.v1.PaymentsService.CreatePayment:output_type -> payments.v1.CreatePaymentResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	4, // 1: payments.v1.PaymentCreated.occurred_at:type_name -> google.protobuf.Timestamp
+	0, // 2: payments.v1.PaymentsService.CreatePayment:input_type -> payments.v1.CreatePaymentRequest
+	1, // 3: payments.v1.PaymentsService.CreatePayment:output_type -> payments.v1.CreatePaymentResponse
+	3, // [3:4] is the sub-list for method output_type
+	2, // [2:3] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_payments_v1_payments_proto_init() }
@@ -234,7 +314,7 @@ func file_payments_v1_payments_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_payments_v1_payments_proto_rawDesc), len(file_payments_v1_payments_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
