@@ -1,6 +1,7 @@
 package order
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -70,5 +71,72 @@ func TestMarshalOrderCanceledProducesReservationSnapshot(t *testing.T) {
 	}
 	if event.GetTicket().GetId() != "9d7d8e0a-7b31-4dd0-8fd8-1a7773f3df7d" {
 		t.Fatalf("unexpected ticket snapshot: %+v", event.GetTicket())
+	}
+}
+
+func TestDecideTicketEventVersion(t *testing.T) {
+	testCases := []struct {
+		name             string
+		hasStoredVersion bool
+		storedVersion    int64
+		incomingVersion  int64
+		wantDecision     ticketEventVersionDecision
+		wantErr          error
+	}{
+		{
+			name:            "applies initial version",
+			incomingVersion: 0,
+			wantDecision:    applyTicketEventVersion,
+		},
+		{
+			name:             "applies next version",
+			hasStoredVersion: true,
+			storedVersion:    1,
+			incomingVersion:  2,
+			wantDecision:     applyTicketEventVersion,
+		},
+		{
+			name:            "rejects missing initial version",
+			incomingVersion: 1,
+			wantErr:         ErrTicketEventVersionGap,
+		},
+		{
+			name:             "rejects skipped version",
+			hasStoredVersion: true,
+			storedVersion:    1,
+			incomingVersion:  3,
+			wantErr:          ErrTicketEventVersionGap,
+		},
+		{
+			name:             "ignores duplicate version",
+			hasStoredVersion: true,
+			storedVersion:    1,
+			incomingVersion:  1,
+			wantDecision:     ignoreTicketEventVersion,
+		},
+		{
+			name:             "ignores stale version",
+			hasStoredVersion: true,
+			storedVersion:    2,
+			incomingVersion:  1,
+			wantDecision:     ignoreTicketEventVersion,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			decision, err := decideTicketEventVersion(
+				testCase.hasStoredVersion,
+				testCase.storedVersion,
+				testCase.incomingVersion,
+			)
+
+			if !errors.Is(err, testCase.wantErr) {
+				t.Fatalf("expected error %v, got %v", testCase.wantErr, err)
+			}
+			if err == nil && decision != testCase.wantDecision {
+				t.Fatalf("expected decision %d, got %d", testCase.wantDecision, decision)
+			}
+		})
 	}
 }

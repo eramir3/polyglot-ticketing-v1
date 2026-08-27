@@ -111,6 +111,13 @@ func (consumer *TicketConsumer) handleDelivery(
 		}
 		return
 	}
+	if errors.Is(err, order.ErrTicketEventVersionGap) {
+		consumer.logger.Warn("ticket projection has a version gap; event will be retried", "subject", subject, "error", err)
+		if nakErr := delivery.Nak(); nakErr != nil {
+			consumer.logger.Warn("failed to negatively acknowledge ticket event", "error", nakErr)
+		}
+		return
+	}
 
 	consumer.logger.Warn("ticket projection failed; event will be retried", "subject", subject, "error", err)
 	if nakErr := delivery.Nak(); nakErr != nil {

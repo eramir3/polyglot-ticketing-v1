@@ -353,9 +353,11 @@ Orders consumes both ticket event subjects through its durable
 `orders-ticket-projection-v1` JetStream consumer, replaying retained events to
 maintain an orders-owned local `tickets` projection. Its `orders.ticket_id`
 foreign key references that local table in `orders-db`, never `tickets-db`.
-Orders applies a ticket event only when its `aggregateVersion` is greater than
-the version already projected, so delayed older snapshots cannot overwrite a
-newer ticket state.
+Orders applies a ticket event only when its `aggregateVersion` is contiguous:
+version `0` creates a missing projection and later events must be exactly one
+greater than the projected version. A future version gap is negatively
+acknowledged so JetStream retries it; duplicate and delayed older snapshots are
+acknowledged as no-ops.
 The `orders` table has `id`, `expires_at`, `user_id`, `ticket_id`, and a
 `status` enum with `Created`, `Canceled`, `AwaitingPayment`, and `Complete`.
 Order creation locks the Orders-owned ticket projection while it checks and

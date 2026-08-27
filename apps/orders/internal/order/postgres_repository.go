@@ -340,9 +340,9 @@ func (repository *PostgresRepository) ListByUser(ctx context.Context, userID str
 	return orders, nil
 }
 
-// UpsertTicketFromEvent records the event and applies a newer ticket snapshot
-// in one transaction. Redelivered or stale event snapshots are intentionally
-// no-ops.
+// UpsertTicketFromEvent records the event and applies a contiguous ticket
+// snapshot in one transaction. Redelivered or stale event snapshots are
+// intentionally no-ops. A future version is rolled back so it can be retried.
 func (repository *PostgresRepository) UpsertTicketFromEvent(
 	ctx context.Context,
 	eventID string,
@@ -367,22 +367,78 @@ func (repository *PostgresRepository) UpsertTicketFromEvent(
 		return tx.Commit(ctx)
 	}
 
-	_, err = tx.Exec(ctx, `
-		INSERT INTO tickets (id, title, price, aggregate_version)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (id) DO UPDATE
-		SET title = EXCLUDED.title,
-		    price = EXCLUDED.price,
-		    aggregate_version = EXCLUDED.aggregate_version
-		WHERE EXCLUDED.aggregate_version > tickets.aggregate_version`,
-		ticket.ID,
-		ticket.Title,
-		ticket.Price,
-		ticket.AggregateVersion,
-	)
+	var storedVersion int64
+	err = tx.QueryRow(ctx, `
+		SELECT aggregate_version
+		FROM tickets
+		WHERE id = $1
+		FOR UPDATE`, ticket.ID).Scan(&storedVersion)
+	hasStoredVersion := err == nil
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+
+	decision, err := decideTicketEventVersion(hasStoredVersion, storedVersion, ticket.AggregateVersion)
+	if err != nil {
+		return err
+	}
+	if decision == ignoreTicketEventVersion {
+		return tx.Commit(ctx)
+	}
+
+	if !hasStoredVersion {
+		_, err = tx.Exec(ctx, `
+			INSERT INTO tickets (id, title, price, aggregate_version)
+			VALUES ($1, $2, $3, $4)`,
+			ticket.ID,
+			ticket.Title,
+			ticket.Price,
+			ticket.AggregateVersion,
+		)
+	} else {
+		_, err = tx.Exec(ctx, `
+			UPDATE tickets
+			SET title = $1,
+			    price = $2,
+			    aggregate_version = $3
+			WHERE id = $4`,
+			ticket.Title,
+			ticket.Price,
+			ticket.AggregateVersion,
+			ticket.ID,
+		)
+	}
 	if err != nil {
 		return err
 	}
 
 	return tx.Commit(ctx)
+}
+
+type ticketEventVersionDecision uint8
+
+const (
+	applyTicketEventVersion ticketEventVersionDecision = iota
+	ignoreTicketEventVersion
+)
+
+func decideTicketEventVersion(
+	hasStoredVersion bool,
+	storedVersion int64,
+	incomingVersion int64,
+) (ticketEventVersionDecision, error) {
+	if !hasStoredVersion {
+		if incomingVersion == 0 {
+			return applyTicketEventVersion, nil
+		}
+		return 0, ErrTicketEventVersionGap
+	}
+	if incomingVersion > storedVersion+1 {
+		return 0, ErrTicketEventVersionGap
+	}
+	if incomingVersion <= storedVersion {
+		return ignoreTicketEventVersion, nil
+	}
+
+	return applyTicketEventVersion, nil
 }

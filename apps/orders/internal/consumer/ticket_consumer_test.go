@@ -98,6 +98,28 @@ func TestTicketConsumerNegativeAcknowledgesRetryableEvent(t *testing.T) {
 	assertTicketDelivery(t, delivery, 0, 1, 0)
 }
 
+func TestTicketConsumerDoesNotAcknowledgeSkippedTicketVersion(t *testing.T) {
+	delivery := &fakeTicketEventDelivery{}
+	consumer := NewTicketConsumer(
+		&fakeTicketProjectionRepository{err: order.ErrTicketEventVersionGap},
+		"",
+		testLogger(),
+	)
+
+	consumer.handleDelivery(
+		context.Background(),
+		ticketevents.TicketUpdatedSubject,
+		marshalTicketEvent(t, &ticketsv1.TicketUpdated{
+			EventId:          "skipped-version-event",
+			AggregateVersion: 3,
+			Ticket:           validTicket(),
+		}),
+		delivery,
+	)
+
+	assertTicketDelivery(t, delivery, 0, 1, 0)
+}
+
 func TestTicketConsumerTerminatesInvalidEvent(t *testing.T) {
 	delivery := &fakeTicketEventDelivery{}
 	consumer := NewTicketConsumer(&fakeTicketProjectionRepository{}, "", testLogger())
