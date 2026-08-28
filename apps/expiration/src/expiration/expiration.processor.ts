@@ -1,5 +1,5 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Inject } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import {
   EXPIRATION_EVENT_PUBLISHER,
@@ -13,6 +13,8 @@ import {
 
 @Processor(expirationQueueName)
 export class ExpirationProcessor extends WorkerHost {
+  private readonly logger = new Logger(ExpirationProcessor.name);
+
   constructor(
     @Inject(EXPIRATION_EVENT_PUBLISHER)
     private readonly publisher: ExpirationEventPublisher,
@@ -25,6 +27,14 @@ export class ExpirationProcessor extends WorkerHost {
       throw new Error(`Unsupported expiration job: ${job.name}`);
     }
 
-    await this.publisher.publishExpirationComplete(job.data.orderId);
+    try {
+      await this.publisher.publishExpirationComplete(job.data.orderId);
+    } catch (error) {
+      this.logger.error(
+        `expiration-complete publish failed; job will be retried order_id=${job.data.orderId}`,
+        error,
+      );
+      throw error;
+    }
   }
 }

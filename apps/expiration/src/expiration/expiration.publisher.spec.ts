@@ -2,7 +2,6 @@ import { fromBinary } from '@bufbuild/protobuf';
 import { ExpirationCompleteSchema } from '../../../../protogen/ts/expiration/v1/events_pb.js';
 import { expirationCompleteSubject } from './expiration.constants.js';
 import { JetStreamExpirationPublisher } from './expiration.publisher.js';
-import { JetStreamService } from './jetstream.service.js';
 
 describe('JetStreamExpirationPublisher', () => {
   it('publishes an ExpirationComplete protobuf event with a stable message ID', async () => {

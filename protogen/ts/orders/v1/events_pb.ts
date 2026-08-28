@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file orders/v1/events.proto.
  */
 export const file_orders_v1_events: GenFile = /*@__PURE__*/
-  fileDesc("ChZvcmRlcnMvdjEvZXZlbnRzLnByb3RvEglvcmRlcnMudjEi+gEKDE9yZGVyQ3JlYXRlZBIQCghldmVudF9pZBgBIAEoCRIvCgtvY2N1cnJlZF9hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEAoIb3JkZXJfaWQYAyABKAkSLAoMb3JkZXJfc3RhdHVzGAQgASgOMhYub3JkZXJzLnYxLk9yZGVyU3RhdHVzEg8KB3VzZXJfaWQYBSABKAkSLgoKZXhwaXJlc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJgoGdGlja2V0GAcgASgLMhYub3JkZXJzLnYxLk9yZGVyVGlja2V0IigKC09yZGVyVGlja2V0EgoKAmlkGAEgASgJEg0KBXByaWNlGAIgASgDIpQBCg1PcmRlckNhbmNlbGVkEhAKCGV2ZW50X2lkGAEgASgJEi8KC29jY3VycmVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghvcmRlcl9pZBgDIAEoCRIuCgZ0aWNrZXQYBCABKAsyHi5vcmRlcnMudjEuT3JkZXJDYW5jZWxlZFRpY2tldCIhChNPcmRlckNhbmNlbGVkVGlja2V0EgoKAmlkGAEgASgJQjZaNHBvbHlnbG90LXRpY2tldGluZy12MS9wcm90b2dlbi9nby9vcmRlcnMvdjE7b3JkZXJzdjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_orders_v1_orders]);
+  fileDesc("ChZvcmRlcnMvdjEvZXZlbnRzLnByb3RvEglvcmRlcnMudjEilQIKDE9yZGVyQ3JlYXRlZBIQCghldmVudF9pZBgBIAEoCRIvCgtvY2N1cnJlZF9hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEAoIb3JkZXJfaWQYAyABKAkSLAoMb3JkZXJfc3RhdHVzGAQgASgOMhYub3JkZXJzLnYxLk9yZGVyU3RhdHVzEg8KB3VzZXJfaWQYBSABKAkSLgoKZXhwaXJlc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJgoGdGlja2V0GAcgASgLMhYub3JkZXJzLnYxLk9yZGVyVGlja2V0EhkKEWFnZ3JlZ2F0ZV92ZXJzaW9uGAggASgDIigKC09yZGVyVGlja2V0EgoKAmlkGAEgASgJEg0KBXByaWNlGAIgASgDIq8BCg1PcmRlckNhbmNlbGVkEhAKCGV2ZW50X2lkGAEgASgJEi8KC29jY3VycmVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghvcmRlcl9pZBgDIAEoCRIuCgZ0aWNrZXQYBCABKAsyHi5vcmRlcnMudjEuT3JkZXJDYW5jZWxlZFRpY2tldBIZChFhZ2dyZWdhdGVfdmVyc2lvbhgFIAEoAyIhChNPcmRlckNhbmNlbGVkVGlja2V0EgoKAmlkGAEgASgJQjZaNHBvbHlnbG90LXRpY2tldGluZy12MS9wcm90b2dlbi9nby9vcmRlcnMvdjE7b3JkZXJzdjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_orders_v1_orders]);
 
 /**
  * OrderCreated is an immutable snapshot of a newly created order reservation.
@@ -56,6 +56,11 @@ export type OrderCreated = Message<"orders.v1.OrderCreated"> & {
    * @generated from field: orders.v1.OrderTicket ticket = 7;
    */
   ticket?: OrderTicket | undefined;
+
+  /**
+   * @generated from field: int64 aggregate_version = 8;
+   */
+  aggregateVersion: bigint;
 };
 
 /**
@@ -112,6 +117,11 @@ export type OrderCanceled = Message<"orders.v1.OrderCanceled"> & {
    * @generated from field: orders.v1.OrderCanceledTicket ticket = 4;
    */
   ticket?: OrderCanceledTicket | undefined;
+
+  /**
+   * @generated from field: int64 aggregate_version = 5;
+   */
+  aggregateVersion: bigint;
 };
 
 /**

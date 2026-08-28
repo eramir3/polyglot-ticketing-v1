@@ -516,7 +516,8 @@ job. Invalid payloads are terminally acknowledged; transient Redis or NATS
 errors are negatively acknowledged for redelivery. The job delay is
 `max(0, expiresAt - now)`, so delayed source delivery causes immediate
 expiration rather than extending the reservation. BullMQ retries failed
-`ExpirationComplete` publishes five times with exponential backoff. Expiration
+`ExpirationComplete` publishes five times with exponential backoff; Expiration
+logs every failed publish attempt before rethrowing for that retry. Expiration
 does not consume `OrderCanceled` events to remove queued BullMQ jobs; that is
 deferred, low-priority work because a later `ExpirationComplete` is a harmless
 Orders no-op for a canceled or completed reservation.
@@ -555,9 +556,9 @@ filesystem storage for seven days. Tickets and Orders log unexpected mutation
 failures at their gRPC boundaries with an operation and error field; Tickets'
 update failures include the ticket ID, and Orders' create and cancellation
 failures include the ticket or order ID respectively. Expiration logs malformed
-`OrderCreated` deliveries that it terminates and transient scheduling failures
-that it retries. Ordinary validation and authentication failures remain
-unlogged. Payments logs each committed simulated payment failure with its
-payment ID and order ID. Metrics, tracing, dashboards, alerts, broad request or
-domain-success logging, and production observability configuration are not part
-of this increment.
+`OrderCreated` deliveries that it terminates, transient scheduling failures that
+it retries, and failed `ExpirationComplete` publish attempts. Ordinary
+validation and authentication failures remain unlogged. Payments logs each
+committed simulated payment failure with its payment ID and order ID. Metrics,
+tracing, dashboards, alerts, broad request or domain-success logging, and
+production observability configuration are not part of this increment.
