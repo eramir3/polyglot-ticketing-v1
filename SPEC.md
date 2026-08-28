@@ -552,13 +552,9 @@ stack. Grafana is available at `http://localhost:3002` and provisions Loki as
 its default datasource. Alloy reads Docker stdout only for `api-gateway`,
 `identity`, `tickets`, `orders`, `payments`, and `expiration`; each Loki stream
 is labeled with its `service` and `environment="local"`. Loki persists local
-filesystem storage for seven days. Tickets and Orders log unexpected mutation
-failures at their gRPC boundaries with an operation and error field; Tickets'
-update failures include the ticket ID, and Orders' create and cancellation
-failures include the ticket or order ID respectively. Expiration logs malformed
-`OrderCreated` deliveries that it terminates, transient scheduling failures that
-it retries, and failed `ExpirationComplete` publish attempts. Ordinary
-validation and authentication failures remain unlogged. Payments logs each
-committed simulated payment failure with its payment ID and order ID. Metrics,
-tracing, dashboards, alerts, broad request or domain-success logging, and
-production observability configuration are not part of this increment.
+filesystem storage for seven days. The intentional, high-signal log messages
+and ready-to-paste LogQL queries are cataloged in
+[`docs/observability.md`](docs/observability.md). Ordinary validation and
+authentication failures, metrics, tracing, dashboards, alerts, broad request or
+domain-success logging, and production observability configuration are not part
+of this increment.

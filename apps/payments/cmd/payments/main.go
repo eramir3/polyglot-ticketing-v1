@@ -60,7 +60,10 @@ func main() {
 	}
 
 	server := grpc.NewServer()
-	paymentsv1.RegisterPaymentsServiceServer(server, grpcserver.NewServer(payment.NewService(repository)))
+	paymentsv1.RegisterPaymentsServiceServer(
+		server,
+		grpcserver.NewServer(payment.NewService(repository), slog.Default()),
+	)
 	go func() {
 		slog.Info("payments gRPC service started", "address", listener.Addr().String())
 		if err := server.Serve(listener); err != nil {

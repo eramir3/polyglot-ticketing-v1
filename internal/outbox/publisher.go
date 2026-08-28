@@ -3,6 +3,7 @@ package outbox
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -30,6 +31,20 @@ type Publisher struct {
 	js nats.JetStreamContext
 }
 
+type eventDispatchError struct {
+	event     Event
+	operation string
+	err       error
+}
+
+func (err *eventDispatchError) Error() string {
+	return fmt.Sprintf("outbox event %s %s failed: %v", err.event.EventID, err.operation, err.err)
+}
+
+func (err *eventDispatchError) Unwrap() error {
+	return err.err
+}
+
 func NewPublisher(repository Repository, config Config, url string, logger *slog.Logger) *Publisher {
 	return &Publisher{repository: repository, config: config, url: url, logger: logger}
 }
@@ -41,7 +56,7 @@ func (publisher *Publisher) Run(ctx context.Context) {
 
 	for {
 		if err := publisher.publishPending(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			publisher.logger.Warn("unable to publish pending outbox events", "error", err)
+			publisher.logPublishPendingError(err)
 		}
 
 		select {
@@ -50,6 +65,22 @@ func (publisher *Publisher) Run(ctx context.Context) {
 		case <-ticker.C:
 		}
 	}
+}
+
+func (publisher *Publisher) logPublishPendingError(err error) {
+	var dispatchErr *eventDispatchError
+	if errors.As(err, &dispatchErr) {
+		publisher.logger.Warn(
+			"outbox event dispatch failed",
+			"operation", dispatchErr.operation,
+			"event_id", dispatchErr.event.EventID,
+			"subject", dispatchErr.event.Subject,
+			"error", dispatchErr.err,
+		)
+		return
+	}
+
+	publisher.logger.Warn("unable to publish pending outbox events", "error", err)
 }
 
 func (publisher *Publisher) publishPending(ctx context.Context) error {
@@ -71,12 +102,12 @@ func (publisher *Publisher) publishPending(ctx context.Context) error {
 		cancel()
 		if publishErr != nil {
 			if err := publisher.repository.MarkFailed(ctx, event.EventID, publishErr); err != nil {
-				return err
+				return &eventDispatchError{event: event, operation: "mark_failed", err: err}
 			}
-			return publishErr
+			return &eventDispatchError{event: event, operation: "publish", err: publishErr}
 		}
 		if err := publisher.repository.MarkPublished(ctx, event.EventID); err != nil {
-			return err
+			return &eventDispatchError{event: event, operation: "mark_published", err: err}
 		}
 	}
 	return nil

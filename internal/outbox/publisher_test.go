@@ -1,9 +1,12 @@
 package outbox
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -124,6 +127,38 @@ func TestPublisherPublishesPaymentFailedEvent(t *testing.T) {
 	var actualEvent paymentsv1.PaymentFailed
 	if err := proto.Unmarshal(message.Data, &actualEvent); err != nil || !proto.Equal(expectedEvent, &actualEvent) {
 		t.Fatalf("unexpected payment-failed payload: event=%+v err=%v", &actualEvent, err)
+	}
+}
+
+func TestPublisherLogsEventDispatchFailure(t *testing.T) {
+	var logs bytes.Buffer
+	publisher := NewPublisher(
+		&fakePublisherRepository{},
+		Config{},
+		"nats://unused",
+		slog.New(slog.NewTextHandler(&logs, nil)),
+	)
+
+	publisher.logPublishPendingError(&eventDispatchError{
+		event: Event{
+			EventID: "event-1",
+			Subject: "orders.order.created.v1",
+		},
+		operation: "publish",
+		err:       errors.New("NATS unavailable"),
+	})
+
+	for _, expected := range []string{
+		"level=WARN",
+		"msg=\"outbox event dispatch failed\"",
+		"operation=publish",
+		"event_id=event-1",
+		"subject=orders.order.created.v1",
+		"error=\"NATS unavailable\"",
+	} {
+		if !strings.Contains(logs.String(), expected) {
+			t.Fatalf("expected log output to contain %q, got %q", expected, logs.String())
+		}
 	}
 }
 

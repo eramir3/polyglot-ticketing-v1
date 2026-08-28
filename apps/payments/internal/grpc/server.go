@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -17,10 +18,11 @@ import (
 type Server struct {
 	paymentsv1.UnimplementedPaymentsServiceServer
 	service *payment.Service
+	logger  *slog.Logger
 }
 
-func NewServer(service *payment.Service) *Server {
-	return &Server{service: service}
+func NewServer(service *payment.Service, logger *slog.Logger) *Server {
+	return &Server{service: service, logger: logger}
 }
 
 func (server *Server) CreatePayment(
@@ -47,6 +49,12 @@ func (server *Server) CreatePayment(
 		}})
 	}
 	if err != nil {
+		server.logger.Error(
+			"payment creation failed",
+			"operation", "create_payment",
+			"order_id", request.GetOrderId(),
+			"error", err,
+		)
 		return nil, structuredError(codes.Internal, []payment.ValidationError{{
 			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
 			Message: "Unable to create payment.",
