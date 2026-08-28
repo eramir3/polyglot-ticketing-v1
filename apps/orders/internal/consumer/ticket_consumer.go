@@ -10,6 +10,7 @@ import (
 
 	"polyglot-ticketing-v1/apps/orders/internal/order"
 	"polyglot-ticketing-v1/apps/orders/internal/projection"
+	"polyglot-ticketing-v1/internal/observability"
 )
 
 const (
@@ -22,6 +23,7 @@ const (
 type TicketConsumer struct {
 	handler *projection.TicketHandler
 	logger  *slog.Logger
+	metrics *observability.Metrics
 	url     string
 }
 
@@ -31,10 +33,11 @@ type ticketEventDelivery interface {
 	Term(...nats.AckOpt) error
 }
 
-func NewTicketConsumer(repository order.TicketProjectionRepository, url string, logger *slog.Logger) *TicketConsumer {
+func NewTicketConsumer(repository order.TicketProjectionRepository, url string, logger *slog.Logger, metrics ...*observability.Metrics) *TicketConsumer {
 	return &TicketConsumer{
 		handler: projection.NewTicketHandler(repository),
 		logger:  logger,
+		metrics: firstMetrics(metrics),
 		url:     url,
 	}
 }
@@ -97,11 +100,15 @@ func (consumer *TicketConsumer) handleDelivery(
 	payload []byte,
 	delivery ticketEventDelivery,
 ) {
+	started := time.Now()
 	err := consumer.handler.Handle(ctx, subject, payload)
 	if err == nil {
 		if err := delivery.Ack(); err != nil {
 			consumer.logger.Warn("failed to acknowledge ticket event", "error", err)
+			consumer.observe("ack_failed", started)
+			return
 		}
+		consumer.observe("success", started)
 		return
 	}
 	if errors.Is(err, order.ErrInvalidTicketEvent) || errors.Is(err, order.ErrUnsupportedSubject) {
@@ -109,6 +116,7 @@ func (consumer *TicketConsumer) handleDelivery(
 		if termErr := delivery.Term(); termErr != nil {
 			consumer.logger.Warn("failed to terminate ticket event", "error", termErr)
 		}
+		consumer.observe("terminal", started)
 		return
 	}
 	if errors.Is(err, order.ErrTicketEventVersionGap) {
@@ -116,12 +124,20 @@ func (consumer *TicketConsumer) handleDelivery(
 		if nakErr := delivery.Nak(); nakErr != nil {
 			consumer.logger.Warn("failed to negatively acknowledge ticket event", "error", nakErr)
 		}
+		consumer.observe("retry", started)
 		return
 	}
 
 	consumer.logger.Warn("ticket projection failed; event will be retried", "subject", subject, "error", err)
 	if nakErr := delivery.Nak(); nakErr != nil {
 		consumer.logger.Warn("failed to negatively acknowledge ticket event", "error", nakErr)
+	}
+	consumer.observe("retry", started)
+}
+
+func (consumer *TicketConsumer) observe(outcome string, started time.Time) {
+	if consumer.metrics != nil {
+		consumer.metrics.ObserveBackground("jetstream_consumer", "ticket_projection", outcome, started)
 	}
 }
 

@@ -37,8 +37,9 @@ Implemented foundations:
 - Local Docker Compose infrastructure includes NATS JetStream, Redis for the
   expiration worker, the gateway, identity, orders, payments, their service
   databases, and Mailpit. Optional local tools include NUI, Redis Insight, and
-  Grafana with Loki-backed application logs. The Mailpit inbox is available on
-  `localhost:8025` and Grafana on `localhost:3002`.
+  Grafana with Loki-backed application logs and Prometheus metrics. The Mailpit
+  inbox is available on `localhost:8025`, Grafana on `localhost:3002`, and the
+  Prometheus UI on `localhost:9090`.
 
 Planned but not implemented: concert-assistant, Kubernetes manifests, GraphQL,
 and a Kubernetes Gateway API controller.
@@ -99,9 +100,10 @@ expiration jobs.
 - Start the local stack with `make docker-up` after configuring the required
   Better Auth and database environment variables.
 - Start optional local tooling with `make docker-up-tools`; Grafana is
-  available at `localhost:3002` and its provisioned Loki datasource contains
-  logs from the six application services, labeled by `service` and
-  `environment=local`.
+  available at `localhost:3002` and provisions Loki and Prometheus. Loki
+  contains logs from the six application services, and Prometheus scrapes their
+  private Compose-network `:9090/metrics` endpoints; both use `service` and
+  `environment=local` labels.
 - The gateway is published on `localhost:3000`; identity gRPC is internal to
   the Compose network on `identity:50051`; Postgres is published on
   `localhost:5432` for local database tooling. Tickets gRPC is internal on

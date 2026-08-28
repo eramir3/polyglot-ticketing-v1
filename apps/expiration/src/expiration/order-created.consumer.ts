@@ -3,6 +3,7 @@ import {
   Logger,
   OnApplicationBootstrap,
   OnApplicationShutdown,
+  Optional,
 } from '@nestjs/common';
 import {
   InvalidOrderCreatedEvent,
@@ -11,6 +12,7 @@ import {
 import { JetStreamService } from './jetstream.service.js';
 import { natsRetryMilliseconds } from './expiration.constants.js';
 import { OrderCreatedDelivery } from './expiration.types.js';
+import { ExpirationMetrics } from '../observability/prometheus.js';
 
 @Injectable()
 export class OrderCreatedConsumer
@@ -24,6 +26,7 @@ export class OrderCreatedConsumer
   constructor(
     private readonly handler: OrderCreatedHandler,
     private readonly jetStream: JetStreamService,
+    @Optional() private readonly metrics?: ExpirationMetrics,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -37,13 +40,16 @@ export class OrderCreatedConsumer
   }
 
   async handleDelivery(delivery: OrderCreatedDelivery): Promise<void> {
+    const started = performance.now();
     try {
       await this.handler.handle(delivery.data);
       delivery.ack();
+      this.observe('success', started);
     } catch (error) {
       if (error instanceof InvalidOrderCreatedEvent) {
         this.logger.error('terminal OrderCreated event', error.message);
         delivery.term(error.message);
+        this.observe('terminal', started);
         return;
       }
 
@@ -52,7 +58,17 @@ export class OrderCreatedConsumer
         error,
       );
       delivery.nak();
+      this.observe('retry', started);
     }
+  }
+
+  private observe(outcome: string, started: number): void {
+    this.metrics?.observe(
+      'jetstream_consumer',
+      'order_created',
+      outcome,
+      (performance.now() - started) / 1_000,
+    );
   }
 
   private async consume(): Promise<void> {

@@ -10,6 +10,7 @@ import (
 
 	"polyglot-ticketing-v1/apps/payments/internal/payment"
 	"polyglot-ticketing-v1/apps/payments/internal/projection"
+	"polyglot-ticketing-v1/internal/observability"
 )
 
 const (
@@ -22,6 +23,7 @@ const (
 type OrderConsumer struct {
 	handler *projection.OrderHandler
 	logger  *slog.Logger
+	metrics *observability.Metrics
 	url     string
 }
 
@@ -31,10 +33,11 @@ type orderEventDelivery interface {
 	Term(...nats.AckOpt) error
 }
 
-func NewOrderConsumer(repository payment.OrderProjectionRepository, url string, logger *slog.Logger) *OrderConsumer {
+func NewOrderConsumer(repository payment.OrderProjectionRepository, url string, logger *slog.Logger, observedMetrics ...*observability.Metrics) *OrderConsumer {
 	return &OrderConsumer{
 		handler: projection.NewOrderHandler(repository),
 		logger:  logger,
+		metrics: firstMetrics(observedMetrics),
 		url:     url,
 	}
 }
@@ -93,11 +96,15 @@ func (consumer *OrderConsumer) handleDelivery(
 	payload []byte,
 	delivery orderEventDelivery,
 ) {
+	started := time.Now()
 	err := consumer.handler.Handle(ctx, subject, payload)
 	if err == nil {
 		if err := delivery.Ack(); err != nil {
 			consumer.logger.Warn("failed to acknowledge payments order event", "error", err)
+			consumer.observe("ack_failed", started)
+			return
 		}
+		consumer.observe("success", started)
 		return
 	}
 	if errors.Is(err, payment.ErrInvalidOrderEvent) || errors.Is(err, payment.ErrUnsupportedSubject) {
@@ -105,6 +112,7 @@ func (consumer *OrderConsumer) handleDelivery(
 		if termErr := delivery.Term(); termErr != nil {
 			consumer.logger.Warn("failed to terminate payments order event", "error", termErr)
 		}
+		consumer.observe("terminal", started)
 		return
 	}
 
@@ -112,6 +120,20 @@ func (consumer *OrderConsumer) handleDelivery(
 	if nakErr := delivery.Nak(); nakErr != nil {
 		consumer.logger.Warn("failed to negatively acknowledge payments order event", "error", nakErr)
 	}
+	consumer.observe("retry", started)
+}
+
+func (consumer *OrderConsumer) observe(outcome string, started time.Time) {
+	if consumer.metrics != nil {
+		consumer.metrics.ObserveBackground("jetstream_consumer", "order_projection", outcome, started)
+	}
+}
+
+func firstMetrics(metrics []*observability.Metrics) *observability.Metrics {
+	if len(metrics) == 0 {
+		return nil
+	}
+	return metrics[0]
 }
 
 func waitForRetry(ctx context.Context) bool {

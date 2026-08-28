@@ -14,6 +14,7 @@ import (
 	"polyglot-ticketing-v1/apps/payments/internal/consumer"
 	grpcserver "polyglot-ticketing-v1/apps/payments/internal/grpc"
 	"polyglot-ticketing-v1/apps/payments/internal/payment"
+	"polyglot-ticketing-v1/internal/observability"
 	"polyglot-ticketing-v1/internal/outbox"
 	paymentsv1 "polyglot-ticketing-v1/protogen/go/payments/v1"
 )
@@ -30,6 +31,8 @@ func main() {
 	defer pool.Close()
 
 	repository := payment.NewPostgresRepository(pool)
+	metrics, registry := observability.NewMetrics()
+	observability.StartMetricsServer(ctx, environmentVariable("METRICS_PORT", observability.DefaultMetricsPort), registry, slog.Default())
 	randomFailures, err := payment.ParseRandomFailures(os.Getenv("PAYMENT_PROCESSOR_RANDOM_FAILURES"))
 	if err != nil {
 		slog.Error("invalid payment processor random failures setting", "error", err)
@@ -49,9 +52,10 @@ func main() {
 		outbox.Config{StreamName: "PAYMENTS_EVENTS", Subjects: []string{"payments.>"}},
 		natsURL,
 		slog.Default(),
+		metrics,
 	).Run(ctx)
-	go consumer.NewOrderConsumer(repository, natsURL, slog.Default()).Run(ctx)
-	go payment.NewProcessor(repository, outcome, randomFailures, slog.Default()).Run(ctx)
+	go consumer.NewOrderConsumer(repository, natsURL, slog.Default(), metrics).Run(ctx)
+	go payment.NewProcessor(repository, outcome, randomFailures, slog.Default(), metrics).Run(ctx)
 
 	listener, err := net.Listen("tcp", ":"+environmentVariable("GRPC_PORT", "50054"))
 	if err != nil {
@@ -59,7 +63,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(metrics.UnaryServerInterceptor))
 	paymentsv1.RegisterPaymentsServiceServer(
 		server,
 		grpcserver.NewServer(payment.NewService(repository), slog.Default()),

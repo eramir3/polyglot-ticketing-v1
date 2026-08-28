@@ -11,6 +11,7 @@ import (
 	"polyglot-ticketing-v1/apps/tickets/internal/projection"
 	"polyglot-ticketing-v1/apps/tickets/internal/ticket"
 	orderevents "polyglot-ticketing-v1/contracts/orders"
+	"polyglot-ticketing-v1/internal/observability"
 )
 
 const (
@@ -26,6 +27,8 @@ type OrderConsumer struct {
 	durableName string
 	handler     *projection.OrderHandler
 	logger      *slog.Logger
+	metrics     *observability.Metrics
+	operation   string
 	subject     string
 	url         string
 }
@@ -37,25 +40,29 @@ type orderEventDelivery interface {
 	Term(...nats.AckOpt) error
 }
 
-func NewOrderCreatedConsumer(repository ticket.ReservationRepository, url string, logger *slog.Logger) *OrderConsumer {
-	return newOrderConsumer(repository, orderCreatedDurableName, orderevents.OrderCreatedSubject, url, logger)
+func NewOrderCreatedConsumer(repository ticket.ReservationRepository, url string, logger *slog.Logger, metrics ...*observability.Metrics) *OrderConsumer {
+	return newOrderConsumer(repository, orderCreatedDurableName, orderevents.OrderCreatedSubject, "order_created", url, logger, firstMetrics(metrics))
 }
 
-func NewOrderCanceledConsumer(repository ticket.ReservationRepository, url string, logger *slog.Logger) *OrderConsumer {
-	return newOrderConsumer(repository, orderCanceledDurableName, orderevents.OrderCanceledSubject, url, logger)
+func NewOrderCanceledConsumer(repository ticket.ReservationRepository, url string, logger *slog.Logger, metrics ...*observability.Metrics) *OrderConsumer {
+	return newOrderConsumer(repository, orderCanceledDurableName, orderevents.OrderCanceledSubject, "order_canceled", url, logger, firstMetrics(metrics))
 }
 
 func newOrderConsumer(
 	repository ticket.ReservationRepository,
 	durableName string,
 	subject string,
+	operation string,
 	url string,
 	logger *slog.Logger,
+	metrics *observability.Metrics,
 ) *OrderConsumer {
 	return &OrderConsumer{
 		durableName: durableName,
 		handler:     projection.NewOrderHandler(repository),
 		logger:      logger,
+		metrics:     metrics,
+		operation:   operation,
 		subject:     subject,
 		url:         url,
 	}
@@ -119,11 +126,15 @@ func (consumer *OrderConsumer) handleDelivery(
 	payload []byte,
 	delivery orderEventDelivery,
 ) {
+	started := time.Now()
 	err := consumer.handler.Handle(ctx, subject, payload)
 	if err == nil {
 		if err := delivery.Ack(); err != nil {
 			consumer.logger.Warn("failed to acknowledge order event", "error", err)
+			consumer.observe("ack_failed", started)
+			return
 		}
+		consumer.observe("success", started)
 		return
 	}
 	if errors.Is(err, ticket.ErrInvalidOrderEvent) || errors.Is(err, ticket.ErrUnsupportedOrderEvent) {
@@ -131,6 +142,7 @@ func (consumer *OrderConsumer) handleDelivery(
 		if termErr := delivery.Term(); termErr != nil {
 			consumer.logger.Warn("failed to terminate order event", "error", termErr)
 		}
+		consumer.observe("terminal", started)
 		return
 	}
 	if errors.Is(err, ticket.ErrOrderReservationPending) {
@@ -138,6 +150,7 @@ func (consumer *OrderConsumer) handleDelivery(
 		if nakErr := delivery.NakWithDelay(orderReservationRetryDelay); nakErr != nil {
 			consumer.logger.Warn("failed to delay order event retry", "error", nakErr)
 		}
+		consumer.observe("retry", started)
 		return
 	}
 
@@ -145,6 +158,20 @@ func (consumer *OrderConsumer) handleDelivery(
 	if nakErr := delivery.Nak(); nakErr != nil {
 		consumer.logger.Warn("failed to negatively acknowledge order event", "error", nakErr)
 	}
+	consumer.observe("retry", started)
+}
+
+func (consumer *OrderConsumer) observe(outcome string, started time.Time) {
+	if consumer.metrics != nil {
+		consumer.metrics.ObserveBackground("jetstream_consumer", consumer.operation, outcome, started)
+	}
+}
+
+func firstMetrics(metrics []*observability.Metrics) *observability.Metrics {
+	if len(metrics) == 0 {
+		return nil
+	}
+	return metrics[0]
 }
 
 func waitForOrderRetry(ctx context.Context) bool {

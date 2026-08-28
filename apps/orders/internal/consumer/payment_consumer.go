@@ -10,6 +10,7 @@ import (
 
 	"polyglot-ticketing-v1/apps/orders/internal/order"
 	paymentevents "polyglot-ticketing-v1/contracts/payments"
+	"polyglot-ticketing-v1/internal/observability"
 )
 
 const (
@@ -20,6 +21,7 @@ const (
 type PaymentCreatedConsumer struct {
 	handler *order.PaymentCreatedHandler
 	logger  *slog.Logger
+	metrics *observability.Metrics
 	url     string
 }
 
@@ -33,10 +35,12 @@ func NewPaymentCreatedConsumer(
 	repository order.PaymentEventRepository,
 	url string,
 	logger *slog.Logger,
+	metrics ...*observability.Metrics,
 ) *PaymentCreatedConsumer {
 	return &PaymentCreatedConsumer{
 		handler: order.NewPaymentCreatedHandler(repository),
 		logger:  logger,
+		metrics: firstMetrics(metrics),
 		url:     url,
 	}
 }
@@ -94,11 +98,15 @@ func (consumer *PaymentCreatedConsumer) handleDelivery(
 	payload []byte,
 	delivery paymentEventDelivery,
 ) {
+	started := time.Now()
 	err := consumer.handler.Handle(ctx, payload)
 	if err == nil {
 		if err := delivery.Ack(); err != nil {
 			consumer.logger.Warn("failed to acknowledge payment-created event", "error", err)
+			consumer.observe("ack_failed", started)
+			return
 		}
+		consumer.observe("success", started)
 		return
 	}
 	if errors.Is(err, order.ErrInvalidPaymentEvent) {
@@ -106,11 +114,19 @@ func (consumer *PaymentCreatedConsumer) handleDelivery(
 		if termErr := delivery.Term(); termErr != nil {
 			consumer.logger.Warn("failed to terminate payment-created event", "error", termErr)
 		}
+		consumer.observe("terminal", started)
 		return
 	}
 
 	consumer.logger.Warn("payment-created handling failed; event will be retried", "error", err)
 	if nakErr := delivery.Nak(); nakErr != nil {
 		consumer.logger.Warn("failed to negatively acknowledge payment-created event", "error", nakErr)
+	}
+	consumer.observe("retry", started)
+}
+
+func (consumer *PaymentCreatedConsumer) observe(outcome string, started time.Time) {
+	if consumer.metrics != nil {
+		consumer.metrics.ObserveBackground("jetstream_consumer", "payment_created", outcome, started)
 	}
 }

@@ -94,8 +94,12 @@ type paymentResultConsumerCase struct {
 
 func paymentResultConsumerCases() []paymentResultConsumerCase {
 	return []paymentResultConsumerCase{
-		{name: "succeeded", durable: paymentSucceededDurableName, newConsumer: NewPaymentSucceededConsumer, payload: validPaymentSucceededPayload, subject: paymentevents.PaymentSucceededSubject},
-		{name: "failed", durable: paymentFailedDurableName, newConsumer: NewPaymentFailedConsumer, payload: validPaymentFailedPayload, subject: paymentevents.PaymentFailedSubject},
+		{name: "succeeded", durable: paymentSucceededDurableName, newConsumer: func(repository order.PaymentResultEventRepository, url string, logger *slog.Logger) *PaymentResultConsumer {
+			return NewPaymentSucceededConsumer(repository, url, logger)
+		}, payload: validPaymentSucceededPayload, subject: paymentevents.PaymentSucceededSubject},
+		{name: "failed", durable: paymentFailedDurableName, newConsumer: func(repository order.PaymentResultEventRepository, url string, logger *slog.Logger) *PaymentResultConsumer {
+			return NewPaymentFailedConsumer(repository, url, logger)
+		}, payload: validPaymentFailedPayload, subject: paymentevents.PaymentFailedSubject},
 	}
 }
 

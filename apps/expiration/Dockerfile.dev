@@ -13,4 +13,6 @@ RUN pnpm nx build expiration
 
 ENV NODE_ENV=development
 
+EXPOSE 9090
+
 CMD ["node", "dist/apps/expiration/apps/expiration/src/main.js"]

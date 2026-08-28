@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+
+	"polyglot-ticketing-v1/internal/observability"
 )
 
 const (
@@ -25,6 +27,7 @@ type Publisher struct {
 	config     Config
 	url        string
 	logger     *slog.Logger
+	metrics    *observability.Metrics
 
 	mu sync.Mutex
 	nc *nats.Conn
@@ -45,8 +48,12 @@ func (err *eventDispatchError) Unwrap() error {
 	return err.err
 }
 
-func NewPublisher(repository Repository, config Config, url string, logger *slog.Logger) *Publisher {
-	return &Publisher{repository: repository, config: config, url: url, logger: logger}
+func NewPublisher(repository Repository, config Config, url string, logger *slog.Logger, metrics ...*observability.Metrics) *Publisher {
+	publisher := &Publisher{repository: repository, config: config, url: url, logger: logger}
+	if len(metrics) > 0 {
+		publisher.metrics = metrics[0]
+	}
+	return publisher
 }
 
 func (publisher *Publisher) Run(ctx context.Context) {
@@ -55,8 +62,9 @@ func (publisher *Publisher) Run(ctx context.Context) {
 	defer publisher.close()
 
 	for {
+		started := time.Now()
 		if err := publisher.publishPending(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			publisher.logPublishPendingError(err)
+			publisher.logPublishPendingError(err, started)
 		}
 
 		select {
@@ -67,7 +75,7 @@ func (publisher *Publisher) Run(ctx context.Context) {
 	}
 }
 
-func (publisher *Publisher) logPublishPendingError(err error) {
+func (publisher *Publisher) logPublishPendingError(err error, started time.Time) {
 	var dispatchErr *eventDispatchError
 	if errors.As(err, &dispatchErr) {
 		publisher.logger.Warn(
@@ -77,10 +85,12 @@ func (publisher *Publisher) logPublishPendingError(err error) {
 			"subject", dispatchErr.event.Subject,
 			"error", dispatchErr.err,
 		)
+		publisher.observe(dispatchErr.operation, "failure", started)
 		return
 	}
 
 	publisher.logger.Warn("unable to publish pending outbox events", "error", err)
+	publisher.observe("poll", "failure", started)
 }
 
 func (publisher *Publisher) publishPending(ctx context.Context) error {
@@ -93,6 +103,7 @@ func (publisher *Publisher) publishPending(ctx context.Context) error {
 		return err
 	}
 	for _, event := range events {
+		started := time.Now()
 		publishCtx, cancel := context.WithTimeout(ctx, publishTimeout)
 		_, publishErr := publisher.js.PublishMsg(&nats.Msg{
 			Subject: event.Subject,
@@ -109,8 +120,15 @@ func (publisher *Publisher) publishPending(ctx context.Context) error {
 		if err := publisher.repository.MarkPublished(ctx, event.EventID); err != nil {
 			return &eventDispatchError{event: event, operation: "mark_published", err: err}
 		}
+		publisher.observe("publish", "success", started)
 	}
 	return nil
+}
+
+func (publisher *Publisher) observe(operation string, outcome string, started time.Time) {
+	if publisher.metrics != nil {
+		publisher.metrics.ObserveBackground("outbox", operation, outcome, started)
+	}
 }
 
 func (publisher *Publisher) ensureJetStream() error {

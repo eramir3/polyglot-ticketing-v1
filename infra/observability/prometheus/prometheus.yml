@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: applications
+    static_configs:
+      - targets: [api-gateway:9090]
+        labels:
+          environment: local
+          service: api-gateway
+      - targets: [identity:9090]
+        labels:
+          environment: local
+          service: identity
+      - targets: [tickets:9090]
+        labels:
+          environment: local
+          service: tickets
+      - targets: [orders:9090]
+        labels:
+          environment: local
+          service: orders
+      - targets: [payments:9090]
+        labels:
+          environment: local
+          service: payments
+      - targets: [expiration:9090]
+        labels:
+          environment: local
+          service: expiration
+
+  - job_name: prometheus
+    static_configs:
+      - targets: [prometheus:9090]
+        labels:
+          environment: local
+          service: prometheus

@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"time"
+
+	"polyglot-ticketing-v1/internal/observability"
 )
 
 const (
@@ -22,10 +24,15 @@ type Processor struct {
 	randomFailures bool
 	randomFloat64  func() float64
 	repo           SettlementRepository
+	metrics        *observability.Metrics
 }
 
-func NewProcessor(repo SettlementRepository, outcome ProcessorOutcome, randomFailures bool, logger *slog.Logger) *Processor {
-	return newProcessor(repo, outcome, randomFailures, rand.Float64, logger)
+func NewProcessor(repo SettlementRepository, outcome ProcessorOutcome, randomFailures bool, logger *slog.Logger, metrics ...*observability.Metrics) *Processor {
+	processor := newProcessor(repo, outcome, randomFailures, rand.Float64, logger)
+	if len(metrics) > 0 {
+		processor.metrics = metrics[0]
+	}
+	return processor
 }
 
 func newProcessor(
@@ -74,16 +81,23 @@ func (processor *Processor) nextOutcome() ProcessorOutcome {
 
 func (processor *Processor) processPending(ctx context.Context) {
 	for ctx.Err() == nil {
+		started := time.Now()
 		payment, resolved, err := processor.ProcessOnce(ctx)
 		if err != nil {
 			if !errors.Is(err, context.Canceled) {
 				processor.logger.Warn("unable to resolve pending payment", "error", err)
+				processor.observe("failure", started)
 			}
 			return
 		}
 		if !resolved {
 			return
 		}
+		outcome := "succeeded"
+		if payment.Status == StatusFailed {
+			outcome = "failed"
+		}
+		processor.observe(outcome, started)
 		if payment.Status == StatusFailed {
 			processor.logger.Warn(
 				"payment failed",
@@ -92,5 +106,11 @@ func (processor *Processor) processPending(ctx context.Context) {
 				"order_id", payment.OrderID,
 			)
 		}
+	}
+}
+
+func (processor *Processor) observe(outcome string, started time.Time) {
+	if processor.metrics != nil {
+		processor.metrics.ObserveBackground("payment_processor", "resolve_payment", outcome, started)
 	}
 }

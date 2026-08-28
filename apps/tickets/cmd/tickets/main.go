@@ -14,6 +14,7 @@ import (
 	"polyglot-ticketing-v1/apps/tickets/internal/consumer"
 	grpcserver "polyglot-ticketing-v1/apps/tickets/internal/grpc"
 	"polyglot-ticketing-v1/apps/tickets/internal/ticket"
+	"polyglot-ticketing-v1/internal/observability"
 	"polyglot-ticketing-v1/internal/outbox"
 	ticketsv1 "polyglot-ticketing-v1/protogen/go/tickets/v1"
 )
@@ -30,16 +31,19 @@ func main() {
 	defer pool.Close()
 
 	repository := ticket.NewPostgresRepository(pool)
+	metrics, registry := observability.NewMetrics()
+	observability.StartMetricsServer(ctx, environmentVariable("METRICS_PORT", observability.DefaultMetricsPort), registry, slog.Default())
 	natsURL := environmentVariable("NATS_URL", "nats://localhost:4222")
 	publisher := outbox.NewPublisher(
 		outbox.NewPostgresRepository(pool),
 		outbox.Config{StreamName: "TICKETS_EVENTS", Subjects: []string{"tickets.>"}},
 		natsURL,
 		slog.Default(),
+		metrics,
 	)
 	go publisher.Run(ctx)
-	go consumer.NewOrderCreatedConsumer(repository, natsURL, slog.Default()).Run(ctx)
-	go consumer.NewOrderCanceledConsumer(repository, natsURL, slog.Default()).Run(ctx)
+	go consumer.NewOrderCreatedConsumer(repository, natsURL, slog.Default(), metrics).Run(ctx)
+	go consumer.NewOrderCanceledConsumer(repository, natsURL, slog.Default(), metrics).Run(ctx)
 
 	listener, err := net.Listen("tcp", ":"+environmentVariable("GRPC_PORT", "50052"))
 	if err != nil {
@@ -47,7 +51,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(metrics.UnaryServerInterceptor))
 	ticketsv1.RegisterTicketsServiceServer(
 		server,
 		grpcserver.NewServer(ticket.NewService(repository), slog.Default()),

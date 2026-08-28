@@ -1,22 +1,123 @@
-# Local Loki log catalog
+# Local observability catalog
 
-This catalog lists the intentional, high-signal logs added to the local
+This catalog lists the intentional, high-signal logs and metrics in the local
 observability stack. It is a troubleshooting reference, not an inventory of
-every line a service writes.
+every line a service writes or every metric a client library exports.
 
 Start the opt-in stack with `make docker-up-tools`, then open Grafana at
-`http://localhost:3002` and select the Loki datasource in **Explore**. Grafana
-Alloy collects Docker stdout from `api-gateway`, `identity`, `tickets`,
-`orders`, `payments`, and `expiration`.
+`http://localhost:3002`. Grafana provisions Loki and Prometheus datasources.
+The Prometheus UI is available only on `http://localhost:9090`.
 
-## Labels and queries
+## Prometheus metrics
 
-Every collected stream has these fixed labels:
+Prometheus scrapes the private `:9090/metrics` endpoint of `api-gateway`,
+`identity`, `tickets`, `orders`, `payments`, and `expiration` over the Compose
+network. Those endpoints have no host-port mapping and are not public API
+routes. Prometheus itself retains local data for seven days.
 
-| Label | Value |
-| --- | --- |
-| `service` | The emitting Compose service, for example `tickets` or `payments`. |
-| `environment` | `local` |
+Every scraped series has the fixed `service` and `environment="local"` target
+labels. Ticket, order, payment, event, and user identifiers must never be
+metric labels.
+
+### Metric format
+
+Prometheus exposes metrics as plaintext time series at each service's private
+`GET :9090/metrics` endpoint. The basic format is:
+
+```text
+metric_name{label="value", other_label="value"} number
+```
+
+For example, one completed gateway request could look like:
+
+```text
+ticketing_app_http_server_requests_total{
+  environment="local",
+  service="api-gateway",
+  method="POST",
+  route="/api/tickets",
+  status="201"
+} 42
+```
+
+`environment` and `service` are added by Prometheus when it scrapes each
+target; the application provides the request labels.
+
+Counters are cumulative and conventionally end in `_total`:
+
+```text
+ticketing_app_background_operations_total{
+  service="payments",
+  component="payment_processor",
+  operation="resolve_payment",
+  outcome="failed"
+} 3
+```
+
+Durations use histograms. A single logical metric becomes multiple exported
+time series:
+
+```text
+ticketing_app_grpc_server_request_duration_seconds_bucket{
+  service="orders",
+  method="/orders.v1.OrdersService/CreateOrder",
+  code="OK",
+  le="0.1"
+} 91
+
+ticketing_app_grpc_server_request_duration_seconds_sum{...} 4.82
+ticketing_app_grpc_server_request_duration_seconds_count{...} 96
+```
+
+- `_bucket`: number of observations at or below the `le` duration threshold.
+- `_sum`: total duration observed.
+- `_count`: total number of observations.
+
+This is the standard Prometheus exposition model. [Prometheus's
+exposition-format documentation](https://prometheus.io/docs/instrumenting/exposition_formats/)
+describes the same counter and histogram structure.
+
+| Metric family                                                                                      | Emitted by                            | Labels beyond target labels            | Purpose                                                                          |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------- |
+| `go_*`, `process_*`                                                                                | Tickets, Orders, Payments             | Client-defined runtime labels only     | Go runtime and process health.                                                   |
+| `nodejs_*`, `process_*`                                                                            | API Gateway, Identity, Expiration     | Client-defined runtime labels only     | Node.js runtime and process health.                                              |
+| `ticketing_app_http_server_requests_total`, `ticketing_app_http_server_request_duration_seconds`   | API Gateway                           | `method`, normalized `route`, `status` | HTTP request rate, errors, and latency.                                          |
+| `ticketing_app_grpc_server_requests_total`, `ticketing_app_grpc_server_request_duration_seconds`   | Tickets, Orders, Payments, Identity   | `method`, `code`                       | gRPC request rate, errors, and latency.                                          |
+| `ticketing_app_background_operations_total`, `ticketing_app_background_operation_duration_seconds` | Tickets, Orders, Payments, Expiration | `component`, `operation`, `outcome`    | JetStream consumer, outbox, payment processor, and BullMQ outcomes and duration. |
+
+Useful PromQL examples:
+
+```promql
+sum by (service, code) (
+  rate(ticketing_app_grpc_server_requests_total{environment="local"}[5m])
+)
+```
+
+```promql
+histogram_quantile(
+  0.95,
+  sum by (le, service, route) (
+    rate(ticketing_app_http_server_request_duration_seconds_bucket{environment="local"}[5m])
+  )
+)
+```
+
+```promql
+sum by (service, component, operation, outcome) (
+  increase(ticketing_app_background_operations_total{environment="local"}[15m])
+)
+```
+
+## Loki logs
+
+Grafana Alloy collects Docker stdout from `api-gateway`, `identity`, `tickets`,
+`orders`, `payments`, and `expiration`. Every collected stream has these fixed
+labels:
+
+| Label         | Value                                                              |
+| ------------- | ------------------------------------------------------------------ |
+| `service`     | The emitting Compose service, for example `tickets` or `payments`. |
+| `environment` | `local`                                                            |
 
 Identifiers such as ticket, order, payment, and event IDs deliberately remain
 in the log content instead of becoming labels. This keeps Loki label
@@ -27,27 +128,39 @@ filter for an identifier when needed:
 {service="orders", environment="local"} |= "order_id=01..."
 ```
 
-The examples below are ready to paste into Grafana Explore. Loki retains this
-local data for seven days.
+Loki retains local data for seven days.
 
 ## Intentional high-signal logs
 
-| Source | Level | Message and trigger | Searchable values | LogQL |
-| --- | --- | --- | --- | --- |
-| Tickets gRPC server | Error | `ticket creation failed` — an unexpected failure while creating a ticket. | `operation=create_ticket`, `error` | `{service="tickets", environment="local"} |= "ticket creation failed"` |
-| Tickets gRPC server | Error | `ticket update failed` — an unexpected failure while updating a ticket. | `operation=update_ticket`, `ticket_id`, `error` | `{service="tickets", environment="local"} |= "ticket update failed"` |
-| Orders gRPC server | Error | `order creation failed` — an unexpected failure while reserving a ticket. | `operation=create_order`, `ticket_id`, `error` | `{service="orders", environment="local"} |= "order creation failed"` |
-| Orders gRPC server | Error | `order cancellation failed` — an unexpected failure while canceling an order. | `operation=cancel_order`, `order_id`, `error` | `{service="orders", environment="local"} |= "order cancellation failed"` |
-| Payments gRPC server | Error | `payment creation failed` — an unexpected failure while creating a payment. | `operation=create_payment`, `order_id`, `error` | `{service="payments", environment="local"} |= "payment creation failed"` |
-| Payments processor | Warn | `payment failed` — a payment was intentionally resolved as failed by the simulated processor; this is a committed outcome, not an infrastructure error. | `operation=resolve_payment`, `payment_id`, `order_id` | `{service="payments", environment="local"} |= "payment failed"` |
-| Expiration `OrderCreated` consumer | Error | `terminal OrderCreated event` — a malformed `OrderCreated` delivery was terminated and will not be retried. | `error` | `{service="expiration", environment="local"} |= "terminal OrderCreated event"` |
-| Expiration `OrderCreated` consumer | Warn | `order-created handling failed; event will be retried` — scheduling the expiration job failed transiently and the JetStream delivery was negatively acknowledged. | `error` | `{service="expiration", environment="local"} |= "order-created handling failed; event will be retried"` |
-| Expiration BullMQ processor | Error | `expiration-complete publish failed; job will be retried` — publishing `ExpirationComplete` failed, so BullMQ retries the job. | `order_id` in the message, `error` | `{service="expiration", environment="local"} |= "expiration-complete publish failed"` |
-| Shared transactional outbox in Tickets, Orders, and Payments | Warn | `outbox event dispatch failed` — publishing an event or recording its publish result failed. | `operation` (`publish`, `mark_failed`, or `mark_published`), `event_id`, `subject`, `error` | `{environment="local", service=~"tickets|orders|payments"} |= "outbox event dispatch failed"` |
+| Source                                                       | Level | Message and trigger                                                                                                                                               | Searchable values                                                                           |
+| ------------------------------------------------------------ | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Tickets gRPC server                                          | Error | `ticket creation failed` — an unexpected failure while creating a ticket.                                                                                         | `operation=create_ticket`, `error`                                                          |
+| Tickets gRPC server                                          | Error | `ticket update failed` — an unexpected failure while updating a ticket.                                                                                           | `operation=update_ticket`, `ticket_id`, `error`                                             |
+| Orders gRPC server                                           | Error | `order creation failed` — an unexpected failure while reserving a ticket.                                                                                         | `operation=create_order`, `ticket_id`, `error`                                              |
+| Orders gRPC server                                           | Error | `order cancellation failed` — an unexpected failure while canceling an order.                                                                                     | `operation=cancel_order`, `order_id`, `error`                                               |
+| Payments gRPC server                                         | Error | `payment creation failed` — an unexpected failure while creating a payment.                                                                                       | `operation=create_payment`, `order_id`, `error`                                             |
+| Payments processor                                           | Warn  | `payment failed` — a payment was intentionally resolved as failed by the simulated processor; this is a committed outcome, not an infrastructure error.           | `operation=resolve_payment`, `payment_id`, `order_id`                                       |
+| Expiration `OrderCreated` consumer                           | Error | `terminal OrderCreated event` — a malformed `OrderCreated` delivery was terminated and will not be retried.                                                       | `error`                                                                                     |
+| Expiration `OrderCreated` consumer                           | Warn  | `order-created handling failed; event will be retried` — scheduling the expiration job failed transiently and the JetStream delivery was negatively acknowledged. | `error`                                                                                     |
+| Expiration BullMQ processor                                  | Error | `expiration-complete publish failed; job will be retried` — publishing `ExpirationComplete` failed, so BullMQ retries the job.                                    | `order_id` in the message, `error`                                                          |
+| Shared transactional outbox in Tickets, Orders, and Payments | Warn  | `outbox event dispatch failed` — publishing an event or recording its publish result failed.                                                                      | `operation` (`publish`, `mark_failed`, or `mark_published`), `event_id`, `subject`, `error` |
+
+### LogQL queries
+
+- Tickets creation: `{service="tickets", environment="local"} |= "ticket creation failed"`
+- Tickets update: `{service="tickets", environment="local"} |= "ticket update failed"`
+- Orders creation: `{service="orders", environment="local"} |= "order creation failed"`
+- Orders cancellation: `{service="orders", environment="local"} |= "order cancellation failed"`
+- Payments creation: `{service="payments", environment="local"} |= "payment creation failed"`
+- Payments simulated failure: `{service="payments", environment="local"} |= "payment failed"`
+- Expiration terminal delivery: `{service="expiration", environment="local"} |= "terminal OrderCreated event"`
+- Expiration retryable scheduling failure: `{service="expiration", environment="local"} |= "order-created handling failed; event will be retried"`
+- Expiration retryable publishing failure: `{service="expiration", environment="local"} |= "expiration-complete publish failed"`
+- Transactional outbox: `{environment="local", service=~"tickets|orders|payments"} |= "outbox event dispatch failed"`
 
 ## Out of scope
 
 The catalog intentionally excludes normal validation, authorization, and
 expected domain responses; success and broad request logging; generic startup
-or reconnect messages; metrics; tracing; dashboards; alerts; and production
-observability configuration.
+or reconnect messages; business lifecycle metrics; tracing and Tempo;
+dashboards; alerts; and production observability configuration.

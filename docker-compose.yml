@@ -15,6 +15,8 @@ services:
       TICKETING_USER_APP_ORIGIN: ${TICKETING_USER_APP_ORIGIN:-http://localhost:3001}
     ports:
       - '3000:3000'
+    expose:
+      - '9090'
     depends_on:
       - identity
       - payments
@@ -37,6 +39,7 @@ services:
         condition: service_completed_successfully
     expose:
       - '50052'
+      - '9090'
 
   nats:
     image: nats:2.11-alpine
@@ -76,6 +79,8 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
+    expose:
+      - '9090'
 
   nui:
     image: ghcr.io/nats-nui/nui:latest
@@ -129,11 +134,27 @@ services:
     depends_on:
       loki:
         condition: service_started
+      prometheus:
+        condition: service_started
     ports:
       - '127.0.0.1:3002:3000'
     volumes:
       - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana-data:/var/lib/grafana
+
+  prometheus:
+    image: prom/prometheus:v3.6.0
+    container_name: prometheus
+    profiles: ['tools']
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+    ports:
+      - '127.0.0.1:9090:9090'
+    volumes:
+      - ./infra/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
 
   alloy:
     image: grafana/alloy:latest
@@ -202,6 +223,7 @@ services:
         condition: service_completed_successfully
     expose:
       - '50053'
+      - '9090'
 
   orders-migrate:
     build:
@@ -255,6 +277,7 @@ services:
         condition: service_completed_successfully
     expose:
       - '50054'
+      - '9090'
 
   payments-migrate:
     build:
@@ -313,6 +336,7 @@ services:
         condition: service_started
     expose:
       - '50051'
+      - '9090'
 
   identity-migrate:
     image: identity:dev
@@ -366,3 +390,4 @@ volumes:
   redisinsight-data:
   loki-data:
   grafana-data:
+  prometheus-data:

@@ -23,5 +23,6 @@ COPY apps/payments/migrations ./migrations
 ENV GRPC_PORT=50054
 
 EXPOSE 50054
+EXPOSE 9090
 
 CMD ["payments"]

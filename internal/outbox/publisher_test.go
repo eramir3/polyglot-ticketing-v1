@@ -146,7 +146,7 @@ func TestPublisherLogsEventDispatchFailure(t *testing.T) {
 		},
 		operation: "publish",
 		err:       errors.New("NATS unavailable"),
-	})
+	}, time.Now())
 
 	for _, expected := range []string{
 		"level=WARN",

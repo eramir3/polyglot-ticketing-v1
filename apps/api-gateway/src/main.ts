@@ -1,11 +1,36 @@
 import { Logger } from '@nestjs/common';
 import { createApiGatewayApplication } from './app/app.bootstrap';
+import {
+  ApiGatewayMetrics,
+  startMetricsServer,
+} from './observability/prometheus';
 
 async function bootstrap() {
+  const metrics = new ApiGatewayMetrics();
+  const metricsServer = startMetricsServer(metrics);
   const app = await createApiGatewayApplication();
+  app.enableShutdownHooks();
+  app.use((request: any, response: any, next: () => void) => {
+    const started = performance.now();
+    response.once('finish', () => {
+      const route =
+        typeof request.route?.path === 'string'
+          ? request.route.path
+          : 'unmatched';
+      metrics.observeRequest(
+        request.method,
+        route,
+        response.statusCode,
+        (performance.now() - started) / 1_000,
+      );
+    });
+    next();
+  });
   const globalPrefix = 'api';
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port);
+  process.once('SIGINT', () => metricsServer.close());
+  process.once('SIGTERM', () => metricsServer.close());
   Logger.log(
     `API gateway is running on: http://localhost:${port}/${globalPrefix}`,
   );

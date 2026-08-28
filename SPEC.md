@@ -350,6 +350,7 @@ Local ports:
 | NUI               | `http://localhost:31311`             |
 | Mailpit inbox     | `http://localhost:8025`              |
 | Grafana           | `http://localhost:3002`              |
+| Prometheus        | `http://localhost:9090`              |
 
 NUI and Redis Insight are optional local development tools. Start them with
 `make docker-up-tools`. In NUI, add a connection to `nats://nats:4222`. In
@@ -547,14 +548,17 @@ projection, and `orders.order.canceled.v1` advances an existing projection to
 
 ## Local Observability
 
-`make docker-up-tools` starts an opt-in local Grafana, Loki, and Grafana Alloy
-stack. Grafana is available at `http://localhost:3002` and provisions Loki as
-its default datasource. Alloy reads Docker stdout only for `api-gateway`,
+`make docker-up-tools` starts an opt-in local Grafana, Loki, Prometheus, and
+Grafana Alloy stack. Grafana is available at `http://localhost:3002` and
+provisions Loki and Prometheus datasources; the Prometheus UI is available at
+`http://localhost:9090`. Alloy reads Docker stdout only for `api-gateway`,
 `identity`, `tickets`, `orders`, `payments`, and `expiration`; each Loki stream
-is labeled with its `service` and `environment="local"`. Loki persists local
-filesystem storage for seven days. The intentional, high-signal log messages
-and ready-to-paste LogQL queries are cataloged in
+is labeled with its `service` and `environment="local"`. Prometheus scrapes a
+private `:9090/metrics` endpoint from the same six services and applies the
+same fixed labels. Loki and Prometheus retain local data for seven days. The
+intentional, high-signal log and metrics catalog, including ready-to-paste
+LogQL and PromQL queries, is in
 [`docs/observability.md`](docs/observability.md). Ordinary validation and
-authentication failures, metrics, tracing, dashboards, alerts, broad request or
-domain-success logging, and production observability configuration are not part
-of this increment.
+authentication failures, business lifecycle metrics, tracing and Tempo,
+dashboards, alerts, broad request or domain-success logging, and production
+observability configuration are not part of this increment.

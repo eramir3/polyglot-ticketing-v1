@@ -20,4 +20,7 @@ COPY --from=build /out/orders /usr/local/bin/orders
 COPY --from=build /out/orders-migrate /usr/local/bin/orders-migrate
 COPY apps/orders/migrations ./migrations
 
+EXPOSE 50053
+EXPOSE 9090
+
 CMD ["orders"]

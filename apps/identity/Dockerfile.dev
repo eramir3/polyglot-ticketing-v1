@@ -15,5 +15,6 @@ ENV NODE_ENV=development
 ENV GRPC_PORT=50051
 
 EXPOSE 50051
+EXPOSE 9090
 
 CMD ["node", "dist/apps/identity/apps/identity/src/main.js"]

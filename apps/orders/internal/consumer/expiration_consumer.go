@@ -10,6 +10,7 @@ import (
 
 	"polyglot-ticketing-v1/apps/orders/internal/order"
 	expirationevents "polyglot-ticketing-v1/contracts/expiration"
+	"polyglot-ticketing-v1/internal/observability"
 )
 
 const (
@@ -20,6 +21,7 @@ const (
 type ExpirationCompleteConsumer struct {
 	handler *order.ExpirationCompleteHandler
 	logger  *slog.Logger
+	metrics *observability.Metrics
 	url     string
 }
 
@@ -33,10 +35,12 @@ func NewExpirationCompleteConsumer(
 	repository order.ExpirationEventRepository,
 	url string,
 	logger *slog.Logger,
+	metrics ...*observability.Metrics,
 ) *ExpirationCompleteConsumer {
 	return &ExpirationCompleteConsumer{
 		handler: order.NewExpirationCompleteHandler(repository),
 		logger:  logger,
+		metrics: firstMetrics(metrics),
 		url:     url,
 	}
 }
@@ -94,11 +98,15 @@ func (consumer *ExpirationCompleteConsumer) handleDelivery(
 	payload []byte,
 	delivery expirationEventDelivery,
 ) {
+	started := time.Now()
 	err := consumer.handler.Handle(ctx, payload)
 	if err == nil {
 		if err := delivery.Ack(); err != nil {
 			consumer.logger.Warn("failed to acknowledge expiration-complete event", "error", err)
+			consumer.observe("ack_failed", started)
+			return
 		}
+		consumer.observe("success", started)
 		return
 	}
 	if errors.Is(err, order.ErrInvalidExpirationEvent) {
@@ -106,11 +114,19 @@ func (consumer *ExpirationCompleteConsumer) handleDelivery(
 		if termErr := delivery.Term(); termErr != nil {
 			consumer.logger.Warn("failed to terminate expiration-complete event", "error", termErr)
 		}
+		consumer.observe("terminal", started)
 		return
 	}
 
 	consumer.logger.Warn("expiration-complete handling failed; event will be retried", "error", err)
 	if nakErr := delivery.Nak(); nakErr != nil {
 		consumer.logger.Warn("failed to negatively acknowledge expiration-complete event", "error", nakErr)
+	}
+	consumer.observe("retry", started)
+}
+
+func (consumer *ExpirationCompleteConsumer) observe(outcome string, started time.Time) {
+	if consumer.metrics != nil {
+		consumer.metrics.ObserveBackground("jetstream_consumer", "expiration_complete", outcome, started)
 	}
 }

@@ -11,6 +11,7 @@ import {
 } from './expiration.constants.js';
 import { JetStreamService } from './jetstream.service.js';
 import { redisConnectionOptions } from './redis.config.js';
+import { ExpirationMetrics } from '../observability/prometheus.js';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { redisConnectionOptions } from './redis.config.js';
     },
     OrderCreatedHandler,
     OrderCreatedConsumer,
+    ExpirationMetrics,
   ],
 })
 export class ExpirationModule {}

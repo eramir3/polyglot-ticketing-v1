@@ -14,6 +14,7 @@ import (
 	"polyglot-ticketing-v1/apps/orders/internal/consumer"
 	grpcserver "polyglot-ticketing-v1/apps/orders/internal/grpc"
 	"polyglot-ticketing-v1/apps/orders/internal/order"
+	"polyglot-ticketing-v1/internal/observability"
 	"polyglot-ticketing-v1/internal/outbox"
 	ordersv1 "polyglot-ticketing-v1/protogen/go/orders/v1"
 )
@@ -30,37 +31,45 @@ func main() {
 	defer pool.Close()
 
 	repository := order.NewPostgresRepository(pool)
+	metrics, registry := observability.NewMetrics()
+	observability.StartMetricsServer(ctx, environmentVariable("METRICS_PORT", observability.DefaultMetricsPort), registry, slog.Default())
 	natsURL := environmentVariable("NATS_URL", "nats://localhost:4222")
 	go outbox.NewPublisher(
 		outbox.NewPostgresRepository(pool),
 		outbox.Config{StreamName: "ORDERS_EVENTS", Subjects: []string{"orders.>"}},
 		natsURL,
 		slog.Default(),
+		metrics,
 	).Run(ctx)
 	go consumer.NewTicketConsumer(
 		repository,
 		natsURL,
 		slog.Default(),
+		metrics,
 	).Run(ctx)
 	go consumer.NewExpirationCompleteConsumer(
 		repository,
 		natsURL,
 		slog.Default(),
+		metrics,
 	).Run(ctx)
 	go consumer.NewPaymentCreatedConsumer(
 		repository,
 		natsURL,
 		slog.Default(),
+		metrics,
 	).Run(ctx)
 	go consumer.NewPaymentSucceededConsumer(
 		repository,
 		natsURL,
 		slog.Default(),
+		metrics,
 	).Run(ctx)
 	go consumer.NewPaymentFailedConsumer(
 		repository,
 		natsURL,
 		slog.Default(),
+		metrics,
 	).Run(ctx)
 
 	listener, err := net.Listen("tcp", ":"+environmentVariable("GRPC_PORT", "50053"))
@@ -69,7 +78,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(metrics.UnaryServerInterceptor))
 	ordersv1.RegisterOrdersServiceServer(
 		server,
 		grpcserver.NewServer(order.NewService(repository), slog.Default()),

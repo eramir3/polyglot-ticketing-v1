@@ -10,6 +10,7 @@ import (
 
 	"polyglot-ticketing-v1/apps/orders/internal/order"
 	paymentevents "polyglot-ticketing-v1/contracts/payments"
+	"polyglot-ticketing-v1/internal/observability"
 )
 
 const (
@@ -18,11 +19,13 @@ const (
 )
 
 type PaymentResultConsumer struct {
-	durable string
-	handler *order.PaymentResultHandler
-	logger  *slog.Logger
-	subject string
-	url     string
+	durable   string
+	handler   *order.PaymentResultHandler
+	logger    *slog.Logger
+	metrics   *observability.Metrics
+	operation string
+	subject   string
+	url       string
 }
 
 type paymentResultDelivery interface {
@@ -31,27 +34,31 @@ type paymentResultDelivery interface {
 	Term(...nats.AckOpt) error
 }
 
-func NewPaymentFailedConsumer(repository order.PaymentResultEventRepository, url string, logger *slog.Logger) *PaymentResultConsumer {
-	return newPaymentResultConsumer(repository, paymentevents.PaymentFailedSubject, paymentFailedDurableName, url, logger)
+func NewPaymentFailedConsumer(repository order.PaymentResultEventRepository, url string, logger *slog.Logger, metrics ...*observability.Metrics) *PaymentResultConsumer {
+	return newPaymentResultConsumer(repository, paymentevents.PaymentFailedSubject, paymentFailedDurableName, "payment_failed", url, logger, firstMetrics(metrics))
 }
 
-func NewPaymentSucceededConsumer(repository order.PaymentResultEventRepository, url string, logger *slog.Logger) *PaymentResultConsumer {
-	return newPaymentResultConsumer(repository, paymentevents.PaymentSucceededSubject, paymentSucceededDurableName, url, logger)
+func NewPaymentSucceededConsumer(repository order.PaymentResultEventRepository, url string, logger *slog.Logger, metrics ...*observability.Metrics) *PaymentResultConsumer {
+	return newPaymentResultConsumer(repository, paymentevents.PaymentSucceededSubject, paymentSucceededDurableName, "payment_succeeded", url, logger, firstMetrics(metrics))
 }
 
 func newPaymentResultConsumer(
 	repository order.PaymentResultEventRepository,
 	subject string,
 	durable string,
+	operation string,
 	url string,
 	logger *slog.Logger,
+	metrics *observability.Metrics,
 ) *PaymentResultConsumer {
 	return &PaymentResultConsumer{
-		durable: durable,
-		handler: order.NewPaymentResultHandler(repository),
-		logger:  logger,
-		subject: subject,
-		url:     url,
+		durable:   durable,
+		handler:   order.NewPaymentResultHandler(repository),
+		logger:    logger,
+		metrics:   metrics,
+		operation: operation,
+		subject:   subject,
+		url:       url,
 	}
 }
 
@@ -103,11 +110,15 @@ func (consumer *PaymentResultConsumer) consume(ctx context.Context) error {
 }
 
 func (consumer *PaymentResultConsumer) handleDelivery(ctx context.Context, payload []byte, delivery paymentResultDelivery) {
+	started := time.Now()
 	err := consumer.handler.Handle(ctx, consumer.subject, payload)
 	if err == nil {
 		if err := delivery.Ack(); err != nil {
 			consumer.logger.Warn("failed to acknowledge payment result event", "subject", consumer.subject, "error", err)
+			consumer.observe("ack_failed", started)
+			return
 		}
+		consumer.observe("success", started)
 		return
 	}
 	if errors.Is(err, order.ErrInvalidPaymentEvent) {
@@ -115,10 +126,18 @@ func (consumer *PaymentResultConsumer) handleDelivery(ctx context.Context, paylo
 		if termErr := delivery.Term(); termErr != nil {
 			consumer.logger.Warn("failed to terminate payment result event", "subject", consumer.subject, "error", termErr)
 		}
+		consumer.observe("terminal", started)
 		return
 	}
 	consumer.logger.Warn("payment result handling failed; event will be retried", "subject", consumer.subject, "error", err)
 	if nakErr := delivery.Nak(); nakErr != nil {
 		consumer.logger.Warn("failed to negatively acknowledge payment result event", "subject", consumer.subject, "error", nakErr)
+	}
+	consumer.observe("retry", started)
+}
+
+func (consumer *PaymentResultConsumer) observe(outcome string, started time.Time) {
+	if consumer.metrics != nil {
+		consumer.metrics.ObserveBackground("jetstream_consumer", consumer.operation, outcome, started)
 	}
 }

@@ -23,5 +23,6 @@ COPY apps/tickets/migrations ./migrations
 ENV GRPC_PORT=50052
 
 EXPOSE 50052
+EXPOSE 9090
 
 CMD ["tickets"]
