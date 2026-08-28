@@ -100,6 +100,58 @@ services:
     volumes:
       - redisinsight-data:/data
 
+  loki:
+    image: grafana/loki:3.6.0
+    container_name: loki
+    profiles: ['tools']
+    command: ['-config.file=/etc/loki/config.yml']
+    depends_on:
+      loki-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./infra/observability/loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+
+  loki-init:
+    image: busybox:1.37
+    container_name: loki-init
+    profiles: ['tools']
+    user: '0:0'
+    command: ['sh', '-c', 'mkdir -p /loki && chown -R 10001:10001 /loki']
+    restart: 'no'
+    volumes:
+      - loki-data:/loki
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    profiles: ['tools']
+    depends_on:
+      loki:
+        condition: service_started
+    ports:
+      - '127.0.0.1:3002:3000'
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    profiles: ['tools']
+    command:
+      [
+        'run',
+        '--server.http.listen-addr=0.0.0.0:12345',
+        '/etc/alloy/config.alloy',
+      ]
+    depends_on:
+      loki:
+        condition: service_started
+    volumes:
+      - ./infra/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
   tickets-migrate:
     build:
       context: .
@@ -311,3 +363,5 @@ volumes:
   expiration-redis-data:
   nui-data:
   redisinsight-data:
+  loki-data:
+  grafana-data:

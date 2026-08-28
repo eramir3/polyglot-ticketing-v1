@@ -75,8 +75,8 @@ docker-build: ## Build all Docker Compose service images.
 docker-up: ## Start the local Docker Compose stack and rebuild images.
 	docker compose up -d --build
 
-docker-up-tools: ## Start optional local development tools, including NUI and Redis Insight.
-	docker compose --profile tools up -d nui redisinsight
+docker-up-tools: ## Start optional local development tools, including NUI, Redis Insight, Grafana, and Loki.
+	docker compose --profile tools up -d nui redisinsight loki grafana alloy
 
 docker-down: ## Stop and remove the local Docker Compose stack.
 	docker compose down

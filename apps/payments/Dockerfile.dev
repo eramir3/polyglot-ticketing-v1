@@ -8,6 +8,7 @@ RUN go mod download
 COPY apps/payments ./apps/payments
 COPY protogen/go ./protogen/go
 COPY contracts ./contracts
+COPY internal ./internal
 RUN CGO_ENABLED=0 go build -o /out/payments ./apps/payments/cmd/payments
 RUN CGO_ENABLED=0 go build -o /out/payments-migrate ./apps/payments/cmd/migrate
 

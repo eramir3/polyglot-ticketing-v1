@@ -347,6 +347,7 @@ Local ports:
 | Redis Insight     | `http://localhost:5540`              |
 | NUI               | `http://localhost:31311`             |
 | Mailpit inbox     | `http://localhost:8025`              |
+| Grafana           | `http://localhost:3002`              |
 
 NUI and Redis Insight are optional local development tools. Start them with
 `make docker-up-tools`. In NUI, add a connection to `nats://nats:4222`. In
@@ -503,8 +504,9 @@ stream, or durable parking/reconciliation workflow. Those mechanisms are
 required before cancellation messages whose matching reservation never arrives
 can be discarded safely and remain future work.
 
-Additional event subjects, consumers, CI/CD, observability, and deployment
-environments remain open design and implementation work.
+Additional event subjects, consumers, CI/CD, deployment environments, and
+observability beyond local log collection remain open design and implementation
+work.
 
 Expiration consumes `orders.order.created.v1` with a durable, explicit-ack
 consumer. It acknowledges the source event only after BullMQ accepts a delayed
@@ -539,3 +541,14 @@ events are terminated and transient failures or version gaps are negatively
 acknowledged for retry. `orders.order.created.v1` creates a version `0`
 projection, and `orders.order.canceled.v1` advances an existing projection to
 `Canceled`.
+
+## Local Observability
+
+`make docker-up-tools` starts an opt-in local Grafana, Loki, and Grafana Alloy
+stack. Grafana is available at `http://localhost:3002` and provisions Loki as
+its default datasource. Alloy reads Docker stdout only for `api-gateway`,
+`identity`, `tickets`, `orders`, `payments`, and `expiration`; each Loki stream
+is labeled with its `service` and `environment="local"`. Loki persists local
+filesystem storage for seven days. Metrics, tracing, dashboards, alerts,
+structured application logging, and production observability configuration are
+not part of this increment.
