@@ -42,10 +42,15 @@ export class OrderCreatedConsumer
       delivery.ack();
     } catch (error) {
       if (error instanceof InvalidOrderCreatedEvent) {
+        this.logger.error('terminal OrderCreated event', error.message);
         delivery.term(error.message);
         return;
       }
 
+      this.logger.warn(
+        'order-created handling failed; event will be retried',
+        error,
+      );
       delivery.nak();
     }
   }

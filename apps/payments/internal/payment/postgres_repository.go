@@ -104,10 +104,10 @@ func insertPaymentCreatedEvent(ctx context.Context, tx pgx.Tx, created Payment) 
 // ResolveNextPending claims and resolves one payment. The status update and
 // result event use one transaction, leaving a failed transaction Pending for a
 // later processor retry.
-func (repository *PostgresRepository) ResolveNextPending(ctx context.Context, outcome ProcessorOutcome) (bool, error) {
+func (repository *PostgresRepository) ResolveNextPending(ctx context.Context, outcome ProcessorOutcome) (Payment, bool, error) {
 	tx, err := repository.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return false, err
+		return Payment{}, false, err
 	}
 	defer tx.Rollback(ctx)
 
@@ -120,31 +120,31 @@ func (repository *PostgresRepository) ResolveNextPending(ctx context.Context, ou
 		FOR UPDATE SKIP LOCKED
 		LIMIT 1`, StatusPending).Scan(&pending.ID, &pending.OrderID, &pending.Status)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false, tx.Commit(ctx)
+		return Payment{}, false, tx.Commit(ctx)
 	}
 	if err != nil {
-		return false, err
+		return Payment{}, false, err
 	}
 
 	resolvedStatus, err := statusForOutcome(outcome)
 	if err != nil {
-		return false, err
+		return Payment{}, false, err
 	}
 	_, err = tx.Exec(ctx, `
 		UPDATE payments
 		SET status = $2
 		WHERE id = $1`, pending.ID, resolvedStatus)
 	if err != nil {
-		return false, err
+		return Payment{}, false, err
 	}
 	pending.Status = resolvedStatus
 	if err := insertPaymentResultEvent(ctx, tx, pending); err != nil {
-		return false, err
+		return Payment{}, false, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return false, err
+		return Payment{}, false, err
 	}
-	return true, nil
+	return pending, true, nil
 }
 
 func statusForOutcome(outcome ProcessorOutcome) (Status, error) {

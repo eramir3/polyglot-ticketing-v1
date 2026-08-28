@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -17,10 +18,11 @@ import (
 type Server struct {
 	ticketsv1.UnimplementedTicketsServiceServer
 	service *ticket.Service
+	logger  *slog.Logger
 }
 
-func NewServer(service *ticket.Service) *Server {
-	return &Server{service: service}
+func NewServer(service *ticket.Service, logger *slog.Logger) *Server {
+	return &Server{service: service, logger: logger}
 }
 
 func (server *Server) CreateTicket(
@@ -36,6 +38,7 @@ func (server *Server) CreateTicket(
 		return nil, structuredError(codes.InvalidArgument, validationErrors)
 	}
 	if err != nil {
+		server.logger.Error("ticket creation failed", "operation", "create_ticket", "error", err)
 		return nil, structuredError(codes.Internal, []ticket.ValidationError{{
 			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
 			Message: "Unable to create ticket.",
@@ -76,6 +79,12 @@ func (server *Server) UpdateTicket(
 		}})
 	}
 	if err != nil {
+		server.logger.Error(
+			"ticket update failed",
+			"operation", "update_ticket",
+			"ticket_id", request.GetId(),
+			"error", err,
+		)
 		return nil, structuredError(codes.Internal, []ticket.ValidationError{{
 			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
 			Message: "Unable to update ticket.",

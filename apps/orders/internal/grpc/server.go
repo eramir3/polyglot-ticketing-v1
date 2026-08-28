@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -18,10 +19,11 @@ import (
 type Server struct {
 	ordersv1.UnimplementedOrdersServiceServer
 	service *order.Service
+	logger  *slog.Logger
 }
 
-func NewServer(service *order.Service) *Server {
-	return &Server{service: service}
+func NewServer(service *order.Service, logger *slog.Logger) *Server {
+	return &Server{service: service, logger: logger}
 }
 
 func (server *Server) CancelOrder(
@@ -49,6 +51,12 @@ func (server *Server) CancelOrder(
 		}})
 	}
 	if err != nil {
+		server.logger.Error(
+			"order cancellation failed",
+			"operation", "cancel_order",
+			"order_id", request.GetOrderId(),
+			"error", err,
+		)
 		return nil, structuredError(codes.Internal, []order.ValidationError{{
 			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
 			Message: "Unable to cancel order.",
@@ -83,6 +91,12 @@ func (server *Server) CreateOrder(
 		}})
 	}
 	if err != nil {
+		server.logger.Error(
+			"order creation failed",
+			"operation", "create_order",
+			"ticket_id", request.GetTicketId(),
+			"error", err,
+		)
 		return nil, structuredError(codes.Internal, []order.ValidationError{{
 			Code:    errorcode.String(commonv1.ErrorCode_ERROR_CODE_INTERNAL_ERROR),
 			Message: "Unable to create order.",

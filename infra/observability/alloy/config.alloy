@@ -30,7 +30,7 @@ loki.source.docker "applications" {
 loki.process "applications" {
   stage.static_labels {
     values = {
-      environment = "local"
+      environment = "local",
     }
   }
 

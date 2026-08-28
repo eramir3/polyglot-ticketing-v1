@@ -4,16 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
 var (
-	ErrInvalidOrderEvent    = errors.New("invalid order event")
-	ErrOrderEventVersionGap = errors.New("order event version gap")
-	ErrOrderNotFound        = errors.New("order not found")
-	ErrOrderNotPayable      = errors.New("order cannot be paid")
-	ErrUnsupportedSubject   = errors.New("unsupported order event subject")
-	ErrInvalidOutcome       = errors.New("invalid payment processor outcome")
+	ErrInvalidOrderEvent     = errors.New("invalid order event")
+	ErrOrderEventVersionGap  = errors.New("order event version gap")
+	ErrOrderNotFound         = errors.New("order not found")
+	ErrOrderNotPayable       = errors.New("order cannot be paid")
+	ErrUnsupportedSubject    = errors.New("unsupported order event subject")
+	ErrInvalidOutcome        = errors.New("invalid payment processor outcome")
+	ErrInvalidRandomFailures = errors.New("invalid payment processor random failures setting")
 )
 
 type OrderStatus string
@@ -70,7 +72,7 @@ type Repository interface {
 }
 
 type SettlementRepository interface {
-	ResolveNextPending(context.Context, ProcessorOutcome) (bool, error)
+	ResolveNextPending(context.Context, ProcessorOutcome) (Payment, bool, error)
 }
 
 type OrderProjectionRepository interface {
@@ -87,4 +89,19 @@ func ParseProcessorOutcome(value string) (ProcessorOutcome, error) {
 	default:
 		return "", fmt.Errorf("%w: %q", ErrInvalidOutcome, value)
 	}
+}
+
+// ParseRandomFailures reads the opt-in local simulation mode. An empty value
+// keeps the deterministic processor outcome behavior.
+func ParseRandomFailures(value string) (bool, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return false, nil
+	}
+
+	randomFailures, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("%w: %q", ErrInvalidRandomFailures, value)
+	}
+	return randomFailures, nil
 }

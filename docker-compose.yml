@@ -245,6 +245,7 @@ services:
       GRPC_PORT: 50054
       NATS_URL: nats://nats:4222
       PAYMENT_PROCESSOR_OUTCOME: ${PAYMENT_PROCESSOR_OUTCOME:-success}
+      PAYMENT_PROCESSOR_RANDOM_FAILURES: ${PAYMENT_PROCESSOR_RANDOM_FAILURES:-false}
     depends_on:
       nats:
         condition: service_started

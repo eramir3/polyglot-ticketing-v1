@@ -1,5 +1,7 @@
 import { create, toBinary } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
+import { jest } from '@jest/globals';
+import { Logger } from '@nestjs/common';
 import { OrderCreatedSchema } from '../../../../protogen/ts/orders/v1/events_pb.js';
 import { OrderStatus } from '../../../../protogen/ts/orders/v1/orders_pb.js';
 import { OrderCreatedConsumer } from './order-created.consumer.js';
@@ -29,6 +31,7 @@ describe('OrderCreatedConsumer', () => {
   });
 
   it('terminates malformed OrderCreated events', async () => {
+    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
     const consumer = new OrderCreatedConsumer(
       new OrderCreatedHandler(new FakeScheduler() as never),
       {} as never,
@@ -40,13 +43,20 @@ describe('OrderCreatedConsumer', () => {
     expect(delivery.acknowledged).toBe(0);
     expect(delivery.negativelyAcknowledged).toBe(0);
     expect(delivery.terminated).toBe(1);
+    expect(error).toHaveBeenCalledWith(
+      'terminal OrderCreated event',
+      'OrderCreated event is invalid.',
+    );
+    error.mockRestore();
   });
 
   it('negatively acknowledges transient scheduling failures', async () => {
+    const schedulingError = new Error('Redis unavailable');
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
     const consumer = new OrderCreatedConsumer(
       {
         handle: async () => {
-          throw new Error('Redis unavailable');
+          throw schedulingError;
         },
       } as unknown as OrderCreatedHandler,
       {} as never,
@@ -58,6 +68,11 @@ describe('OrderCreatedConsumer', () => {
     expect(delivery.acknowledged).toBe(0);
     expect(delivery.negativelyAcknowledged).toBe(1);
     expect(delivery.terminated).toBe(0);
+    expect(warn).toHaveBeenCalledWith(
+      'order-created handling failed; event will be retried',
+      schedulingError,
+    );
+    warn.mockRestore();
   });
 });
 

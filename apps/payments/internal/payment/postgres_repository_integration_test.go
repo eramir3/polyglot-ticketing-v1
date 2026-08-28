@@ -86,13 +86,13 @@ func TestPostgresRepositoryResolvesPendingPaymentAndWritesResultEvent(t *testing
 				t.Fatalf("create pending payment: payment=%+v created=%t err=%v", created, wasCreated, err)
 			}
 
-			resolved, err := repository.ResolveNextPending(ctx, testCase.outcome)
+			_, resolved, err := repository.ResolveNextPending(ctx, testCase.outcome)
 			if err != nil || !resolved {
 				t.Fatalf("resolve pending payment: resolved=%t err=%v", resolved, err)
 			}
 			assertPaymentResult(t, ctx, pool, created, testCase.expectedStatus, testCase.expectedSubject)
 
-			resolved, err = repository.ResolveNextPending(ctx, testCase.outcome)
+			_, resolved, err = repository.ResolveNextPending(ctx, testCase.outcome)
 			if err != nil || resolved {
 				t.Fatalf("repeat resolution: resolved=%t err=%v", resolved, err)
 			}
@@ -122,7 +122,7 @@ func TestPostgresRepositoryResolvesPendingPaymentOnlyOnceConcurrently(t *testing
 		go func() {
 			defer workers.Done()
 			<-start
-			resolved, err := repository.ResolveNextPending(ctx, ProcessorOutcomeSuccess)
+			_, resolved, err := repository.ResolveNextPending(ctx, ProcessorOutcomeSuccess)
 			results <- resolved
 			errors <- err
 		}()

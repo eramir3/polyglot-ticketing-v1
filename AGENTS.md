@@ -89,6 +89,10 @@ expiration jobs.
 - Build all services: `make build`; test all services: `make test`.
 - Orders and Payments tests include PostgreSQL Testcontainers integration tests
   and require a working Docker container runtime.
+- Payments simulation is deterministic by default through
+  `PAYMENT_PROCESSOR_OUTCOME`; set `PAYMENT_PROCESSOR_RANDOM_FAILURES=true`
+  for local stress testing with an independent 10% failure probability per
+  payment.
 - Build or run an individual service with `make build-<service>` or
   `make serve-<service>` (for example, `make serve-tickets`).
 - Generate contracts with `make generate-proto`.
