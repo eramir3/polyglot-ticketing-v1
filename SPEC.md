@@ -16,21 +16,21 @@ port `3000` in local Docker Compose.
 
 Implemented endpoint:
 
-| Method   | Path                               | Behavior                                                                 |
-| -------- | ---------------------------------- | ------------------------------------------------------------------------ |
-| `POST`   | `/api/auth/signup`                 | Validates a signup request and forwards it to identity through gRPC.     |
-| `POST`   | `/api/auth/signin`                 | Signs in with email and password, then sets an HTTP-only session cookie. |
-| `POST`   | `/api/auth/signout`                | Revokes the current session and expires the HTTP-only session cookie.    |
-| `GET`    | `/api/auth/currentuser`            | Returns safe metadata for the authenticated user.                        |
-| `GET`    | `/api/auth/verify-email?token=...` | Verifies an email token through identity gRPC.                           |
-| `GET`    | `/api/tickets`                     | Retrieves all tickets through tickets gRPC.                              |
-| `GET`    | `/api/tickets/:id`                 | Retrieves a ticket by ID through tickets gRPC.                           |
-| `POST`   | `/api/tickets`                     | Creates a ticket for the authenticated user through tickets gRPC.        |
-| `PUT`    | `/api/tickets/:id`                 | Updates an owned ticket through tickets gRPC.                            |
-| `GET`    | `/api/orders`                      | Retrieves the authenticated user's orders through orders gRPC.           |
-| `GET`    | `/api/orders/:id`                  | Retrieves one owned order through orders gRPC.                           |
-| `POST`   | `/api/orders`                      | Creates an order for the authenticated user through orders gRPC.         |
-| `DELETE` | `/api/orders/:id`                  | Cancels one owned active order through orders gRPC.                      |
+| Method   | Path                               | Behavior                                                                        |
+| -------- | ---------------------------------- | ------------------------------------------------------------------------------- |
+| `POST`   | `/api/auth/signup`                 | Validates a signup request and forwards it to identity through gRPC.            |
+| `POST`   | `/api/auth/signin`                 | Signs in with email and password, then sets an HTTP-only session cookie.        |
+| `POST`   | `/api/auth/signout`                | Revokes the current session and expires the HTTP-only session cookie.           |
+| `GET`    | `/api/auth/currentuser`            | Returns safe metadata for the authenticated user.                               |
+| `GET`    | `/api/auth/verify-email?token=...` | Verifies an email token through identity gRPC.                                  |
+| `GET`    | `/api/tickets`                     | Retrieves all tickets through tickets gRPC.                                     |
+| `GET`    | `/api/tickets/:id`                 | Retrieves a ticket by ID through tickets gRPC.                                  |
+| `POST`   | `/api/tickets`                     | Creates a ticket for the authenticated user through tickets gRPC.               |
+| `PUT`    | `/api/tickets/:id`                 | Updates an owned ticket through tickets gRPC.                                   |
+| `GET`    | `/api/orders`                      | Retrieves the authenticated user's orders through orders gRPC.                  |
+| `GET`    | `/api/orders/:id`                  | Retrieves one owned order through orders gRPC.                                  |
+| `POST`   | `/api/orders`                      | Creates an order for the authenticated user through orders gRPC.                |
+| `DELETE` | `/api/orders/:id`                  | Cancels one owned active order through orders gRPC.                             |
 | `POST`   | `/api/payments`                    | Creates or returns a payment for an eligible owned order through payments gRPC. |
 
 The gateway validates HTTP payloads with NestJS DTOs, exposes public HTTP
@@ -244,11 +244,11 @@ send another message.
 
 ## Service Communication
 
-| Direction                          | Transport                 | Status                          |
-| ---------------------------------- | ------------------------- | ------------------------------- |
-| User application to API gateway    | REST now; GraphQL planned | Gateway REST signup implemented |
+| Direction                          | Transport                 | Status                                  |
+| ---------------------------------- | ------------------------- | --------------------------------------- |
+| User application to API gateway    | REST now; GraphQL planned | Gateway REST signup implemented         |
 | API gateway to backend services    | gRPC                      | Identity, tickets, orders, and payments |
-| Backend service to backend service | NATS JetStream            | Ticket, order, and expiration events |
+| Backend service to backend service | NATS JetStream            | Ticket, order, and expiration events    |
 
 Kubernetes Gateway API will provide ingress and routing in a later deployment
 phase. No Kubernetes controller or manifests are implemented yet.
@@ -343,8 +343,8 @@ Local ports:
 | Payments Postgres | `localhost:5435`                     |
 | NATS JetStream    | `nats://localhost:4222`              |
 | NATS monitoring   | `http://localhost:8222`              |
-| Redis             | `localhost:6379`                      |
-| Redis Insight     | `http://localhost:5540`               |
+| Redis             | `localhost:6379`                     |
+| Redis Insight     | `http://localhost:5540`              |
 | NUI               | `http://localhost:31311`             |
 | Mailpit inbox     | `http://localhost:8025`              |
 

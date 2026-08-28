@@ -124,6 +124,15 @@ describe('payments endpoint', () => {
     expect(repeated.body).toEqual(created.body);
   });
 
+  it('returns 404 when the order does not exist', async () => {
+    const response = await postPayment({ orderId: randomUUID() }, sessionCookie);
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      errors: [expect.objectContaining({ code: 'NOT_FOUND' })],
+    });
+  });
+
   it('hides an order owned by another user', async () => {
     const response = await postPayment(
       { orderId: await seedProjectedOrder('another-user', 'Created') },
