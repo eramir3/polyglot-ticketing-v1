@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	orderevents "polyglot-ticketing-v1/contracts/orders"
+	"polyglot-ticketing-v1/internal/tracing"
 	ordersv1 "polyglot-ticketing-v1/protogen/go/orders/v1"
 )
 
@@ -88,9 +89,10 @@ func insertOrderCreatedEvent(ctx context.Context, tx pgx.Tx, created Order, tick
 		return err
 	}
 
+	traceparent, tracestate := tracing.HeaderValues(ctx)
 	_, err = tx.Exec(ctx, `
-		INSERT INTO outbox_events (event_id, subject, payload, created_at)
-		VALUES ($1, $2, $3, $4)`, eventID, orderevents.OrderCreatedSubject, payload, occurredAt)
+		INSERT INTO outbox_events (event_id, subject, payload, created_at, traceparent, tracestate)
+		VALUES ($1, $2, $3, $4, $5, $6)`, eventID, orderevents.OrderCreatedSubject, payload, occurredAt, traceparent, tracestate)
 	return err
 }
 
@@ -493,9 +495,10 @@ func insertOrderCanceledEvent(ctx context.Context, tx pgx.Tx, canceled Order) er
 		return err
 	}
 
+	traceparent, tracestate := tracing.HeaderValues(ctx)
 	_, err = tx.Exec(ctx, `
-		INSERT INTO outbox_events (event_id, subject, payload, created_at)
-		VALUES ($1, $2, $3, $4)`, eventID, orderevents.OrderCanceledSubject, payload, occurredAt)
+		INSERT INTO outbox_events (event_id, subject, payload, created_at, traceparent, tracestate)
+		VALUES ($1, $2, $3, $4, $5, $6)`, eventID, orderevents.OrderCanceledSubject, payload, occurredAt, traceparent, tracestate)
 	return err
 }
 

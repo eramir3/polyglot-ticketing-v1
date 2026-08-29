@@ -12,6 +12,7 @@ services:
       ORDERS_GRPC_URL: orders:50053
       PAYMENTS_GRPC_URL: payments:50054
       TICKETS_GRPC_URL: tickets:50052
+      OTEL_EXPORTER_OTLP_ENDPOINT: alloy:4318
       TICKETING_USER_APP_ORIGIN: ${TICKETING_USER_APP_ORIGIN:-http://localhost:3001}
     ports:
       - '3000:3000'
@@ -32,6 +33,7 @@ services:
       DATABASE_URL: postgresql://tickets:${TICKETS_DB_PASSWORD:?TICKETS_DB_PASSWORD must be set}@tickets-db:5432/tickets-db?sslmode=disable
       GRPC_PORT: 50052
       NATS_URL: nats://nats:4222
+      OTEL_EXPORTER_OTLP_ENDPOINT: alloy:4318
     depends_on:
       tickets-db:
         condition: service_healthy
@@ -74,6 +76,7 @@ services:
     environment:
       NATS_URL: nats://nats:4222
       REDIS_URL: redis://redis:6379
+      OTEL_EXPORTER_OTLP_ENDPOINT: alloy:4318
     depends_on:
       nats:
         condition: service_started
@@ -136,6 +139,8 @@ services:
         condition: service_started
       prometheus:
         condition: service_started
+      tempo:
+        condition: service_started
     ports:
       - '127.0.0.1:3002:3000'
     volumes:
@@ -156,6 +161,28 @@ services:
       - ./infra/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
 
+  tempo:
+    image: grafana/tempo:3.0.0
+    container_name: tempo
+    profiles: ['tools']
+    command: ['-config.file=/etc/tempo/config.yml']
+    depends_on:
+      tempo-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./infra/observability/tempo/config.yml:/etc/tempo/config.yml:ro
+      - tempo-data:/var/tempo
+
+  tempo-init:
+    image: busybox:1.37
+    container_name: tempo-init
+    profiles: ['tools']
+    user: '0:0'
+    command: ['sh', '-c', 'mkdir -p /var/tempo && chown -R 10001:10001 /var/tempo']
+    restart: 'no'
+    volumes:
+      - tempo-data:/var/tempo
+
   alloy:
     image: grafana/alloy:latest
     container_name: alloy
@@ -169,6 +196,10 @@ services:
     depends_on:
       loki:
         condition: service_started
+      tempo:
+        condition: service_started
+    expose:
+      - '4318'
     volumes:
       - ./infra/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -214,6 +245,7 @@ services:
       DATABASE_URL: postgresql://orders:${ORDERS_DB_PASSWORD:?ORDERS_DB_PASSWORD must be set}@orders-db:5432/orders-db?sslmode=disable
       GRPC_PORT: 50053
       NATS_URL: nats://nats:4222
+      OTEL_EXPORTER_OTLP_ENDPOINT: alloy:4318
     depends_on:
       nats:
         condition: service_started
@@ -268,6 +300,7 @@ services:
       NATS_URL: nats://nats:4222
       PAYMENT_PROCESSOR_OUTCOME: ${PAYMENT_PROCESSOR_OUTCOME:-success}
       PAYMENT_PROCESSOR_RANDOM_FAILURES: ${PAYMENT_PROCESSOR_RANDOM_FAILURES:-false}
+      OTEL_EXPORTER_OTLP_ENDPOINT: alloy:4318
     depends_on:
       nats:
         condition: service_started
@@ -323,6 +356,7 @@ services:
       EMAIL_VERIFICATION_URL: ${EMAIL_VERIFICATION_URL:-http://localhost:3000/api/auth/verify-email}
       NODE_ENV: development
       GRPC_PORT: 50051
+      OTEL_EXPORTER_OTLP_ENDPOINT: alloy:4318
       SMTP_FROM: ${SMTP_FROM:-no-reply@polyglot-ticketing.local}
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
@@ -391,3 +425,4 @@ volumes:
   loki-data:
   grafana-data:
   prometheus-data:
+  tempo-data:

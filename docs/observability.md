@@ -5,8 +5,18 @@ observability stack. It is a troubleshooting reference, not an inventory of
 every line a service writes or every metric a client library exports.
 
 Start the opt-in stack with `make docker-up-tools`, then open Grafana at
-`http://localhost:3002`. Grafana provisions Loki and Prometheus datasources.
+`http://localhost:3002`. Grafana provisions Loki, Prometheus, and Tempo datasources.
 The Prometheus UI is available only on `http://localhost:9090`.
+
+## Tempo traces
+
+Tempo receives local traces through Alloy. Services export OTLP to Alloy's
+private Compose-network endpoint; Alloy batches and forwards traces to Tempo.
+Grafana Explore is the supported trace UI. Traces include HTTP, gRPC, NATS,
+outbox, BullMQ, and payment-processor operations, with W3C trace context
+preserved across durable handoffs. They contain transport metadata only: no
+aggregate IDs, users, payloads, SQL, or credentials. Tempo retains local data
+for seven days. Trace-to-log correlation is intentionally deferred.
 
 ## Prometheus metrics
 

@@ -11,6 +11,7 @@ import (
 	"polyglot-ticketing-v1/apps/payments/internal/payment"
 	"polyglot-ticketing-v1/apps/payments/internal/projection"
 	"polyglot-ticketing-v1/internal/observability"
+	"polyglot-ticketing-v1/internal/tracing"
 )
 
 const (
@@ -84,7 +85,7 @@ func (consumer *OrderConsumer) consume(ctx context.Context) error {
 			return err
 		}
 		for _, message := range messages {
-			consumer.handleDelivery(ctx, message.Subject, message.Data, message)
+			consumer.handleDelivery(tracing.ExtractNATS(ctx, message.Header), message.Subject, message.Data, message)
 		}
 	}
 	return context.Canceled

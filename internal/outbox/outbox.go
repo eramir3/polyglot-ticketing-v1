@@ -7,9 +7,11 @@ import (
 )
 
 type Event struct {
-	EventID string
-	Subject string
-	Payload []byte
+	EventID     string
+	Subject     string
+	Payload     []byte
+	Traceparent *string
+	Tracestate  *string
 }
 
 type Repository interface {

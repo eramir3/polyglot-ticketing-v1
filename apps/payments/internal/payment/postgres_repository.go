@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	paymentevents "polyglot-ticketing-v1/contracts/payments"
+	"polyglot-ticketing-v1/internal/tracing"
 	paymentsv1 "polyglot-ticketing-v1/protogen/go/payments/v1"
 )
 
@@ -49,7 +50,7 @@ func (repository *PostgresRepository) Create(
 	}
 	var existing Payment
 	err = tx.QueryRow(ctx, `
-		SELECT id::text, order_id::text, status::text
+		SELECT id::text, order_id::text, status::text, traceparent, tracestate
 		FROM payments
 		WHERE order_id = $1`, input.OrderID).Scan(&existing.ID, &existing.OrderID, &existing.Status)
 	if err == nil {
@@ -66,10 +67,11 @@ func (repository *PostgresRepository) Create(
 	}
 
 	var created Payment
+	traceparent, tracestate := tracing.HeaderValues(ctx)
 	err = tx.QueryRow(ctx, `
-		INSERT INTO payments (order_id)
-		VALUES ($1)
-		RETURNING id::text, order_id::text, status::text`, input.OrderID).Scan(&created.ID, &created.OrderID, &created.Status)
+		INSERT INTO payments (order_id, traceparent, tracestate)
+		VALUES ($1, $2, $3)
+		RETURNING id::text, order_id::text, status::text`, input.OrderID, traceparent, tracestate).Scan(&created.ID, &created.OrderID, &created.Status)
 	if err != nil {
 		return Payment{}, false, err
 	}
@@ -95,9 +97,10 @@ func insertPaymentCreatedEvent(ctx context.Context, tx pgx.Tx, created Payment) 
 		return err
 	}
 
+	traceparent, tracestate := tracing.HeaderValues(ctx)
 	_, err = tx.Exec(ctx, `
-		INSERT INTO outbox_events (event_id, subject, payload, created_at)
-		VALUES ($1, $2, $3, $4)`, eventID, paymentevents.PaymentCreatedSubject, payload, occurredAt)
+		INSERT INTO outbox_events (event_id, subject, payload, created_at, traceparent, tracestate)
+		VALUES ($1, $2, $3, $4, $5, $6)`, eventID, paymentevents.PaymentCreatedSubject, payload, occurredAt, traceparent, tracestate)
 	return err
 }
 
@@ -118,13 +121,14 @@ func (repository *PostgresRepository) ResolveNextPending(ctx context.Context, ou
 		WHERE status = $1
 		ORDER BY id
 		FOR UPDATE SKIP LOCKED
-		LIMIT 1`, StatusPending).Scan(&pending.ID, &pending.OrderID, &pending.Status)
+		LIMIT 1`, StatusPending).Scan(&pending.ID, &pending.OrderID, &pending.Status, &pending.Traceparent, &pending.Tracestate)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Payment{}, false, tx.Commit(ctx)
 	}
 	if err != nil {
 		return Payment{}, false, err
 	}
+	ctx = tracing.ContextFromHeaders(ctx, pending.Traceparent, pending.Tracestate)
 
 	resolvedStatus, err := statusForOutcome(outcome)
 	if err != nil {
@@ -184,9 +188,10 @@ func insertPaymentResultEvent(ctx context.Context, tx pgx.Tx, resolved Payment) 
 		return err
 	}
 
+	traceparent, tracestate := tracing.HeaderValues(ctx)
 	_, err = tx.Exec(ctx, `
-		INSERT INTO outbox_events (event_id, subject, payload, created_at)
-		VALUES ($1, $2, $3, $4)`, eventID, subject, payload, occurredAt)
+		INSERT INTO outbox_events (event_id, subject, payload, created_at, traceparent, tracestate)
+		VALUES ($1, $2, $3, $4, $5, $6)`, eventID, subject, payload, occurredAt, traceparent, tracestate)
 	return err
 }
 

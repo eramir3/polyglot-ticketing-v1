@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 
 	"polyglot-ticketing-v1/apps/payments/internal/consumer"
@@ -16,13 +17,20 @@ import (
 	"polyglot-ticketing-v1/apps/payments/internal/payment"
 	"polyglot-ticketing-v1/internal/observability"
 	"polyglot-ticketing-v1/internal/outbox"
+	"polyglot-ticketing-v1/internal/tracing"
 	paymentsv1 "polyglot-ticketing-v1/protogen/go/payments/v1"
 )
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	shutdownTracing, err := tracing.Install(ctx, "payments", os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"))
+	if err != nil {
+		slog.Error("failed to initialize tracing", "error", err)
+		os.Exit(1)
+	}
 
+	defer shutdownTracing(context.Background())
 	pool, err := pgxpool.New(ctx, requiredEnvironmentVariable("DATABASE_URL"))
 	if err != nil {
 		slog.Error("failed to create payments database pool", "error", err)
@@ -63,7 +71,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	server := grpc.NewServer(grpc.UnaryInterceptor(metrics.UnaryServerInterceptor))
+	server := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()), grpc.UnaryInterceptor(metrics.UnaryServerInterceptor))
 	paymentsv1.RegisterPaymentsServiceServer(
 		server,
 		grpcserver.NewServer(payment.NewService(repository), slog.Default()),

@@ -42,7 +42,7 @@ func (repository *PostgresRepository) ClaimPending(
 		SET locked_until = NOW() + $2::interval
 		FROM pending
 		WHERE outbox_events.event_id = pending.event_id
-		RETURNING outbox_events.event_id::text, outbox_events.subject, outbox_events.payload`,
+		RETURNING outbox_events.event_id::text, outbox_events.subject, outbox_events.payload, outbox_events.traceparent, outbox_events.tracestate`,
 		limit,
 		leaseDuration.String(),
 	)
@@ -54,7 +54,7 @@ func (repository *PostgresRepository) ClaimPending(
 	events := make([]Event, 0, limit)
 	for rows.Next() {
 		var event Event
-		if err := rows.Scan(&event.EventID, &event.Subject, &event.Payload); err != nil {
+		if err := rows.Scan(&event.EventID, &event.Subject, &event.Payload, &event.Traceparent, &event.Tracestate); err != nil {
 			return nil, err
 		}
 		events = append(events, event)

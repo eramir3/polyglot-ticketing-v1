@@ -11,6 +11,7 @@ import (
 	"github.com/nats-io/nats.go"
 
 	"polyglot-ticketing-v1/internal/observability"
+	"polyglot-ticketing-v1/internal/tracing"
 )
 
 const (
@@ -105,9 +106,12 @@ func (publisher *Publisher) publishPending(ctx context.Context) error {
 	for _, event := range events {
 		started := time.Now()
 		publishCtx, cancel := context.WithTimeout(ctx, publishTimeout)
+		headers := nats.Header{"Nats-Msg-Id": []string{event.EventID}}
+		traceContext := tracing.ContextFromHeaders(ctx, event.Traceparent, event.Tracestate)
+		tracing.InjectNATS(traceContext, headers)
 		_, publishErr := publisher.js.PublishMsg(&nats.Msg{
 			Subject: event.Subject,
-			Header:  nats.Header{"Nats-Msg-Id": []string{event.EventID}},
+			Header:  headers,
 			Data:    event.Payload,
 		}, nats.Context(publishCtx))
 		cancel()

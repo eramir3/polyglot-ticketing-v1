@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	ticketevents "polyglot-ticketing-v1/contracts/tickets"
+	"polyglot-ticketing-v1/internal/tracing"
 	ticketsv1 "polyglot-ticketing-v1/protogen/go/tickets/v1"
 )
 
@@ -51,9 +52,10 @@ func (repository *PostgresRepository) Create(ctx context.Context, input CreateIn
 		return Ticket{}, err
 	}
 
+	traceparent, tracestate := tracing.HeaderValues(ctx)
 	_, err = tx.Exec(ctx, `
-		INSERT INTO outbox_events (event_id, subject, payload, created_at)
-		VALUES ($1, $2, $3, $4)`, eventID, ticketevents.TicketCreatedSubject, payload, occurredAt)
+		INSERT INTO outbox_events (event_id, subject, payload, created_at, traceparent, tracestate)
+		VALUES ($1, $2, $3, $4, $5, $6)`, eventID, ticketevents.TicketCreatedSubject, payload, occurredAt, traceparent, tracestate)
 	if err != nil {
 		return Ticket{}, err
 	}
@@ -326,9 +328,10 @@ func insertTicketUpdatedEvent(ctx context.Context, tx pgx.Tx, updated Ticket) er
 		return err
 	}
 
+	traceparent, tracestate := tracing.HeaderValues(ctx)
 	_, err = tx.Exec(ctx, `
-		INSERT INTO outbox_events (event_id, subject, payload, created_at)
-		VALUES ($1, $2, $3, $4)`, eventID, ticketevents.TicketUpdatedSubject, payload, occurredAt)
+		INSERT INTO outbox_events (event_id, subject, payload, created_at, traceparent, tracestate)
+		VALUES ($1, $2, $3, $4, $5, $6)`, eventID, ticketevents.TicketUpdatedSubject, payload, occurredAt, traceparent, tracestate)
 	return err
 }
 

@@ -51,9 +51,11 @@ type Order struct {
 }
 
 type Payment struct {
-	ID      string
-	OrderID string
-	Status  Status
+	ID          string
+	OrderID     string
+	Status      Status
+	Traceparent *string
+	Tracestate  *string
 }
 
 type CreateInput struct {

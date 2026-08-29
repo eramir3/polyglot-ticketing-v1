@@ -548,7 +548,7 @@ projection, and `orders.order.canceled.v1` advances an existing projection to
 
 ## Local Observability
 
-`make docker-up-tools` starts an opt-in local Grafana, Loki, Prometheus, and
+`make docker-up-tools` starts an opt-in local Grafana, Loki, Prometheus, Tempo, and
 Grafana Alloy stack. Grafana is available at `http://localhost:3002` and
 provisions Loki and Prometheus datasources; the Prometheus UI is available at
 `http://localhost:9090`. Alloy reads Docker stdout only for `api-gateway`,

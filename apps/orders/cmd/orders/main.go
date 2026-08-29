@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 
 	"polyglot-ticketing-v1/apps/orders/internal/consumer"
@@ -16,12 +17,19 @@ import (
 	"polyglot-ticketing-v1/apps/orders/internal/order"
 	"polyglot-ticketing-v1/internal/observability"
 	"polyglot-ticketing-v1/internal/outbox"
+	"polyglot-ticketing-v1/internal/tracing"
 	ordersv1 "polyglot-ticketing-v1/protogen/go/orders/v1"
 )
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	shutdownTracing, err := tracing.Install(ctx, "orders", os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"))
+	if err != nil {
+		slog.Error("failed to initialize tracing", "error", err)
+		os.Exit(1)
+	}
+	defer shutdownTracing(context.Background())
 
 	pool, err := pgxpool.New(ctx, requiredEnvironmentVariable("DATABASE_URL"))
 	if err != nil {
@@ -78,7 +86,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	server := grpc.NewServer(grpc.UnaryInterceptor(metrics.UnaryServerInterceptor))
+	server := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()), grpc.UnaryInterceptor(metrics.UnaryServerInterceptor))
 	ordersv1.RegisterOrdersServiceServer(
 		server,
 		grpcserver.NewServer(order.NewService(repository), slog.Default()),

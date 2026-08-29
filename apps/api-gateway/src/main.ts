@@ -1,11 +1,13 @@
 import { Logger } from '@nestjs/common';
-import { createApiGatewayApplication } from './app/app.bootstrap';
+import { startTracing } from '../../../libs/observability/src/index.js';
 import {
   ApiGatewayMetrics,
   startMetricsServer,
 } from './observability/prometheus';
 
 async function bootstrap() {
+  const shutdownTracing = startTracing('api-gateway');
+  const { createApiGatewayApplication } = await import('./app/app.bootstrap.js');
   const metrics = new ApiGatewayMetrics();
   const metricsServer = startMetricsServer(metrics);
   const app = await createApiGatewayApplication();
@@ -31,6 +33,8 @@ async function bootstrap() {
   await app.listen(port);
   process.once('SIGINT', () => metricsServer.close());
   process.once('SIGTERM', () => metricsServer.close());
+  process.once('SIGINT', () => void shutdownTracing());
+  process.once('SIGTERM', () => void shutdownTracing());
   Logger.log(
     `API gateway is running on: http://localhost:${port}/${globalPrefix}`,
   );
