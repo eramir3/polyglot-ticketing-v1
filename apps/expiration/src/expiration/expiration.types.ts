@@ -1,4 +1,5 @@
 import type { JobsOptions } from 'bullmq';
+import type { MsgHdrs } from '@nats-io/transport-node';
 
 export interface ExpirationJobData {
   orderId: string;
@@ -18,7 +19,13 @@ export interface ExpirationEventPublisher {
 
 export interface OrderCreatedDelivery {
   data: Uint8Array;
+  headers?: MsgHdrs;
+  info: {
+    deliveryCount: number;
+    stream: string;
+    streamSequence: number;
+  };
+  subject: string;
   ack(): void;
   nak(): void;
-  term(reason?: string): void;
 }

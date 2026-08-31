@@ -549,8 +549,16 @@ work.
 
 Expiration consumes `orders.order.created.v1` with a durable, explicit-ack
 consumer. It acknowledges the source event only after BullMQ accepts a delayed
-job. Invalid payloads are terminally acknowledged; transient Redis or NATS
-errors are negatively acknowledged for redelivery. The job delay is
+job. Invalid payloads are parked immediately in `EXPIRATION_DLQ` on
+`dlq.expiration.order-created.v1`; transient Redis or NATS errors retry five
+times before the sixth delivery is parked. Parked records retain the original
+protobuf payload, trace headers, source subject/stream/sequence, durable
+consumer, delivery count, failure class, and failure reason. The source is
+acknowledged only after parking succeeds, so a DLQ publication failure remains
+retryable. Operators inspect retained records and replay one with
+`make replay-expiration-dlq DLQ_SEQUENCE=<sequence>`; replay validates the
+original OrderCreated subject, preserves trace headers, assigns a new NATS
+message ID, and retains the DLQ record for audit. The job delay is
 `max(0, expiresAt - now)`, so delayed source delivery causes immediate
 expiration rather than extending the reservation. BullMQ retries failed
 `ExpirationComplete` publishes five times with exponential backoff; Expiration

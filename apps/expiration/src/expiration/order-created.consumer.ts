@@ -10,7 +10,10 @@ import {
   OrderCreatedHandler,
 } from './order-created.handler.js';
 import { JetStreamService } from './jetstream.service.js';
-import { natsRetryMilliseconds } from './expiration.constants.js';
+import {
+  natsRetryMilliseconds,
+  orderCreatedMaxRetries,
+} from './expiration.constants.js';
 import { OrderCreatedDelivery } from './expiration.types.js';
 import { ExpirationMetrics } from '../observability/prometheus.js';
 
@@ -46,10 +49,16 @@ export class OrderCreatedConsumer
       delivery.ack();
       this.observe('success', started);
     } catch (error) {
-      if (error instanceof InvalidOrderCreatedEvent) {
-        this.logger.error('terminal OrderCreated event', error.message);
-        delivery.term(error.message);
-        this.observe('terminal', started);
+      const failureClass = this.failureClass(error);
+      if (
+        failureClass === 'invalid' ||
+        delivery.info.deliveryCount > orderCreatedMaxRetries
+      ) {
+        if (await this.park(delivery, failureClass, error)) {
+          this.observe('dead_lettered', started);
+          return;
+        }
+        this.observe('dead_letter_publish_failed', started);
         return;
       }
 
@@ -60,6 +69,40 @@ export class OrderCreatedConsumer
       delivery.nak();
       this.observe('retry', started);
     }
+  }
+
+  private async park(
+    delivery: OrderCreatedDelivery,
+    failureClass: string,
+    failure: unknown,
+  ): Promise<boolean> {
+    try {
+      await this.jetStream.parkOrderCreated(delivery, failureClass, failure);
+    } catch (error) {
+      this.logger.error(
+        'failed to park OrderCreated event in dead letter queue; event will be retried',
+        error,
+      );
+      delivery.nak();
+      return false;
+    }
+
+    delivery.ack();
+    this.logger.warn('OrderCreated event parked in dead letter queue', {
+      deliveryCount: delivery.info.deliveryCount,
+      error: failure instanceof Error ? failure.message : String(failure),
+      failureClass,
+      streamSequence: delivery.info.streamSequence,
+      subject: delivery.subject,
+    });
+    return true;
+  }
+
+  private failureClass(error: unknown): string {
+    if (error instanceof InvalidOrderCreatedEvent) {
+      return 'invalid';
+    }
+    return 'retryable';
   }
 
   private observe(outcome: string, started: number): void {
