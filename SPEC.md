@@ -353,7 +353,11 @@ Local ports:
 | Prometheus        | `http://localhost:9090`              |
 
 NUI and Redis Insight are optional local development tools. Start them with
-`make docker-up-tools`. In NUI, add a connection to `nats://nats:4222`. In
+`make docker-up-tools`. In NUI, add a connection to `nats://nats:4222`. The
+locally built NUI image contains the repository's event contracts plus the
+protobuf `Timestamp` well-known type, so current event payloads can be decoded
+after selecting their message type. Future event-schema imports belong in
+`infra/nui/proto-schemas/`, not in the application-owned `proto/` module. In
 Redis Insight, add a standalone database connection to `redis:6379`; it shares
 the Compose network with Redis. Their configurations persist in the local
 `nui-data` and `redisinsight-data` Docker volumes.

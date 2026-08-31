@@ -88,7 +88,7 @@ make docker-up-tools
 | --- | --- | --- |
 | Mailpit | `http://localhost:8025` | Local email inbox |
 | NATS monitoring | `http://localhost:8222` | NATS server monitoring |
-| NUI | `http://localhost:31311` | NATS JetStream UI |
+| NUI | `http://localhost:31311` | NATS JetStream UI with the current event protobuf schemas |
 | Redis Insight | `http://localhost:5540` | Expiration Redis / BullMQ inspection |
 | Grafana | `http://localhost:3002` | Explore Loki logs, Prometheus metrics, and Tempo traces |
 | Prometheus | `http://localhost:9090` | Metrics query UI |

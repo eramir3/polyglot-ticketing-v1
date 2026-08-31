@@ -86,7 +86,10 @@ services:
       - '9090'
 
   nui:
-    image: ghcr.io/nats-nui/nui:latest
+    build:
+      context: .
+      dockerfile: infra/nui/Dockerfile
+    image: nui:dev
     container_name: nui
     profiles: ['tools']
     depends_on:
