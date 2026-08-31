@@ -155,6 +155,8 @@ Loki retains local data for seven days.
 | Expiration BullMQ processor                                  | Error | `expiration-complete publish failed; job will be retried` — publishing `ExpirationComplete` failed, so BullMQ retries the job.                                    | `order_id` in the message, `error`                                                          |
 | Orders JetStream consumers                                   | Warn  | `… event parked in dead letter queue` — a malformed delivery, or a transient failure after five retries, was retained in `ORDERS_DLQ`.                              | `subject`, `stream_sequence`, `delivery_count`, `failure_class`, `error`                    |
 | Orders JetStream consumers                                   | Error | `failed to park … event in dead letter queue; event will be retried` — the source event remains unacknowledged until it can be parked safely.                        | `subject`, `error`                                                                          |
+| Tickets order-event consumers                                | Warn  | `order event parked in dead letter queue` — a malformed delivery, or a transient failure after five retries, was retained in `TICKETS_DLQ`.                         | `subject`, `stream_sequence`, `delivery_count`, `failure_class`, `error`                    |
+| Tickets order-event consumers                                | Error | `failed to park order event in dead letter queue; event will be retried` — the source event remains unacknowledged until it can be parked safely.                   | `subject`, `error`                                                                          |
 | Shared transactional outbox in Tickets, Orders, and Payments | Warn  | `outbox event dispatch failed` — publishing an event or recording its publish result failed.                                                                      | `operation` (`publish`, `mark_failed`, or `mark_published`), `event_id`, `subject`, `error` |
 
 ### LogQL queries
@@ -170,6 +172,8 @@ Loki retains local data for seven days.
 - Expiration retryable publishing failure: `{service="expiration", environment="local"} |= "expiration-complete publish failed"`
 - Orders DLQ: `{service="orders", environment="local"} |= "event parked in dead letter queue"`
 - Orders DLQ publication failure: `{service="orders", environment="local"} |= "dead letter queue; event will be retried"`
+- Tickets DLQ: `{service="tickets", environment="local"} |= "order event parked in dead letter queue"`
+- Tickets DLQ publication failure: `{service="tickets", environment="local"} |= "failed to park order event in dead letter queue"`
 - Transactional outbox: `{environment="local", service=~"tickets|orders|payments"} |= "outbox event dispatch failed"`
 
 ## Out of scope

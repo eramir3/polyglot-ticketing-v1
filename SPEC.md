@@ -527,10 +527,21 @@ it. If cancellation arrives before creation, Tickets sends a delayed negative
 acknowledgment so JetStream retries it after creation is processed. These
 changes are asynchronous and take effect after event consumption.
 
-Cancellation retries do not yet have a maximum-delivery policy, dead-letter
-stream, or durable parking/reconciliation workflow. Those mechanisms are
-required before cancellation messages whose matching reservation never arrives
-can be discarded safely and remain future work.
+Tickets records terminal and exhausted order deliveries in its `TICKETS_DLQ`
+stream. `OrderCreated` reservation and `OrderCanceled` cancellation consumers
+have dedicated `dlq.tickets.order-reservation.v1` and
+`dlq.tickets.order-cancellation.v1` subjects. Malformed or unsupported events
+are parked immediately; transient failures, including a cancellation whose
+reservation has not arrived, retry five times and park on the sixth delivery.
+Each parked record preserves the original protobuf payload, trace headers,
+source subject/stream/sequence, durable consumer, delivery count, failure
+class, and failure reason. Tickets acknowledges the source only after parking
+succeeds, leaving it retryable if DLQ publication fails.
+
+Operators inspect retained Tickets DLQ records and replay one with
+`make replay-tickets-dlq DLQ_SEQUENCE=<sequence>`. Replay validates the
+original order subject, republishes the original payload with a new NATS
+message ID, preserves trace headers, and leaves the DLQ record for audit.
 
 Additional event subjects, consumers, CI/CD, deployment environments, and
 observability beyond local log collection remain open design and implementation
