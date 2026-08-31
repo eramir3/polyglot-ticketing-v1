@@ -8,9 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"polyglot-ticketing-v1/apps/orders/internal/order"
 	ticketevents "polyglot-ticketing-v1/contracts/tickets"
@@ -82,6 +84,147 @@ func TestTicketConsumerAcknowledgesJetStreamEvent(t *testing.T) {
 	}
 
 	waitForTicketAcknowledgement(t, js)
+}
+
+func TestTicketConsumerIntegrationProjectsTicketCreatedEvent(t *testing.T) {
+	ctx := context.Background()
+	pool := startOrdersPostgres(t, ctx)
+	nc, js, shutdown := startTicketJetStream(t)
+	defer shutdown()
+	if _, err := js.AddStream(&nats.StreamConfig{Name: streamName, Subjects: []string{"tickets.>"}}); err != nil {
+		t.Fatalf("add tickets stream: %v", err)
+	}
+
+	consumeCtx, cancel := context.WithCancel(context.Background())
+	consumerDone := make(chan struct{})
+	consumer := NewTicketConsumer(order.NewPostgresRepository(pool), nc.ConnectedUrl(), testLogger())
+	go func() {
+		consumer.Run(consumeCtx)
+		close(consumerDone)
+	}()
+	defer func() {
+		cancel()
+		select {
+		case <-consumerDone:
+		case <-time.After(2 * time.Second):
+			t.Error("ticket consumer did not stop")
+		}
+	}()
+
+	ticketID := uuid.NewString()
+	eventID := uuid.NewString()
+	if _, err := js.Publish(ticketevents.TicketCreatedSubject, marshalTicketEvent(t, &ticketsv1.TicketCreated{
+		EventId:          eventID,
+		OccurredAt:       timestamppb.New(time.Now().UTC()),
+		AggregateVersion: 0,
+		Ticket:           &ticketsv1.Ticket{Id: ticketID, Title: "Projected concert ticket", Price: 10_000},
+	})); err != nil {
+		t.Fatalf("publish ticket-created event: %v", err)
+	}
+
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		var title string
+		var price int64
+		var aggregateVersion int64
+		projectionErr := pool.QueryRow(ctx, `
+			SELECT title, price, aggregate_version
+			FROM tickets
+			WHERE id = $1`, ticketID).Scan(&title, &price, &aggregateVersion)
+		var processedCount int
+		processedErr := pool.QueryRow(ctx, `SELECT COUNT(*) FROM processed_events WHERE event_id = $1`, eventID).Scan(&processedCount)
+		info, consumerErr := js.ConsumerInfo(streamName, durableName)
+		if projectionErr == nil && processedErr == nil && consumerErr == nil &&
+			title == "Projected concert ticket" && price == 10_000 && aggregateVersion == 0 && processedCount == 1 &&
+			info.Delivered.Stream == 1 && info.AckFloor.Stream == 1 && info.NumAckPending == 0 && info.NumPending == 0 {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	var title string
+	var price int64
+	var aggregateVersion int64
+	projectionErr := pool.QueryRow(ctx, `
+		SELECT title, price, aggregate_version
+		FROM tickets
+		WHERE id = $1`, ticketID).Scan(&title, &price, &aggregateVersion)
+	info, consumerErr := js.ConsumerInfo(streamName, durableName)
+	t.Fatalf("ticket-created event was not fully projected: title=%q price=%d aggregate_version=%d projection_err=%v consumer=%+v consumer_err=%v", title, price, aggregateVersion, projectionErr, info, consumerErr)
+}
+
+func TestTicketConsumerIntegrationProjectsTicketUpdatedEvent(t *testing.T) {
+	ctx := context.Background()
+	pool := startOrdersPostgres(t, ctx)
+	nc, js, shutdown := startTicketJetStream(t)
+	defer shutdown()
+	if _, err := js.AddStream(&nats.StreamConfig{Name: streamName, Subjects: []string{"tickets.>"}}); err != nil {
+		t.Fatalf("add tickets stream: %v", err)
+	}
+
+	consumeCtx, cancel := context.WithCancel(context.Background())
+	consumerDone := make(chan struct{})
+	consumer := NewTicketConsumer(order.NewPostgresRepository(pool), nc.ConnectedUrl(), testLogger())
+	go func() {
+		consumer.Run(consumeCtx)
+		close(consumerDone)
+	}()
+	defer func() {
+		cancel()
+		select {
+		case <-consumerDone:
+		case <-time.After(2 * time.Second):
+			t.Error("ticket consumer did not stop")
+		}
+	}()
+
+	ticketID := uuid.NewString()
+	if _, err := js.Publish(ticketevents.TicketCreatedSubject, marshalTicketEvent(t, &ticketsv1.TicketCreated{
+		EventId:          uuid.NewString(),
+		OccurredAt:       timestamppb.New(time.Now().UTC()),
+		AggregateVersion: 0,
+		Ticket:           &ticketsv1.Ticket{Id: ticketID, Title: "Original concert ticket", Price: 10_000},
+	})); err != nil {
+		t.Fatalf("publish ticket-created event: %v", err)
+	}
+	if _, err := js.Publish(ticketevents.TicketUpdatedSubject, marshalTicketEvent(t, &ticketsv1.TicketUpdated{
+		EventId:          uuid.NewString(),
+		OccurredAt:       timestamppb.New(time.Now().UTC()),
+		AggregateVersion: 1,
+		Ticket:           &ticketsv1.Ticket{Id: ticketID, Title: "Updated concert ticket", Price: 12_500},
+	})); err != nil {
+		t.Fatalf("publish ticket-updated event: %v", err)
+	}
+
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		var title string
+		var price int64
+		var aggregateVersion int64
+		projectionErr := pool.QueryRow(ctx, `
+			SELECT title, price, aggregate_version
+			FROM tickets
+			WHERE id = $1`, ticketID).Scan(&title, &price, &aggregateVersion)
+		var processedCount int
+		processedErr := pool.QueryRow(ctx, `SELECT COUNT(*) FROM processed_events`).Scan(&processedCount)
+		info, consumerErr := js.ConsumerInfo(streamName, durableName)
+		if projectionErr == nil && processedErr == nil && consumerErr == nil &&
+			title == "Updated concert ticket" && price == 12_500 && aggregateVersion == 1 && processedCount == 2 &&
+			info.Delivered.Stream == 2 && info.AckFloor.Stream == 2 && info.NumAckPending == 0 && info.NumPending == 0 {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	var title string
+	var price int64
+	var aggregateVersion int64
+	projectionErr := pool.QueryRow(ctx, `
+		SELECT title, price, aggregate_version
+		FROM tickets
+		WHERE id = $1`, ticketID).Scan(&title, &price, &aggregateVersion)
+	info, consumerErr := js.ConsumerInfo(streamName, durableName)
+	t.Fatalf("ticket-updated event was not fully projected: title=%q price=%d aggregate_version=%d projection_err=%v consumer=%+v consumer_err=%v", title, price, aggregateVersion, projectionErr, info, consumerErr)
 }
 
 func TestTicketConsumerParksSixthFailedJetStreamDelivery(t *testing.T) {
