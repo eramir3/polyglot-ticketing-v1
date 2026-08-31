@@ -52,7 +52,13 @@ func (repository *PostgresRepository) Create(
 	err = tx.QueryRow(ctx, `
 		SELECT id::text, order_id::text, status::text, traceparent, tracestate
 		FROM payments
-		WHERE order_id = $1`, input.OrderID).Scan(&existing.ID, &existing.OrderID, &existing.Status)
+		WHERE order_id = $1`, input.OrderID).Scan(
+		&existing.ID,
+		&existing.OrderID,
+		&existing.Status,
+		&existing.Traceparent,
+		&existing.Tracestate,
+	)
 	if err == nil {
 		if err := tx.Commit(ctx); err != nil {
 			return Payment{}, false, err
@@ -116,7 +122,7 @@ func (repository *PostgresRepository) ResolveNextPending(ctx context.Context, ou
 
 	var pending Payment
 	err = tx.QueryRow(ctx, `
-		SELECT id::text, order_id::text, status::text
+		SELECT id::text, order_id::text, status::text, traceparent, tracestate
 		FROM payments
 		WHERE status = $1
 		ORDER BY id

@@ -18,7 +18,7 @@ var (
 	ErrUnsupportedSubject     = errors.New("unsupported ticket event subject")
 )
 
-const ExpirationWindow = 1 * time.Minute
+const ExpirationWindow = 15 * time.Minute
 
 type Status string
 
