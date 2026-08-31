@@ -22,10 +22,11 @@ const (
 )
 
 type OrderConsumer struct {
-	handler *projection.OrderHandler
-	logger  *slog.Logger
-	metrics *observability.Metrics
-	url     string
+	deadLetters paymentsDeadLetterer
+	handler     *projection.OrderHandler
+	logger      *slog.Logger
+	metrics     *observability.Metrics
+	url         string
 }
 
 type orderEventDelivery interface {
@@ -65,6 +66,10 @@ func (consumer *OrderConsumer) consume(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if err := ensurePaymentsDeadLetterStream(js); err != nil {
+		return err
+	}
+	consumer.deadLetters = jetStreamPaymentsDeadLetterer{js: js}
 	subscription, err := js.PullSubscribe(
 		"orders.>",
 		orderConsumerDurableName,
@@ -85,22 +90,29 @@ func (consumer *OrderConsumer) consume(ctx context.Context) error {
 			return err
 		}
 		for _, message := range messages {
-			consumer.handleDelivery(tracing.ExtractNATS(ctx, message.Header), message.Subject, message.Data, message)
+			consumer.handleMessage(tracing.ExtractNATS(ctx, message.Header), message)
 		}
 	}
 	return context.Canceled
 }
 
-func (consumer *OrderConsumer) handleDelivery(
-	ctx context.Context,
-	subject string,
-	payload []byte,
-	delivery orderEventDelivery,
-) {
+func (consumer *OrderConsumer) handleMessage(ctx context.Context, message *nats.Msg) {
+	event, err := newPaymentsDelivery(message)
+	if err != nil {
+		consumer.logger.Warn("failed to read payments order event delivery metadata; event will be retried", "error", err)
+		if nakErr := message.Nak(); nakErr != nil {
+			consumer.logger.Warn("failed to negatively acknowledge payments order event", "error", nakErr)
+		}
+		return
+	}
+	consumer.handleDelivery(ctx, event)
+}
+
+func (consumer *OrderConsumer) handleDelivery(ctx context.Context, event paymentsDelivery) {
 	started := time.Now()
-	err := consumer.handler.Handle(ctx, subject, payload)
+	err := consumer.handler.Handle(ctx, event.subject, event.payload)
 	if err == nil {
-		if err := delivery.Ack(); err != nil {
+		if err := event.delivery.Ack(); err != nil {
 			consumer.logger.Warn("failed to acknowledge payments order event", "error", err)
 			consumer.observe("ack_failed", started)
 			return
@@ -108,20 +120,55 @@ func (consumer *OrderConsumer) handleDelivery(
 		consumer.observe("success", started)
 		return
 	}
-	if errors.Is(err, payment.ErrInvalidOrderEvent) || errors.Is(err, payment.ErrUnsupportedSubject) {
-		consumer.logger.Error("terminal payments order event", "subject", subject, "error", err)
-		if termErr := delivery.Term(); termErr != nil {
-			consumer.logger.Warn("failed to terminate payments order event", "error", termErr)
+	failureClass := paymentOrderFailureClass(err)
+	if failureClass == "invalid" || event.deliveryCount > orderEventMaxRetries {
+		if consumer.park(ctx, event, failureClass, err) {
+			consumer.observe("dead_lettered", started)
+			return
 		}
-		consumer.observe("terminal", started)
+		consumer.observe("dead_letter_publish_failed", started)
 		return
 	}
 
-	consumer.logger.Warn("payments order projection failed; event will be retried", "subject", subject, "error", err)
-	if nakErr := delivery.Nak(); nakErr != nil {
+	consumer.logger.Warn("payments order projection failed; event will be retried", "subject", event.subject, "error", err)
+	if nakErr := event.delivery.Nak(); nakErr != nil {
 		consumer.logger.Warn("failed to negatively acknowledge payments order event", "error", nakErr)
 	}
 	consumer.observe("retry", started)
+}
+
+func (consumer *OrderConsumer) park(ctx context.Context, event paymentsDelivery, failureClass string, failure error) bool {
+	if consumer.deadLetters == nil {
+		consumer.logger.Warn("payments order event dead letter queue is unavailable; event will be retried", "subject", event.subject, "error", failure)
+		if nakErr := event.delivery.Nak(); nakErr != nil {
+			consumer.logger.Warn("failed to negatively acknowledge payments order event", "error", nakErr)
+		}
+		return false
+	}
+
+	if err := consumer.deadLetters.Park(ctx, event.deadLetter(orderConsumerDurableName, failureClass, failure)); err != nil {
+		consumer.logger.Error("failed to park payments order event in dead letter queue; event will be retried", "subject", event.subject, "error", err)
+		if nakErr := event.delivery.Nak(); nakErr != nil {
+			consumer.logger.Warn("failed to negatively acknowledge payments order event", "error", nakErr)
+		}
+		return false
+	}
+	if err := event.delivery.Ack(); err != nil {
+		consumer.logger.Warn("failed to acknowledge payments order event after dead-lettering", "error", err)
+		return false
+	}
+	consumer.logger.Warn("payments order event parked in dead letter queue", "subject", event.subject, "stream_sequence", event.streamSeq, "delivery_count", event.deliveryCount, "failure_class", failureClass, "error", failure)
+	return true
+}
+
+func paymentOrderFailureClass(err error) string {
+	if errors.Is(err, payment.ErrInvalidOrderEvent) || errors.Is(err, payment.ErrUnsupportedSubject) {
+		return "invalid"
+	}
+	if errors.Is(err, payment.ErrOrderEventVersionGap) {
+		return "version_gap"
+	}
+	return "retryable"
 }
 
 func (consumer *OrderConsumer) observe(outcome string, started time.Time) {

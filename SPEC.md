@@ -578,10 +578,21 @@ five times before being parked.
 Payments consumes both order subjects through its durable
 `payments-order-projection-v1` JetStream consumer. It records event IDs and
 applies only contiguous aggregate versions to its local projection; malformed
-events are terminated and transient failures or version gaps are negatively
-acknowledged for retry. `orders.order.created.v1` creates a version `0`
-projection, and `orders.order.canceled.v1` advances an existing projection to
-`Canceled`.
+events are parked immediately, while transient failures and version gaps retry
+five times before parking the sixth delivery. `orders.order.created.v1` creates
+a version `0` projection, and `orders.order.canceled.v1` advances an existing
+projection to `Canceled`.
+
+Payments stores terminal and exhausted order-projection deliveries in its
+`PAYMENTS_DLQ` stream on `dlq.payments.order-projection.v1`. Each retained
+record includes the original protobuf payload, trace headers, source
+subject/stream/sequence, durable consumer, delivery count, failure class, and
+failure reason. The source event is acknowledged only after it is safely
+parked; a DLQ publication failure leaves it retryable. Operators inspect and
+replay a retained record with
+`make replay-payments-dlq DLQ_SEQUENCE=<sequence>`. Replay validates the
+original order subject, republishes the payload with a new NATS message ID,
+preserves trace headers, and leaves the DLQ record for audit.
 
 ## Local Observability
 

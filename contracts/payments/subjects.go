@@ -2,7 +2,8 @@
 package paymentevents
 
 const (
-	PaymentCreatedSubject   = "payments.payment.created.v1"
-	PaymentFailedSubject    = "payments.payment.failed.v1"
-	PaymentSucceededSubject = "payments.payment.succeeded.v1"
+	PaymentCreatedSubject            = "payments.payment.created.v1"
+	PaymentFailedSubject             = "payments.payment.failed.v1"
+	PaymentSucceededSubject          = "payments.payment.succeeded.v1"
+	OrderProjectionDeadLetterSubject = "dlq.payments.order-projection.v1"
 )
