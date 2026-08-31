@@ -2,6 +2,7 @@
 package orderevents
 
 const (
-	OrderCanceledSubject = "orders.order.canceled.v1"
-	OrderCreatedSubject  = "orders.order.created.v1"
+	OrderCanceledSubject              = "orders.order.canceled.v1"
+	OrderCreatedSubject               = "orders.order.created.v1"
+	TicketProjectionDeadLetterSubject = "dlq.orders.ticket-projection.v1"
 )

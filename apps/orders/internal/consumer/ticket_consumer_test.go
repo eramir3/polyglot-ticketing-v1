@@ -40,7 +40,7 @@ func TestTicketConsumerAcknowledgesSuccessfulTicketEvents(t *testing.T) {
 			delivery := &fakeTicketEventDelivery{}
 			consumer := NewTicketConsumer(&fakeTicketProjectionRepository{}, "", testLogger())
 
-			consumer.handleDelivery(context.Background(), testCase.subject, testCase.payload, delivery)
+			consumer.handleDelivery(context.Background(), ticketDeliveryFor(delivery, testCase.subject, testCase.payload, 1))
 
 			assertTicketDelivery(t, delivery, 1, 0, 0)
 		})
@@ -84,16 +84,59 @@ func TestTicketConsumerAcknowledgesJetStreamEvent(t *testing.T) {
 	waitForTicketAcknowledgement(t, js)
 }
 
+func TestTicketConsumerParksSixthFailedJetStreamDelivery(t *testing.T) {
+	nc, js, shutdown := startTicketJetStream(t)
+	defer shutdown()
+	if _, err := js.AddStream(&nats.StreamConfig{Name: streamName, Subjects: []string{"tickets.>"}}); err != nil {
+		t.Fatalf("add tickets stream: %v", err)
+	}
+
+	consumeCtx, cancel := context.WithCancel(context.Background())
+	consumerDone := make(chan struct{})
+	consumer := NewTicketConsumer(&fakeTicketProjectionRepository{err: errors.New("database unavailable")}, nc.ConnectedUrl(), testLogger())
+	go func() {
+		consumer.Run(consumeCtx)
+		close(consumerDone)
+	}()
+	defer func() {
+		cancel()
+		select {
+		case <-consumerDone:
+		case <-time.After(2 * time.Second):
+			t.Error("ticket consumer did not stop")
+		}
+	}()
+
+	payload := marshalTicketEvent(t, &ticketsv1.TicketCreated{EventId: "retry-to-dlq", Ticket: validTicket()})
+	if _, err := js.Publish(ticketevents.TicketCreatedSubject, payload); err != nil {
+		t.Fatalf("publish ticket event: %v", err)
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		parked, err := js.GetMsg(ticketDeadLetterStreamName, 1)
+		if err == nil {
+			if parked.Header.Get(ticketDeadLetterHeader+"Delivery-Count") != "6" || string(parked.Data) != string(payload) {
+				t.Fatalf("unexpected parked event: %+v", parked)
+			}
+			waitForTicketAcknowledgement(t, js)
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatal("ticket event was not parked after five retries")
+}
+
 func TestTicketConsumerNegativeAcknowledgesRetryableEvent(t *testing.T) {
 	delivery := &fakeTicketEventDelivery{}
 	consumer := NewTicketConsumer(&fakeTicketProjectionRepository{err: errors.New("database unavailable")}, "", testLogger())
 
-	consumer.handleDelivery(
-		context.Background(),
+	consumer.handleDelivery(context.Background(), ticketDeliveryFor(
+		delivery,
 		ticketevents.TicketCreatedSubject,
 		marshalTicketEvent(t, &ticketsv1.TicketCreated{EventId: "retry-event", Ticket: validTicket()}),
-		delivery,
-	)
+		1,
+	))
 
 	assertTicketDelivery(t, delivery, 0, 1, 0)
 }
@@ -106,27 +149,110 @@ func TestTicketConsumerDoesNotAcknowledgeSkippedTicketVersion(t *testing.T) {
 		testLogger(),
 	)
 
-	consumer.handleDelivery(
-		context.Background(),
+	consumer.handleDelivery(context.Background(), ticketDeliveryFor(
+		delivery,
 		ticketevents.TicketUpdatedSubject,
 		marshalTicketEvent(t, &ticketsv1.TicketUpdated{
 			EventId:          "skipped-version-event",
 			AggregateVersion: 3,
 			Ticket:           validTicket(),
 		}),
-		delivery,
-	)
+		1,
+	))
 
 	assertTicketDelivery(t, delivery, 0, 1, 0)
 }
 
-func TestTicketConsumerTerminatesInvalidEvent(t *testing.T) {
+func TestTicketConsumerParksInvalidEvent(t *testing.T) {
 	delivery := &fakeTicketEventDelivery{}
 	consumer := NewTicketConsumer(&fakeTicketProjectionRepository{}, "", testLogger())
+	deadLetters := &fakeTicketDeadLetterer{}
+	consumer.deadLetters = deadLetters
 
-	consumer.handleDelivery(context.Background(), ticketevents.TicketCreatedSubject, nil, delivery)
+	consumer.handleDelivery(context.Background(), ticketDeliveryFor(delivery, ticketevents.TicketCreatedSubject, nil, 1))
 
-	assertTicketDelivery(t, delivery, 0, 0, 1)
+	assertTicketDelivery(t, delivery, 1, 0, 0)
+	if len(deadLetters.events) != 1 || deadLetters.events[0].FailureClass != "invalid" {
+		t.Fatalf("expected one invalid event to be parked, got %+v", deadLetters.events)
+	}
+}
+
+func TestTicketConsumerParksRetryableEventAfterFiveRetries(t *testing.T) {
+	consumer := NewTicketConsumer(&fakeTicketProjectionRepository{err: errors.New("database unavailable")}, "", testLogger())
+	deadLetters := &fakeTicketDeadLetterer{}
+	consumer.deadLetters = deadLetters
+	payload := marshalTicketEvent(t, &ticketsv1.TicketUpdated{EventId: "retry-event", AggregateVersion: 1, Ticket: validTicket()})
+
+	for attempt := uint64(1); attempt <= ticketEventMaxRetries; attempt++ {
+		delivery := &fakeTicketEventDelivery{}
+		consumer.handleDelivery(context.Background(), ticketDeliveryFor(delivery, ticketevents.TicketUpdatedSubject, payload, attempt))
+		assertTicketDelivery(t, delivery, 0, 1, 0)
+	}
+
+	delivery := &fakeTicketEventDelivery{}
+	consumer.handleDelivery(context.Background(), ticketDeliveryFor(delivery, ticketevents.TicketUpdatedSubject, payload, ticketEventMaxRetries+1))
+	assertTicketDelivery(t, delivery, 1, 0, 0)
+	if len(deadLetters.events) != 1 || deadLetters.events[0].DeliveryCount != ticketEventMaxRetries+1 {
+		t.Fatalf("expected retryable event to be parked on attempt %d, got %+v", ticketEventMaxRetries+1, deadLetters.events)
+	}
+}
+
+func TestTicketConsumerRetriesWhenParkingFails(t *testing.T) {
+	delivery := &fakeTicketEventDelivery{}
+	consumer := NewTicketConsumer(&fakeTicketProjectionRepository{err: errors.New("database unavailable")}, "", testLogger())
+	consumer.deadLetters = &fakeTicketDeadLetterer{err: errors.New("DLQ unavailable")}
+
+	consumer.handleDelivery(context.Background(), ticketDeliveryFor(
+		delivery,
+		ticketevents.TicketCreatedSubject,
+		marshalTicketEvent(t, &ticketsv1.TicketCreated{EventId: "retry-event", Ticket: validTicket()}),
+		ticketEventMaxRetries+1,
+	))
+
+	assertTicketDelivery(t, delivery, 0, 1, 0)
+}
+
+func TestTicketDeadLettererRetainsAndReplaysOriginalTicketEvent(t *testing.T) {
+	_, js, shutdown := startTicketJetStream(t)
+	defer shutdown()
+	if _, err := js.AddStream(&nats.StreamConfig{Name: streamName, Subjects: []string{"tickets.>"}}); err != nil {
+		t.Fatalf("add ticket stream: %v", err)
+	}
+	if err := ensureTicketDeadLetterStream(js); err != nil {
+		t.Fatalf("create ticket DLQ stream: %v", err)
+	}
+	payload := marshalTicketEvent(t, &ticketsv1.TicketCreated{EventId: "dlq-event", Ticket: validTicket()})
+	if err := (jetStreamTicketDeadLetterer{js: js}).Park(context.Background(), ticketDeadLetter{
+		Consumer:        durableName,
+		DeliveryCount:   6,
+		FailureClass:    "retryable",
+		FailureReason:   "database unavailable",
+		OriginalHeader:  nats.Header{"traceparent": []string{"00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"}},
+		OriginalStream:  streamName,
+		OriginalSeq:     42,
+		OriginalSubject: ticketevents.TicketCreatedSubject,
+		Payload:         payload,
+	}); err != nil {
+		t.Fatalf("park ticket event: %v", err)
+	}
+
+	parked, err := js.GetMsg(ticketDeadLetterStreamName, 1)
+	if err != nil {
+		t.Fatalf("get parked event: %v", err)
+	}
+	if string(parked.Data) != string(payload) || parked.Header.Get(ticketDeadLetterHeader+"Original-Subject") != ticketevents.TicketCreatedSubject {
+		t.Fatalf("unexpected parked message: %+v", parked)
+	}
+	if _, err := ReplayTicketDeadLetter(context.Background(), js, 1); err != nil {
+		t.Fatalf("replay ticket event: %v", err)
+	}
+	replayed, err := js.GetMsg(streamName, 1)
+	if err != nil {
+		t.Fatalf("get replayed event: %v", err)
+	}
+	if replayed.Subject != ticketevents.TicketCreatedSubject || string(replayed.Data) != string(payload) || replayed.Header.Get("traceparent") == "" {
+		t.Fatalf("unexpected replayed message: %+v", replayed)
+	}
 }
 
 func marshalTicketEvent(t *testing.T, event proto.Message) []byte {
@@ -209,6 +335,18 @@ func assertTicketDelivery(t *testing.T, delivery *fakeTicketEventDelivery, ackno
 	}
 }
 
+func ticketDeliveryFor(delivery ticketEventDelivery, subject string, payload []byte, deliveryCount uint64) ticketDelivery {
+	return ticketDelivery{
+		delivery:      delivery,
+		deliveryCount: deliveryCount,
+		headers:       nats.Header{},
+		payload:       payload,
+		stream:        streamName,
+		streamSeq:     1,
+		subject:       subject,
+	}
+}
+
 type fakeTicketProjectionRepository struct {
 	err error
 }
@@ -225,6 +363,19 @@ type fakeTicketEventDelivery struct {
 	acknowledged           int
 	negativelyAcknowledged int
 	terminated             int
+}
+
+type fakeTicketDeadLetterer struct {
+	err    error
+	events []ticketDeadLetter
+}
+
+func (deadLetterer *fakeTicketDeadLetterer) Park(_ context.Context, event ticketDeadLetter) error {
+	if deadLetterer.err != nil {
+		return deadLetterer.err
+	}
+	deadLetterer.events = append(deadLetterer.events, event)
+	return nil
 }
 
 func (delivery *fakeTicketEventDelivery) Ack(...nats.AckOpt) error {

@@ -415,7 +415,20 @@ Orders applies a ticket event only when its `aggregateVersion` is contiguous:
 version `0` creates a missing projection and later events must be exactly one
 greater than the projected version. A future version gap is negatively
 acknowledged so JetStream retries it; duplicate and delayed older snapshots are
-acknowledged as no-ops.
+acknowledged as no-ops. Retryable ticket-projection failures, including version
+gaps, retry five times after the initial delivery. On the sixth delivery, and
+immediately for malformed or unsupported ticket events, Orders copies the
+original binary message into its `ORDERS_DLQ` JetStream stream on
+`dlq.orders.ticket-projection.v1`, then acknowledges the source. The
+DLQ headers retain the original subject, stream sequence, delivery count,
+failure class and reason, and tracing context. If parking fails, the source
+event remains unacknowledged and retries until it can be retained safely.
+
+Operators inspect retained ticket DLQ messages and replay one with
+`make replay-ticket-dlq DLQ_SEQUENCE=<sequence>`. Replays republish the original
+payload to its ticket subject with a new NATS message ID and leave the DLQ
+record for audit. Replay related messages in original stream-sequence order so
+the ticket projection can advance aggregate versions contiguously.
 The `orders` table has `id`, `expires_at`, `user_id`, `ticket_id`, and a
 `status` enum with `Created`, `Canceled`, `AwaitingPayment`, and `Complete`.
 Orders owns an internal `aggregate_version` that starts at `0` when the order
