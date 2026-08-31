@@ -15,6 +15,9 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"polyglot-ticketing-v1/apps/orders/internal/order"
+	expirationevents "polyglot-ticketing-v1/contracts/expiration"
+	orderevents "polyglot-ticketing-v1/contracts/orders"
+	paymentevents "polyglot-ticketing-v1/contracts/payments"
 	ticketevents "polyglot-ticketing-v1/contracts/tickets"
 	ticketsv1 "polyglot-ticketing-v1/protogen/go/tickets/v1"
 )
@@ -257,9 +260,9 @@ func TestTicketConsumerParksSixthFailedJetStreamDelivery(t *testing.T) {
 
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
-		parked, err := js.GetMsg(ticketDeadLetterStreamName, 1)
+		parked, err := js.GetMsg(ordersDeadLetterStreamName, 1)
 		if err == nil {
-			if parked.Header.Get(ticketDeadLetterHeader+"Delivery-Count") != "6" || string(parked.Data) != string(payload) {
+			if parked.Header.Get(ordersDeadLetterHeader+"Delivery-Count") != "6" || string(parked.Data) != string(payload) {
 				t.Fatalf("unexpected parked event: %+v", parked)
 			}
 			waitForTicketAcknowledgement(t, js)
@@ -326,17 +329,17 @@ func TestTicketConsumerParksRetryableEventAfterFiveRetries(t *testing.T) {
 	consumer.deadLetters = deadLetters
 	payload := marshalTicketEvent(t, &ticketsv1.TicketUpdated{EventId: "retry-event", AggregateVersion: 1, Ticket: validTicket()})
 
-	for attempt := uint64(1); attempt <= ticketEventMaxRetries; attempt++ {
+	for attempt := uint64(1); attempt <= orderEventMaxRetries; attempt++ {
 		delivery := &fakeTicketEventDelivery{}
 		consumer.handleDelivery(context.Background(), ticketDeliveryFor(delivery, ticketevents.TicketUpdatedSubject, payload, attempt))
 		assertTicketDelivery(t, delivery, 0, 1, 0)
 	}
 
 	delivery := &fakeTicketEventDelivery{}
-	consumer.handleDelivery(context.Background(), ticketDeliveryFor(delivery, ticketevents.TicketUpdatedSubject, payload, ticketEventMaxRetries+1))
+	consumer.handleDelivery(context.Background(), ticketDeliveryFor(delivery, ticketevents.TicketUpdatedSubject, payload, orderEventMaxRetries+1))
 	assertTicketDelivery(t, delivery, 1, 0, 0)
-	if len(deadLetters.events) != 1 || deadLetters.events[0].DeliveryCount != ticketEventMaxRetries+1 {
-		t.Fatalf("expected retryable event to be parked on attempt %d, got %+v", ticketEventMaxRetries+1, deadLetters.events)
+	if len(deadLetters.events) != 1 || deadLetters.events[0].DeliveryCount != orderEventMaxRetries+1 {
+		t.Fatalf("expected retryable event to be parked on attempt %d, got %+v", orderEventMaxRetries+1, deadLetters.events)
 	}
 }
 
@@ -349,7 +352,7 @@ func TestTicketConsumerRetriesWhenParkingFails(t *testing.T) {
 		delivery,
 		ticketevents.TicketCreatedSubject,
 		marshalTicketEvent(t, &ticketsv1.TicketCreated{EventId: "retry-event", Ticket: validTicket()}),
-		ticketEventMaxRetries+1,
+		orderEventMaxRetries+1,
 	))
 
 	assertTicketDelivery(t, delivery, 0, 1, 0)
@@ -361,11 +364,11 @@ func TestTicketDeadLettererRetainsAndReplaysOriginalTicketEvent(t *testing.T) {
 	if _, err := js.AddStream(&nats.StreamConfig{Name: streamName, Subjects: []string{"tickets.>"}}); err != nil {
 		t.Fatalf("add ticket stream: %v", err)
 	}
-	if err := ensureTicketDeadLetterStream(js); err != nil {
+	if err := ensureOrdersDeadLetterStream(js); err != nil {
 		t.Fatalf("create ticket DLQ stream: %v", err)
 	}
 	payload := marshalTicketEvent(t, &ticketsv1.TicketCreated{EventId: "dlq-event", Ticket: validTicket()})
-	if err := (jetStreamTicketDeadLetterer{js: js}).Park(context.Background(), ticketDeadLetter{
+	if err := (jetStreamOrdersDeadLetterer{js: js}).Park(context.Background(), ordersDeadLetter{
 		Consumer:        durableName,
 		DeliveryCount:   6,
 		FailureClass:    "retryable",
@@ -375,18 +378,19 @@ func TestTicketDeadLettererRetainsAndReplaysOriginalTicketEvent(t *testing.T) {
 		OriginalSeq:     42,
 		OriginalSubject: ticketevents.TicketCreatedSubject,
 		Payload:         payload,
+		Subject:         orderevents.TicketProjectionDeadLetterSubject,
 	}); err != nil {
 		t.Fatalf("park ticket event: %v", err)
 	}
 
-	parked, err := js.GetMsg(ticketDeadLetterStreamName, 1)
+	parked, err := js.GetMsg(ordersDeadLetterStreamName, 1)
 	if err != nil {
 		t.Fatalf("get parked event: %v", err)
 	}
-	if string(parked.Data) != string(payload) || parked.Header.Get(ticketDeadLetterHeader+"Original-Subject") != ticketevents.TicketCreatedSubject {
+	if string(parked.Data) != string(payload) || parked.Header.Get(ordersDeadLetterHeader+"Original-Subject") != ticketevents.TicketCreatedSubject {
 		t.Fatalf("unexpected parked message: %+v", parked)
 	}
-	if _, err := ReplayTicketDeadLetter(context.Background(), js, 1); err != nil {
+	if _, err := ReplayOrdersDeadLetter(context.Background(), js, 1); err != nil {
 		t.Fatalf("replay ticket event: %v", err)
 	}
 	replayed, err := js.GetMsg(streamName, 1)
@@ -395,6 +399,100 @@ func TestTicketDeadLettererRetainsAndReplaysOriginalTicketEvent(t *testing.T) {
 	}
 	if replayed.Subject != ticketevents.TicketCreatedSubject || string(replayed.Data) != string(payload) || replayed.Header.Get("traceparent") == "" {
 		t.Fatalf("unexpected replayed message: %+v", replayed)
+	}
+}
+
+func TestOrdersDeadLettererRetainsAndReplaysLifecycleEvents(t *testing.T) {
+	_, js, shutdown := startTicketJetStream(t)
+	defer shutdown()
+	if _, err := js.AddStream(&nats.StreamConfig{Name: expirationEventsStreamName, Subjects: []string{"expiration.>"}}); err != nil {
+		t.Fatalf("add expiration stream: %v", err)
+	}
+	if _, err := js.AddStream(&nats.StreamConfig{Name: paymentEventsStreamName, Subjects: []string{"payments.>"}}); err != nil {
+		t.Fatalf("add payments stream: %v", err)
+	}
+	if err := ensureOrdersDeadLetterStream(js); err != nil {
+		t.Fatalf("create Orders DLQ stream: %v", err)
+	}
+
+	testCases := []struct {
+		deadLetterSubject string
+		name              string
+		originalSubject   string
+		stream            string
+	}{
+		{deadLetterSubject: orderevents.ExpirationCompleteDeadLetterSubject, name: "expiration", originalSubject: expirationevents.ExpirationCompleteSubject, stream: expirationEventsStreamName},
+		{deadLetterSubject: orderevents.PaymentCreatedDeadLetterSubject, name: "payment-created", originalSubject: paymentevents.PaymentCreatedSubject, stream: paymentEventsStreamName},
+		{deadLetterSubject: orderevents.PaymentSucceededDeadLetterSubject, name: "payment-succeeded", originalSubject: paymentevents.PaymentSucceededSubject, stream: paymentEventsStreamName},
+		{deadLetterSubject: orderevents.PaymentFailedDeadLetterSubject, name: "payment-failed", originalSubject: paymentevents.PaymentFailedSubject, stream: paymentEventsStreamName},
+	}
+	for index, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			payload := []byte(testCase.name)
+			if err := (jetStreamOrdersDeadLetterer{js: js}).Park(context.Background(), ordersDeadLetter{
+				Consumer:        "orders-" + testCase.name + "-v1",
+				DeliveryCount:   6,
+				FailureClass:    "retryable",
+				FailureReason:   "database unavailable",
+				OriginalHeader:  nats.Header{"traceparent": []string{"00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"}},
+				OriginalStream:  testCase.stream,
+				OriginalSeq:     uint64(index + 1),
+				OriginalSubject: testCase.originalSubject,
+				Payload:         payload,
+				Subject:         testCase.deadLetterSubject,
+			}); err != nil {
+				t.Fatalf("park lifecycle event: %v", err)
+			}
+
+			sequence := uint64(index + 1)
+			parked, err := js.GetMsg(ordersDeadLetterStreamName, sequence)
+			if err != nil {
+				t.Fatalf("get parked lifecycle event: %v", err)
+			}
+			if parked.Subject != testCase.deadLetterSubject || parked.Header.Get(ordersDeadLetterHeader+"Original-Subject") != testCase.originalSubject {
+				t.Fatalf("unexpected parked lifecycle event: %+v", parked)
+			}
+			ack, err := ReplayOrdersDeadLetter(context.Background(), js, sequence)
+			if err != nil {
+				t.Fatalf("replay lifecycle event: %v", err)
+			}
+			replayed, err := js.GetMsg(testCase.stream, ack.Sequence)
+			if err != nil {
+				t.Fatalf("get replayed lifecycle event: %v", err)
+			}
+			if replayed.Subject != testCase.originalSubject || string(replayed.Data) != string(payload) || replayed.Header.Get("traceparent") == "" {
+				t.Fatalf("unexpected replayed lifecycle event: %+v", replayed)
+			}
+		})
+	}
+}
+
+func TestEnsureOrdersDeadLetterStreamAddsLifecycleSubjectsToExistingStream(t *testing.T) {
+	_, js, shutdown := startTicketJetStream(t)
+	defer shutdown()
+	if _, err := js.AddStream(&nats.StreamConfig{
+		Name:     ordersDeadLetterStreamName,
+		Subjects: []string{orderevents.TicketProjectionDeadLetterSubject},
+		Storage:  nats.FileStorage,
+	}); err != nil {
+		t.Fatalf("add legacy Orders DLQ stream: %v", err)
+	}
+
+	if err := ensureOrdersDeadLetterStream(js); err != nil {
+		t.Fatalf("upgrade Orders DLQ stream: %v", err)
+	}
+	info, err := js.StreamInfo(ordersDeadLetterStreamName)
+	if err != nil {
+		t.Fatalf("read Orders DLQ stream: %v", err)
+	}
+	configured := make(map[string]bool, len(info.Config.Subjects))
+	for _, subject := range info.Config.Subjects {
+		configured[subject] = true
+	}
+	for _, subject := range ordersDeadLetterSubjects {
+		if !configured[subject] {
+			t.Fatalf("Orders DLQ is missing subject %q: %+v", subject, info.Config.Subjects)
+		}
 	}
 }
 
@@ -457,16 +555,37 @@ func startTicketJetStream(t *testing.T) (*nats.Conn, nats.JetStreamContext, func
 
 func waitForTicketAcknowledgement(t *testing.T, js nats.JetStreamContext) {
 	t.Helper()
+	waitForConsumerAcknowledgement(t, js, streamName, durableName)
+}
+
+func waitForConsumerAcknowledgement(t *testing.T, js nats.JetStreamContext, stream, durable string) {
+	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
-		info, err := js.ConsumerInfo(streamName, durableName)
+		info, err := js.ConsumerInfo(stream, durable)
 		if err == nil && info.Delivered.Stream == 1 && info.AckFloor.Stream == 1 &&
 			info.NumAckPending == 0 && info.NumPending == 0 {
 			return
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	t.Fatal("ticket event was not acknowledged by JetStream")
+	t.Fatalf("event was not acknowledged by JetStream: stream=%s durable=%s", stream, durable)
+}
+
+func waitForOrdersDeadLetter(t *testing.T, js nats.JetStreamContext, subject string, payload []byte) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		parked, err := js.GetMsg(ordersDeadLetterStreamName, 1)
+		if err == nil {
+			if parked.Subject != subject || parked.Header.Get(ordersDeadLetterHeader+"Delivery-Count") != "6" || string(parked.Data) != string(payload) {
+				t.Fatalf("unexpected Orders DLQ event: %+v", parked)
+			}
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("event was not parked in Orders DLQ for subject %s", subject)
 }
 
 func assertTicketDelivery(t *testing.T, delivery *fakeTicketEventDelivery, acknowledged, negativelyAcknowledged, terminated int) {
@@ -478,15 +597,16 @@ func assertTicketDelivery(t *testing.T, delivery *fakeTicketEventDelivery, ackno
 	}
 }
 
-func ticketDeliveryFor(delivery ticketEventDelivery, subject string, payload []byte, deliveryCount uint64) ticketDelivery {
-	return ticketDelivery{
-		delivery:      delivery,
-		deliveryCount: deliveryCount,
-		headers:       nats.Header{},
-		payload:       payload,
-		stream:        streamName,
-		streamSeq:     1,
-		subject:       subject,
+func ticketDeliveryFor(delivery ordersEventDelivery, subject string, payload []byte, deliveryCount uint64) ordersDelivery {
+	return ordersDelivery{
+		delivery:          delivery,
+		deadLetterSubject: orderevents.TicketProjectionDeadLetterSubject,
+		deliveryCount:     deliveryCount,
+		headers:           nats.Header{},
+		payload:           payload,
+		stream:            streamName,
+		streamSeq:         1,
+		subject:           subject,
 	}
 }
 
@@ -510,10 +630,10 @@ type fakeTicketEventDelivery struct {
 
 type fakeTicketDeadLetterer struct {
 	err    error
-	events []ticketDeadLetter
+	events []ordersDeadLetter
 }
 
-func (deadLetterer *fakeTicketDeadLetterer) Park(_ context.Context, event ticketDeadLetter) error {
+func (deadLetterer *fakeTicketDeadLetterer) Park(_ context.Context, event ordersDeadLetter) error {
 	if deadLetterer.err != nil {
 		return deadLetterer.err
 	}

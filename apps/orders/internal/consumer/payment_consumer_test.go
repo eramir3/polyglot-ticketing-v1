@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"polyglot-ticketing-v1/apps/orders/internal/order"
+	orderevents "polyglot-ticketing-v1/contracts/orders"
 	paymentevents "polyglot-ticketing-v1/contracts/payments"
 	paymentsv1 "polyglot-ticketing-v1/protogen/go/payments/v1"
 )
@@ -20,7 +21,7 @@ func TestPaymentCreatedConsumerAcknowledgesSuccessfulEvent(t *testing.T) {
 	delivery := &fakePaymentEventDelivery{}
 	consumer := NewPaymentCreatedConsumer(&fakePaymentCreatedRepository{}, "", testLogger())
 
-	consumer.handleDelivery(context.Background(), validPaymentCreatedPayload(t), delivery)
+	consumer.handleDelivery(context.Background(), paymentCreatedDeliveryFor(delivery, validPaymentCreatedPayload(t), 1))
 
 	assertPaymentDelivery(t, delivery, 1, 0, 0)
 }
@@ -29,18 +30,64 @@ func TestPaymentCreatedConsumerNegativeAcknowledgesRetryableEvent(t *testing.T) 
 	delivery := &fakePaymentEventDelivery{}
 	consumer := NewPaymentCreatedConsumer(&fakePaymentCreatedRepository{err: errors.New("database unavailable")}, "", testLogger())
 
-	consumer.handleDelivery(context.Background(), validPaymentCreatedPayload(t), delivery)
+	consumer.handleDelivery(context.Background(), paymentCreatedDeliveryFor(delivery, validPaymentCreatedPayload(t), 1))
 
 	assertPaymentDelivery(t, delivery, 0, 1, 0)
 }
 
-func TestPaymentCreatedConsumerTerminatesInvalidEvent(t *testing.T) {
+func TestPaymentCreatedConsumerParksInvalidEvent(t *testing.T) {
 	delivery := &fakePaymentEventDelivery{}
 	consumer := NewPaymentCreatedConsumer(&fakePaymentCreatedRepository{}, "", testLogger())
+	deadLetters := &fakeOrdersDeadLetterer{}
+	consumer.deadLetters = deadLetters
 
-	consumer.handleDelivery(context.Background(), nil, delivery)
+	consumer.handleDelivery(context.Background(), paymentCreatedDeliveryFor(delivery, nil, 1))
 
-	assertPaymentDelivery(t, delivery, 0, 0, 1)
+	assertPaymentDelivery(t, delivery, 1, 0, 0)
+	if len(deadLetters.events) != 1 || deadLetters.events[0].FailureClass != "invalid" {
+		t.Fatalf("expected one invalid event to be parked, got %+v", deadLetters.events)
+	}
+}
+
+func TestPaymentCreatedConsumerParksSixthFailedJetStreamDelivery(t *testing.T) {
+	nc, js, shutdown := startTicketJetStream(t)
+	defer shutdown()
+	if _, err := js.AddStream(&nats.StreamConfig{Name: paymentEventsStreamName, Subjects: []string{"payments.>"}}); err != nil {
+		t.Fatalf("add payments stream: %v", err)
+	}
+
+	consumeCtx, cancel := context.WithCancel(context.Background())
+	consumerDone := make(chan struct{})
+	consumer := NewPaymentCreatedConsumer(&fakePaymentCreatedRepository{err: errors.New("database unavailable")}, nc.ConnectedUrl(), testLogger())
+	go func() {
+		consumer.Run(consumeCtx)
+		close(consumerDone)
+	}()
+	defer func() {
+		cancel()
+		select {
+		case <-consumerDone:
+		case <-time.After(2 * time.Second):
+			t.Error("payment-created consumer did not stop")
+		}
+	}()
+
+	payload := validPaymentCreatedPayload(t)
+	if _, err := js.Publish(paymentevents.PaymentCreatedSubject, payload); err != nil {
+		t.Fatalf("publish payment-created event: %v", err)
+	}
+	waitForOrdersDeadLetter(t, js, orderevents.PaymentCreatedDeadLetterSubject, payload)
+	waitForConsumerAcknowledgement(t, js, paymentEventsStreamName, paymentCreatedDurableName)
+}
+
+func TestPaymentCreatedConsumerRetriesWhenParkingFails(t *testing.T) {
+	delivery := &fakePaymentEventDelivery{}
+	consumer := NewPaymentCreatedConsumer(&fakePaymentCreatedRepository{err: errors.New("database unavailable")}, "", testLogger())
+	consumer.deadLetters = &fakeOrdersDeadLetterer{err: errors.New("DLQ unavailable")}
+
+	consumer.handleDelivery(context.Background(), paymentCreatedDeliveryFor(delivery, validPaymentCreatedPayload(t), orderEventMaxRetries+1))
+
+	assertPaymentDelivery(t, delivery, 0, 1, 0)
 }
 
 func TestPaymentCreatedConsumerAcknowledgesJetStreamEvent(t *testing.T) {
@@ -92,6 +139,19 @@ func assertPaymentDelivery(t *testing.T, delivery *fakePaymentEventDelivery, ack
 	t.Helper()
 	if delivery.acknowledged != acknowledged || delivery.negativelyAcknowledged != negativelyAcknowledged || delivery.terminated != terminated {
 		t.Fatalf("unexpected payment-created acknowledgement: %+v", delivery)
+	}
+}
+
+func paymentCreatedDeliveryFor(delivery ordersEventDelivery, payload []byte, deliveryCount uint64) ordersDelivery {
+	return ordersDelivery{
+		delivery:          delivery,
+		deadLetterSubject: orderevents.PaymentCreatedDeadLetterSubject,
+		deliveryCount:     deliveryCount,
+		headers:           nats.Header{},
+		payload:           payload,
+		stream:            paymentEventsStreamName,
+		streamSeq:         1,
+		subject:           paymentevents.PaymentCreatedSubject,
 	}
 }
 

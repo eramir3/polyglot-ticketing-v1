@@ -38,12 +38,12 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	ack, err := consumer.ReplayTicketDeadLetter(ctx, js, sequence)
+	ack, err := consumer.ReplayOrdersDeadLetter(ctx, js, sequence)
 	if err != nil {
-		slog.Error("ticket DLQ replay failed", "sequence", sequence, "error", err)
+		slog.Error("Orders DLQ replay failed", "sequence", sequence, "error", err)
 		os.Exit(1)
 	}
-	fmt.Printf("replayed ticket DLQ sequence %d as TICKETS_EVENTS sequence %d\n", sequence, ack.Sequence)
+	fmt.Printf("replayed Orders DLQ sequence %d as source stream sequence %d\n", sequence, ack.Sequence)
 }
 
 func requiredSequence(name string) (uint64, error) {

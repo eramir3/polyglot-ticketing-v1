@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"polyglot-ticketing-v1/apps/orders/internal/order"
+	orderevents "polyglot-ticketing-v1/contracts/orders"
 	paymentevents "polyglot-ticketing-v1/contracts/payments"
 	paymentsv1 "polyglot-ticketing-v1/protogen/go/payments/v1"
 )
@@ -23,7 +24,7 @@ func TestPaymentResultConsumersAcknowledgeValidEvents(t *testing.T) {
 			delivery := &fakePaymentResultDelivery{}
 			consumer := testCase.newConsumer(&fakePaymentResultRepository{}, "", testLogger())
 
-			consumer.handleDelivery(context.Background(), testCase.payload(t), delivery)
+			consumer.handleDelivery(context.Background(), paymentResultDeliveryFor(delivery, testCase.subject, testCase.payload(t), 1))
 
 			assertPaymentResultDelivery(t, delivery, 1, 0, 0)
 		})
@@ -35,14 +36,19 @@ func TestPaymentResultConsumersHandleRetryableAndInvalidEvents(t *testing.T) {
 		t.Run(testCase.name+" retry", func(t *testing.T) {
 			delivery := &fakePaymentResultDelivery{}
 			consumer := testCase.newConsumer(&fakePaymentResultRepository{err: errors.New("database unavailable")}, "", testLogger())
-			consumer.handleDelivery(context.Background(), testCase.payload(t), delivery)
+			consumer.handleDelivery(context.Background(), paymentResultDeliveryFor(delivery, testCase.subject, testCase.payload(t), 1))
 			assertPaymentResultDelivery(t, delivery, 0, 1, 0)
 		})
 		t.Run(testCase.name+" invalid", func(t *testing.T) {
 			delivery := &fakePaymentResultDelivery{}
 			consumer := testCase.newConsumer(&fakePaymentResultRepository{}, "", testLogger())
-			consumer.handleDelivery(context.Background(), nil, delivery)
-			assertPaymentResultDelivery(t, delivery, 0, 0, 1)
+			deadLetters := &fakeOrdersDeadLetterer{}
+			consumer.deadLetters = deadLetters
+			consumer.handleDelivery(context.Background(), paymentResultDeliveryFor(delivery, testCase.subject, nil, 1))
+			assertPaymentResultDelivery(t, delivery, 1, 0, 0)
+			if len(deadLetters.events) != 1 || deadLetters.events[0].FailureClass != "invalid" {
+				t.Fatalf("expected one invalid event to be parked, got %+v", deadLetters.events)
+			}
 		})
 	}
 }
@@ -80,6 +86,59 @@ func TestPaymentResultConsumersAcknowledgeJetStreamEvents(t *testing.T) {
 				time.Sleep(20 * time.Millisecond)
 			}
 			t.Fatal("payment result event was not acknowledged by JetStream")
+		})
+	}
+}
+
+func TestPaymentResultConsumersParkSixthFailedJetStreamDelivery(t *testing.T) {
+	for _, testCase := range paymentResultConsumerCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			nc, js, shutdown := startTicketJetStream(t)
+			defer shutdown()
+			if _, err := js.AddStream(&nats.StreamConfig{Name: paymentEventsStreamName, Subjects: []string{"payments.>"}}); err != nil {
+				t.Fatalf("add payments stream: %v", err)
+			}
+
+			consumeCtx, cancel := context.WithCancel(context.Background())
+			consumerDone := make(chan struct{})
+			consumer := testCase.newConsumer(&fakePaymentResultRepository{err: errors.New("database unavailable")}, nc.ConnectedUrl(), testLogger())
+			go func() {
+				consumer.Run(consumeCtx)
+				close(consumerDone)
+			}()
+			defer func() {
+				cancel()
+				select {
+				case <-consumerDone:
+				case <-time.After(2 * time.Second):
+					t.Error("payment result consumer did not stop")
+				}
+			}()
+
+			payload := testCase.payload(t)
+			if _, err := js.Publish(testCase.subject, payload); err != nil {
+				t.Fatalf("publish payment result event: %v", err)
+			}
+			deadLetterSubject := orderevents.PaymentFailedDeadLetterSubject
+			if testCase.subject == paymentevents.PaymentSucceededSubject {
+				deadLetterSubject = orderevents.PaymentSucceededDeadLetterSubject
+			}
+			waitForOrdersDeadLetter(t, js, deadLetterSubject, payload)
+			waitForConsumerAcknowledgement(t, js, paymentEventsStreamName, testCase.durable)
+		})
+	}
+}
+
+func TestPaymentResultConsumersRetryWhenParkingFails(t *testing.T) {
+	for _, testCase := range paymentResultConsumerCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			delivery := &fakePaymentResultDelivery{}
+			consumer := testCase.newConsumer(&fakePaymentResultRepository{err: errors.New("database unavailable")}, "", testLogger())
+			consumer.deadLetters = &fakeOrdersDeadLetterer{err: errors.New("DLQ unavailable")}
+
+			consumer.handleDelivery(context.Background(), paymentResultDeliveryFor(delivery, testCase.subject, testCase.payload(t), orderEventMaxRetries+1))
+
+			assertPaymentResultDelivery(t, delivery, 0, 1, 0)
 		})
 	}
 }
@@ -125,6 +184,23 @@ func assertPaymentResultDelivery(t *testing.T, delivery *fakePaymentResultDelive
 	t.Helper()
 	if delivery.acknowledged != acknowledged || delivery.negativelyAcknowledged != negativelyAcknowledged || delivery.terminated != terminated {
 		t.Fatalf("unexpected payment result acknowledgement: %+v", delivery)
+	}
+}
+
+func paymentResultDeliveryFor(delivery ordersEventDelivery, subject string, payload []byte, deliveryCount uint64) ordersDelivery {
+	deadLetterSubject := orderevents.PaymentFailedDeadLetterSubject
+	if subject == paymentevents.PaymentSucceededSubject {
+		deadLetterSubject = orderevents.PaymentSucceededDeadLetterSubject
+	}
+	return ordersDelivery{
+		delivery:          delivery,
+		deadLetterSubject: deadLetterSubject,
+		deliveryCount:     deliveryCount,
+		headers:           nats.Header{},
+		payload:           payload,
+		stream:            paymentEventsStreamName,
+		streamSeq:         1,
+		subject:           subject,
 	}
 }
 

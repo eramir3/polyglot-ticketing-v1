@@ -10,6 +10,7 @@ import (
 
 	"polyglot-ticketing-v1/apps/orders/internal/order"
 	"polyglot-ticketing-v1/apps/orders/internal/projection"
+	orderevents "polyglot-ticketing-v1/contracts/orders"
 	"polyglot-ticketing-v1/internal/observability"
 	"polyglot-ticketing-v1/internal/tracing"
 )
@@ -23,15 +24,10 @@ const (
 
 type TicketConsumer struct {
 	handler     *projection.TicketHandler
-	deadLetters ticketDeadLetterer
+	deadLetters ordersDeadLetterer
 	logger      *slog.Logger
 	metrics     *observability.Metrics
 	url         string
-}
-
-type ticketEventDelivery interface {
-	Ack(...nats.AckOpt) error
-	Nak(...nats.AckOpt) error
 }
 
 func NewTicketConsumer(repository order.TicketProjectionRepository, url string, logger *slog.Logger, metrics ...*observability.Metrics) *TicketConsumer {
@@ -65,10 +61,10 @@ func (consumer *TicketConsumer) consume(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := ensureTicketDeadLetterStream(js); err != nil {
+	if err := ensureOrdersDeadLetterStream(js); err != nil {
 		return err
 	}
-	consumer.deadLetters = jetStreamTicketDeadLetterer{js: js}
+	consumer.deadLetters = jetStreamOrdersDeadLetterer{js: js}
 	subscription, err := js.PullSubscribe(
 		"tickets.>",
 		durableName,
@@ -97,7 +93,7 @@ func (consumer *TicketConsumer) consume(ctx context.Context) error {
 
 func (consumer *TicketConsumer) handleMessage(ctx context.Context, message *nats.Msg) {
 	ctx = tracing.ExtractNATS(ctx, message.Header)
-	metadata, err := message.Metadata()
+	event, err := newOrdersDelivery(message, orderevents.TicketProjectionDeadLetterSubject)
 	if err != nil {
 		consumer.logger.Warn("failed to read ticket event delivery metadata; event will be retried", "error", err)
 		if nakErr := message.Nak(); nakErr != nil {
@@ -105,28 +101,10 @@ func (consumer *TicketConsumer) handleMessage(ctx context.Context, message *nats
 		}
 		return
 	}
-	consumer.handleDelivery(ctx, ticketDelivery{
-		delivery:      message,
-		deliveryCount: metadata.NumDelivered,
-		headers:       message.Header,
-		payload:       message.Data,
-		stream:        metadata.Stream,
-		streamSeq:     metadata.Sequence.Stream,
-		subject:       message.Subject,
-	})
+	consumer.handleDelivery(ctx, event)
 }
 
-type ticketDelivery struct {
-	delivery      ticketEventDelivery
-	deliveryCount uint64
-	headers       nats.Header
-	payload       []byte
-	stream        string
-	streamSeq     uint64
-	subject       string
-}
-
-func (consumer *TicketConsumer) handleDelivery(ctx context.Context, event ticketDelivery) {
+func (consumer *TicketConsumer) handleDelivery(ctx context.Context, event ordersDelivery) {
 	started := time.Now()
 	err := consumer.handler.Handle(ctx, event.subject, event.payload)
 	if err == nil {
@@ -139,7 +117,7 @@ func (consumer *TicketConsumer) handleDelivery(ctx context.Context, event ticket
 		return
 	}
 	failureClass := ticketFailureClass(err)
-	if failureClass == "invalid" || event.deliveryCount > ticketEventMaxRetries {
+	if failureClass == "invalid" || event.deliveryCount > orderEventMaxRetries {
 		if consumer.park(ctx, event, failureClass, err) {
 			consumer.observe("dead_lettered", started)
 			return
@@ -155,7 +133,7 @@ func (consumer *TicketConsumer) handleDelivery(ctx context.Context, event ticket
 	consumer.observe("retry", started)
 }
 
-func (consumer *TicketConsumer) park(ctx context.Context, event ticketDelivery, failureClass string, failure error) bool {
+func (consumer *TicketConsumer) park(ctx context.Context, event ordersDelivery, failureClass string, failure error) bool {
 	if consumer.deadLetters == nil {
 		consumer.logger.Warn("ticket dead letter queue is unavailable; event will be retried", "subject", event.subject, "error", failure)
 		if nakErr := event.delivery.Nak(); nakErr != nil {
@@ -164,17 +142,7 @@ func (consumer *TicketConsumer) park(ctx context.Context, event ticketDelivery, 
 		return false
 	}
 
-	err := consumer.deadLetters.Park(ctx, ticketDeadLetter{
-		Consumer:        durableName,
-		DeliveryCount:   event.deliveryCount,
-		FailureClass:    failureClass,
-		FailureReason:   failure.Error(),
-		OriginalHeader:  event.headers,
-		OriginalStream:  event.stream,
-		OriginalSeq:     event.streamSeq,
-		OriginalSubject: event.subject,
-		Payload:         event.payload,
-	})
+	err := consumer.deadLetters.Park(ctx, event.deadLetter(durableName, failureClass, failure))
 	if err != nil {
 		consumer.logger.Error("failed to park ticket event in dead letter queue; event will be retried", "subject", event.subject, "error", err)
 		if nakErr := event.delivery.Nak(); nakErr != nil {

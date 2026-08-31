@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install generate-proto build build-api-gateway build-identity build-tickets build-orders build-payments build-expiration test test-api-gateway test-tickets test-orders test-payments test-expiration serve-api-gateway serve-identity serve-tickets serve-orders serve-payments serve-expiration stress-tickets replay-ticket-dlq docker-build docker-up docker-up-tools docker-down docker-reset docker-logs docker-ps
+.PHONY: help install generate-proto build build-api-gateway build-identity build-tickets build-orders build-payments build-expiration test test-api-gateway test-tickets test-orders test-payments test-expiration serve-api-gateway serve-identity serve-tickets serve-orders serve-payments serve-expiration stress-tickets replay-orders-dlq replay-ticket-dlq docker-build docker-up docker-up-tools docker-down docker-reset docker-logs docker-ps
 
 help: ## Show available commands.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-22s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -69,9 +69,11 @@ serve-expiration: ## Run the expiration service locally.
 stress-tickets: ## Run sequential ticket create/update stress cycles (requires STRESS_COOKIE).
 	node scripts/stress/tickets.js
 
-replay-ticket-dlq: ## Replay one Orders ticket-projection DLQ message (requires DLQ_SEQUENCE).
+replay-orders-dlq: ## Replay one Orders DLQ message (requires DLQ_SEQUENCE).
 	@test -n "$(DLQ_SEQUENCE)" || (echo "DLQ_SEQUENCE is required"; exit 1)
 	DLQ_SEQUENCE=$(DLQ_SEQUENCE) go run ./apps/orders/cmd/orders-ticket-dlq-replay
+
+replay-ticket-dlq: replay-orders-dlq ## Deprecated alias for replay-orders-dlq.
 
 docker-build: ## Build all Docker Compose service images.
 	docker compose build

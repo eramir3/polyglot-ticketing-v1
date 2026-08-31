@@ -415,20 +415,26 @@ Orders applies a ticket event only when its `aggregateVersion` is contiguous:
 version `0` creates a missing projection and later events must be exactly one
 greater than the projected version. A future version gap is negatively
 acknowledged so JetStream retries it; duplicate and delayed older snapshots are
-acknowledged as no-ops. Retryable ticket-projection failures, including version
-gaps, retry five times after the initial delivery. On the sixth delivery, and
-immediately for malformed or unsupported ticket events, Orders copies the
-original binary message into its `ORDERS_DLQ` JetStream stream on
-`dlq.orders.ticket-projection.v1`, then acknowledges the source. The
-DLQ headers retain the original subject, stream sequence, delivery count,
-failure class and reason, and tracing context. If parking fails, the source
-event remains unacknowledged and retries until it can be retained safely.
+acknowledged as no-ops.
 
-Operators inspect retained ticket DLQ messages and replay one with
-`make replay-ticket-dlq DLQ_SEQUENCE=<sequence>`. Replays republish the original
-payload to its ticket subject with a new NATS message ID and leave the DLQ
-record for audit. Replay related messages in original stream-sequence order so
-the ticket projection can advance aggregate versions contiguously.
+All Orders JetStream consumers use a shared `ORDERS_DLQ` stream. The ticket
+projection, `ExpirationComplete`, `PaymentCreated`, `PaymentSucceeded`, and
+`PaymentFailed` consumers each retry transient failures five times after the
+initial delivery and park the sixth delivery. Malformed or unsupported events
+are parked immediately. The stream has one dedicated `dlq.orders.*` subject per
+consumer: `ticket-projection`, `expiration-complete`, `payment-created`,
+`payment-succeeded`, and `payment-failed`. Parking retains the original binary
+payload, trace headers, source subject/stream/sequence, durable consumer,
+delivery count, failure class, and failure reason. The source event is
+acknowledged only after parking succeeds; a DLQ publication failure leaves it
+retryable.
+
+Operators inspect retained Orders DLQ messages and replay one with
+`make replay-orders-dlq DLQ_SEQUENCE=<sequence>`. Replays validate the retained
+original subject, republish its original payload with a new NATS message ID,
+and leave the DLQ record for audit. Replay related ticket messages in original
+stream-sequence order so the ticket projection can advance aggregate versions
+contiguously.
 The `orders` table has `id`, `expires_at`, `user_id`, `ticket_id`, and a
 `status` enum with `Created`, `Canceled`, `AwaitingPayment`, and `Complete`.
 Orders owns an internal `aggregate_version` that starts at `0` when the order
@@ -477,7 +483,8 @@ stores a new payment. The `payments.v1.PaymentCreated` protobuf payload carries
 the durable `orders-payment-created-v1` consumer. In one transaction it records
 the event ID and moves only a `Created` order to `AwaitingPayment`, incrementing
 the Orders aggregate version. Duplicate and late valid events are acknowledged
-as no-ops; malformed events are terminated and transient failures are retried.
+as no-ops. Malformed events are parked in the Orders DLQ immediately;
+transient failures retry five times before being parked.
 
 Payments also publishes `payments.payment.succeeded.v1` and
 `payments.payment.failed.v1` to `PAYMENTS_EVENTS`. Their respective
@@ -488,8 +495,9 @@ durable consumers. A success moves a `Created` or `AwaitingPayment` order to
 `Complete`, so an early result can complete an order before `PaymentCreated`
 arrives. A failure moves either eligible state to `Canceled` and writes one
 `OrderCanceled` outbox event. Duplicate, late, missing, already canceled, and
-already complete orders are acknowledged as no-ops; malformed events terminate
-and transient failures retry.
+already complete orders are acknowledged as no-ops. Malformed events are parked
+in the Orders DLQ immediately; transient failures retry five times before being
+parked.
 
 The cancellation event has the same delivery envelope and identifies the
 canceled order and ticket:
@@ -548,8 +556,9 @@ Orders no-op for a canceled or completed reservation.
 ```
 
 Orders validates and explicitly acknowledges the event only after its database
-transaction commits. Invalid expiration payloads are terminally acknowledged;
-transient database or NATS failures are negatively acknowledged for redelivery.
+transaction commits. Invalid expiration payloads are parked in the Orders DLQ
+immediately; transient database or NATS failures are negatively acknowledged
+five times before being parked.
 
 Payments consumes both order subjects through its durable
 `payments-order-projection-v1` JetStream consumer. It records event IDs and

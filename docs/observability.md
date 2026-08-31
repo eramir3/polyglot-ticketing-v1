@@ -153,8 +153,8 @@ Loki retains local data for seven days.
 | Expiration `OrderCreated` consumer                           | Error | `terminal OrderCreated event` — a malformed `OrderCreated` delivery was terminated and will not be retried.                                                       | `error`                                                                                     |
 | Expiration `OrderCreated` consumer                           | Warn  | `order-created handling failed; event will be retried` — scheduling the expiration job failed transiently and the JetStream delivery was negatively acknowledged. | `error`                                                                                     |
 | Expiration BullMQ processor                                  | Error | `expiration-complete publish failed; job will be retried` — publishing `ExpirationComplete` failed, so BullMQ retries the job.                                    | `order_id` in the message, `error`                                                          |
-| Orders ticket-projection consumer                            | Warn  | `ticket event parked in dead letter queue` — a malformed ticket event or a retryable ticket-projection failure after five retries was retained in `ORDERS_DLQ`.     | `subject`, `stream_sequence`, `delivery_count`, `failure_class`, `error`                    |
-| Orders ticket-projection consumer                            | Error | `failed to park ticket event in dead letter queue; event will be retried` — the source ticket event remains unacknowledged until it can be parked safely.          | `subject`, `error`                                                                          |
+| Orders JetStream consumers                                   | Warn  | `… event parked in dead letter queue` — a malformed delivery, or a transient failure after five retries, was retained in `ORDERS_DLQ`.                              | `subject`, `stream_sequence`, `delivery_count`, `failure_class`, `error`                    |
+| Orders JetStream consumers                                   | Error | `failed to park … event in dead letter queue; event will be retried` — the source event remains unacknowledged until it can be parked safely.                        | `subject`, `error`                                                                          |
 | Shared transactional outbox in Tickets, Orders, and Payments | Warn  | `outbox event dispatch failed` — publishing an event or recording its publish result failed.                                                                      | `operation` (`publish`, `mark_failed`, or `mark_published`), `event_id`, `subject`, `error` |
 
 ### LogQL queries
@@ -168,8 +168,8 @@ Loki retains local data for seven days.
 - Expiration terminal delivery: `{service="expiration", environment="local"} |= "terminal OrderCreated event"`
 - Expiration retryable scheduling failure: `{service="expiration", environment="local"} |= "order-created handling failed; event will be retried"`
 - Expiration retryable publishing failure: `{service="expiration", environment="local"} |= "expiration-complete publish failed"`
-- Orders ticket DLQ: `{service="orders", environment="local"} |= "ticket event parked in dead letter queue"`
-- Orders ticket DLQ publication failure: `{service="orders", environment="local"} |= "failed to park ticket event in dead letter queue"`
+- Orders DLQ: `{service="orders", environment="local"} |= "event parked in dead letter queue"`
+- Orders DLQ publication failure: `{service="orders", environment="local"} |= "dead letter queue; event will be retried"`
 - Transactional outbox: `{environment="local", service=~"tickets|orders|payments"} |= "outbox event dispatch failed"`
 
 ## Out of scope
