@@ -612,12 +612,12 @@ provisions Loki and Prometheus datasources; the Prometheus UI is available at
 is labeled with its `service` and `environment="local"`. Prometheus scrapes a
 private `:9090/metrics` endpoint from the same six services and applies the
 same fixed labels. It also accepts labeled k6 results through its Compose-network
-remote-write receiver. `make k6-tickets-list-comparison` requires
-`LOAD_TEST_METRICS_TOKEN`, removes local Compose data, records an empty-list
-baseline, adds exactly 100 deterministic tickets to the newly empty
-`tickets-db`, and records the matching seeded run. Grafana's provisioned
-Ticketing / k6 Load Tests dashboard filters those `k6_*` series by test type
-and run, and correlates them with verified
+remote-write receiver. `make prepare-k6-tickets-list` removes local Compose
+data, starts the observability stack, and seeds exactly 100 deterministic
+tickets. `make k6-tickets-list K6_PROFILE=smoke|load|stress` requires
+`LOAD_TEST_METRICS_TOKEN` and runs only the selected profile. Grafana's
+provisioned Ticketing / k6 Load Tests dashboard filters those `k6_*` series by
+profile and run, includes dropped-iteration rate, and correlates them with verified
 `traffic_source="k6"` gateway metrics. Loki and Prometheus retain local data
 for seven days. The intentional, high-signal log and metrics catalog,
 including ready-to-paste LogQL and PromQL queries, is in

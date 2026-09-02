@@ -1,0 +1,59 @@
+{
+  "smoke": {
+    "description": "Smoke test - minimal load to verify ticket-list functionality.",
+    "thinkTimeSeconds": 1,
+    "scenario": {
+      "executor": "ramping-vus",
+      "stages": [
+        { "duration": "10s", "target": 1 },
+        { "duration": "30s", "target": 5 },
+        { "duration": "10s", "target": 0 }
+      ]
+    },
+    "thresholds": {
+      "checks": ["rate==1"],
+      "dropped_iterations": ["count==0"],
+      "http_req_failed": ["rate<0.01"],
+      "http_req_duration": ["p(95)<1000"]
+    }
+  },
+  "load": {
+    "description": "Load test - sustained expected ticket-list traffic.",
+    "thinkTimeSeconds": 0,
+    "scenario": {
+      "executor": "constant-arrival-rate",
+      "duration": "5m",
+      "rate": 20,
+      "timeUnit": "1s",
+      "preAllocatedVUs": 25,
+      "maxVUs": 50
+    },
+    "thresholds": {
+      "checks": ["rate==1"],
+      "dropped_iterations": ["count==0"],
+      "http_req_failed": ["rate<0.01"],
+      "http_req_duration": ["p(95)<1000"]
+    }
+  },
+  "stress": {
+    "description": "Stress test - staged ticket-list traffic beyond expected capacity.",
+    "thinkTimeSeconds": 0,
+    "scenario": {
+      "executor": "ramping-arrival-rate",
+      "startRate": 20,
+      "timeUnit": "1s",
+      "preAllocatedVUs": 50,
+      "maxVUs": 200,
+      "stages": [
+        { "duration": "1m", "target": 20 },
+        { "duration": "0s", "target": 40 },
+        { "duration": "1m", "target": 40 },
+        { "duration": "0s", "target": 80 },
+        { "duration": "1m", "target": 80 },
+        { "duration": "0s", "target": 160 },
+        { "duration": "1m", "target": 160 }
+      ]
+    },
+    "thresholds": {}
+  }
+}

@@ -29,10 +29,14 @@ k6 sends its short-lived load-test metrics to Prometheus's private remote-write
 receiver. These are separate `k6_*` series, tagged with `source="k6"`,
 `test_type`, and a unique `testid`; they are not application metrics. The
 provisioned Grafana **Ticketing / k6 Load Tests** dashboard filters them by
-test type and `testid`. `make k6-tickets-list-comparison` resets local Compose
-data, produces the `tickets-list-empty` baseline, seeds the deterministic
-100-ticket dataset, and produces the `tickets-list-seeded` run. Individual
-commands remain available for running either scenario separately.
+test type and `testid`. `make prepare-k6-tickets-list` resets local Compose
+data and seeds the deterministic 100-ticket dataset. Then
+`make k6-tickets-list K6_PROFILE=smoke|load|stress` runs only the selected
+profile and tags it as `tickets-list-smoke`, `tickets-list-load`, or
+`tickets-list-stress`. The dashboard includes the `k6_dropped_iterations_total`
+rate, which identifies whether the k6 executor could not start scheduled work.
+Profile descriptions, scenarios, thresholds, and think time are defined in
+[`tests/performance/k6/test-configs.json`](../tests/performance/k6/test-configs.json).
 
 Every scraped series has the fixed `service` and `environment="local"` target
 labels. Ticket, order, payment, event, and user identifiers must never be

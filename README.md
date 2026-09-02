@@ -61,41 +61,45 @@ For local payment stress testing, set
 then resolves each payment with an independent 10% failure probability;
 otherwise `PAYMENT_PROCESSOR_OUTCOME` controls a deterministic result.
 
-Run the ticket-list performance comparison from a fresh local database:
+Prepare the deterministic ticket-list performance dataset:
 
 ```bash
-make k6-tickets-list-comparison
+make prepare-k6-tickets-list
 ```
 
-This command requires `LOAD_TEST_METRICS_TOKEN` and removes local application
-and observability data before recreating the databases and running migrations.
-It captures an empty-list baseline that expects zero tickets, inserts exactly
-100 deterministic read-only ticket records, then captures the matching seeded
-run. The seed refuses to run if `tickets-db` is not empty.
+This command removes local application and observability data, recreates the
+databases, starts the observability tools, and inserts exactly 100 deterministic
+read-only ticket records. The seed refuses to run if `tickets-db` is not empty.
 
-The individual commands remain available when you need to run a single stage:
+Then run exactly one ticket-list profile at a time:
 
 ```bash
-make docker-reset
-make docker-up-tools
-make k6-tickets-list
-make seed-performance-tickets
-make k6-tickets-list-seeded
+make k6-tickets-list K6_PROFILE=smoke
+make k6-tickets-list K6_PROFILE=load
+make k6-tickets-list K6_PROFILE=stress
 ```
 
-Both tests use a Dockerized k6 runner on the Compose network and exercise the
-public `GET /api/tickets` route. They require successful responses and checks,
-an HTTP error rate below 1%, and a p95 request duration below one second. To
-target another reachable gateway, set `K6_BASE_URL`, for example:
+All profiles use a Dockerized k6 runner on the Compose network and exercise the
+public `GET /api/tickets` route against the 100-ticket dataset. `smoke` retains
+the short one-to-five virtual-user ramp. `load` sustains 20 requests per second
+for five minutes and requires successful checks, fewer than 1% HTTP failures,
+a p95 below one second, and no dropped iterations. `stress` holds 20, 40, 80,
+and 160 requests per second for one minute each, reporting saturation without
+failing on those results. To target another reachable gateway, set `K6_BASE_URL`,
+for example:
 
 ```bash
-K6_BASE_URL=http://api-gateway:3000 make k6-tickets-list-seeded
+K6_BASE_URL=http://api-gateway:3000 make k6-tickets-list K6_PROFILE=load
 ```
+
+Profile descriptions, scenarios, thresholds, and think time are versioned in
+[`tests/performance/k6/test-configs.json`](tests/performance/k6/test-configs.json).
 
 Set a random `LOAD_TEST_METRICS_TOKEN` in `.env` before running the test. k6
 uses that token only to mark its gateway requests in local metrics. Grafana's
-**Ticketing / k6 Load Tests** dashboard compares the empty and seeded test
-types, selected runs, and normal gateway traffic.
+**Ticketing / k6 Load Tests** dashboard filters smoke, load, and stress runs by
+profile and run ID, and shows their dropped-iteration rate alongside normal
+gateway traffic.
 
 ## Public API
 

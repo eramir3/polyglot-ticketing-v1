@@ -105,11 +105,11 @@ expiration jobs.
   contains logs from the six application services, and Prometheus scrapes their
   private Compose-network `:9090/metrics` endpoints; both use `service` and
   `environment=local` labels. Set `LOAD_TEST_METRICS_TOKEN` and run
-  `make k6-tickets-list-comparison` to reset local Compose data and write the
-  deterministic empty-list and 100-ticket comparison to Prometheus. The
-  individual baseline, seed, and seeded targets remain available; Grafana's
-  Ticketing / k6 Load Tests dashboard separates test types and selected runs
-  from normal gateway traffic.
+  `make prepare-k6-tickets-list` to reset local Compose data and seed the
+  deterministic 100-ticket dataset. Then run exactly one profile with
+  `make k6-tickets-list K6_PROFILE=smoke|load|stress`; Grafana's Ticketing / k6
+  Load Tests dashboard separates profile types and selected runs from normal
+  gateway traffic.
 - The gateway is published on `localhost:3000`; identity gRPC is internal to
   the Compose network on `identity:50051`; Postgres is published on
   `localhost:5432` for local database tooling. Tickets gRPC is internal on

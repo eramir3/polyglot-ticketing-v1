@@ -2,24 +2,18 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 const baseUrl = __ENV.K6_BASE_URL || 'http://api-gateway:3000';
+const testConfigs = JSON.parse(open('./test-configs.json'));
+const profileName = readProfileName();
+const profile = testConfigs[profileName];
 const expectedTicketCount = readExpectedTicketCount();
 
 export const options = {
   scenarios: {
-    tickets_list: {
-      executor: 'ramping-vus',
-      stages: [
-        { duration: '10s', target: 1 },
-        { duration: '30s', target: 5 },
-        { duration: '10s', target: 0 },
-      ],
-    },
+    [`tickets_list_${profileName}`]: profile.scenario,
   },
-  thresholds: {
-    checks: ['rate==1'],
-    http_req_failed: ['rate<0.01'],
-    http_req_duration: ['p(95)<1000'],
-  },
+  ...(Object.keys(profile.thresholds).length === 0
+    ? {}
+    : { thresholds: profile.thresholds }),
 };
 
 function hasJsonArrayBody(response) {
@@ -39,13 +33,24 @@ function hasExpectedTicketCount(response) {
 }
 
 function readExpectedTicketCount() {
-  const value = __ENV.K6_EXPECT_TICKET_COUNT || '0';
+  const value = __ENV.K6_EXPECT_TICKET_COUNT || '100';
   const count = Number(value);
   if (!Number.isSafeInteger(count) || count < 0) {
     throw new Error('K6_EXPECT_TICKET_COUNT must be a non-negative integer');
   }
 
   return count;
+}
+
+function readProfileName() {
+  const value = __ENV.K6_PROFILE || 'smoke';
+  if (!Object.prototype.hasOwnProperty.call(testConfigs, value)) {
+    throw new Error(
+      `K6_PROFILE must be one of: ${Object.keys(testConfigs).join(', ')}`,
+    );
+  }
+
+  return value;
 }
 
 export default function () {
@@ -62,5 +67,7 @@ export default function () {
     'returns the expected ticket count': hasExpectedTicketCount,
   });
 
-  sleep(1);
+  if (profile.thinkTimeSeconds > 0) {
+    sleep(profile.thinkTimeSeconds);
+  }
 }

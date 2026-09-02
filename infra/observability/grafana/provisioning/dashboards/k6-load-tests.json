@@ -1,6 +1,6 @@
 {
   "uid": "k6-load-tests",
-  "title": "k6 Load Tests",
+  "title": "Tickets API Performance",
   "tags": ["k6", "performance"],
   "timezone": "browser",
   "schemaVersion": 41,
@@ -96,6 +96,15 @@
       "targets": [{ "expr": "100 * sum by (service) (rate(process_cpu_seconds_total{environment=\"local\",service=~\"api-gateway|identity|tickets|orders|payments|expiration\"}[$__rate_interval]))", "legendFormat": "{{service}}", "refId": "A" }],
       "fieldConfig": { "defaults": { "unit": "percent", "min": 0 }, "overrides": [] },
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 }
+    },
+    {
+      "id": 8,
+      "title": "Dropped iterations rate",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(k6_dropped_iterations_total{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\"}[$__rate_interval]))", "legendFormat": "dropped/s", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 }
     }
   ]
 }
