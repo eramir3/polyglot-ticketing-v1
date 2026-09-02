@@ -2,7 +2,7 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 const baseUrl = __ENV.K6_BASE_URL || 'http://api-gateway:3000';
-const testConfigs = JSON.parse(open('./test-configs.json'));
+const testConfigs = JSON.parse(open('./tickets-list-configs.json'));
 const profileName = readProfileName();
 const profile = testConfigs[profileName];
 const expectedTicketCount = readExpectedTicketCount();

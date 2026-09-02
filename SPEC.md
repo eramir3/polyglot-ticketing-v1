@@ -615,10 +615,14 @@ same fixed labels. It also accepts labeled k6 results through its Compose-networ
 remote-write receiver. `make prepare-k6-tickets-list` removes local Compose
 data, starts the observability stack, and seeds exactly 100 deterministic
 tickets. `make k6-tickets-list K6_PROFILE=smoke|load|stress` requires
-`LOAD_TEST_METRICS_TOKEN` and runs only the selected profile. Grafana's
-provisioned Ticketing / k6 Load Tests dashboard filters those `k6_*` series by
-profile and run, includes dropped-iteration rate, and correlates them with verified
-`traffic_source="k6"` gateway metrics. Loki and Prometheus retain local data
+`LOAD_TEST_METRICS_TOKEN` and runs only the selected profile. For authenticated
+ticket creation, `make prepare-k6-tickets-create` resets and starts the local
+stack without a ticket seed; `make k6-tickets-create K6_PROFILE=smoke|load|stress`
+creates, verifies, and signs in one disposable user during k6 setup, then
+measures `POST /api/tickets`. Grafana's provisioned Tickets API Performance
+dashboard filters those `k6_*` series by profile, run, and endpoint, includes
+dropped-iteration rate, and correlates them with verified `traffic_source="k6"`
+gateway metrics. Loki and Prometheus retain local data
 for seven days. The intentional, high-signal log and metrics catalog,
 including ready-to-paste LogQL and PromQL queries, is in
 [`docs/observability.md`](docs/observability.md). Ordinary validation and

@@ -93,13 +93,31 @@ K6_BASE_URL=http://api-gateway:3000 make k6-tickets-list K6_PROFILE=load
 ```
 
 Profile descriptions, scenarios, thresholds, and think time are versioned in
-[`tests/performance/k6/test-configs.json`](tests/performance/k6/test-configs.json).
+[`tests/performance/k6/tickets-list-configs.json`](tests/performance/k6/tickets-list-configs.json).
 
-Set a random `LOAD_TEST_METRICS_TOKEN` in `.env` before running the test. k6
+Ticket creation has the same profile names with conservative write rates. Its
+setup creates, verifies through Mailpit, and signs in one disposable user; the
+measured requests then share that session. It does not seed tickets because the
+test writes them:
+
+```bash
+make prepare-k6-tickets-create
+make k6-tickets-create K6_PROFILE=smoke
+make k6-tickets-create K6_PROFILE=load
+make k6-tickets-create K6_PROFILE=stress
+```
+
+The create load profile runs at five creates per second for five minutes. Its
+stress profile holds 5, 10, 20, and 40 creates per second for one minute each.
+The generated tickets remain in the local database until the next reset.
+Profile definitions are in
+[`tests/performance/k6/tickets-create-configs.json`](tests/performance/k6/tickets-create-configs.json).
+
+Set a random `LOAD_TEST_METRICS_TOKEN` in `.env` before running either test. k6
 uses that token only to mark its gateway requests in local metrics. Grafana's
-**Ticketing / k6 Load Tests** dashboard filters smoke, load, and stress runs by
-profile and run ID, and shows their dropped-iteration rate alongside normal
-gateway traffic.
+**Tickets API Performance** dashboard filters smoke, load, and stress runs by
+profile, run ID, and endpoint, and shows their dropped-iteration rate alongside
+normal gateway traffic.
 
 ## Public API
 

@@ -27,16 +27,25 @@ routes. Prometheus itself retains local data for seven days.
 
 k6 sends its short-lived load-test metrics to Prometheus's private remote-write
 receiver. These are separate `k6_*` series, tagged with `source="k6"`,
-`test_type`, and a unique `testid`; they are not application metrics. The
-provisioned Grafana **Ticketing / k6 Load Tests** dashboard filters them by
-test type and `testid`. `make prepare-k6-tickets-list` resets local Compose
-data and seeds the deterministic 100-ticket dataset. Then
+`test_type`, a unique `testid`, and an endpoint tag; they are not application
+metrics. The provisioned Grafana **Tickets API Performance** dashboard filters
+them by test type, run, and endpoint. `make prepare-k6-tickets-list` resets
+local Compose data and seeds the deterministic 100-ticket dataset. Then
 `make k6-tickets-list K6_PROFILE=smoke|load|stress` runs only the selected
 profile and tags it as `tickets-list-smoke`, `tickets-list-load`, or
 `tickets-list-stress`. The dashboard includes the `k6_dropped_iterations_total`
 rate, which identifies whether the k6 executor could not start scheduled work.
 Profile descriptions, scenarios, thresholds, and think time are defined in
-[`tests/performance/k6/test-configs.json`](../tests/performance/k6/test-configs.json).
+[`tests/performance/k6/tickets-list-configs.json`](../tests/performance/k6/tickets-list-configs.json).
+`make prepare-k6-tickets-create` starts a fresh local stack without a ticket
+seed, and `make k6-tickets-create K6_PROFILE=smoke|load|stress` creates,
+verifies through Mailpit, and signs in one disposable user during setup before
+measuring `POST /api/tickets`. Its setup requests are tagged
+`tickets_create_auth_setup`; measured ticket requests are tagged
+`tickets_create` and use profiles in
+[`tests/performance/k6/tickets-create-configs.json`](../tests/performance/k6/tickets-create-configs.json).
+Ticket-create runs leave their generated tickets in the local database until
+the next reset.
 
 Every scraped series has the fixed `service` and `environment="local"` target
 labels. Ticket, order, payment, event, and user identifiers must never be
@@ -113,7 +122,7 @@ describes the same counter and histogram structure.
 | `ticketing_app_grpc_server_requests_total`, `ticketing_app_grpc_server_request_duration_seconds`   | Tickets, Orders, Payments, Identity   | `method`, `code`                       | gRPC request rate, errors, and latency.                                          |
 | `ticketing_app_background_operations_total`, `ticketing_app_background_operation_duration_seconds` | Tickets, Orders, Payments, Expiration | `component`, `operation`, `outcome`    | JetStream consumer, outbox, payment processor, and BullMQ outcomes and duration. |
 
-The **Ticketing / k6 Load Tests** dashboard includes per-service application
+The **Tickets API Performance** dashboard includes per-service application
 CPU usage derived from `process_cpu_seconds_total`. It is CPU time as a
 percentage of one core, not CPU usage relative to a container limit; a
 multithreaded process can exceed 100%.

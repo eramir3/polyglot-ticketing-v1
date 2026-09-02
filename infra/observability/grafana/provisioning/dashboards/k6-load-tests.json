@@ -33,6 +33,19 @@
         "multi": true,
         "refresh": 2,
         "sort": 2
+      },
+      {
+        "name": "endpoint",
+        "label": "Endpoint",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "definition": "label_values(k6_http_reqs_total{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\"}, endpoint)",
+        "query": { "query": "label_values(k6_http_reqs_total{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\"}, endpoint)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": true,
+        "refresh": 2,
+        "sort": 2
       }
     ]
   },
@@ -42,7 +55,7 @@
       "title": "Request rate",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum(rate(k6_http_reqs_total{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\"}[$__rate_interval]))", "legendFormat": "requests/s", "refId": "A" }],
+      "targets": [{ "expr": "sum(rate(k6_http_reqs_total{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\",endpoint=~\"$endpoint\"}[$__rate_interval]))", "legendFormat": "requests/s", "refId": "A" }],
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
     },
     {
@@ -50,7 +63,7 @@
       "title": "HTTP failure rate",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "avg(k6_http_req_failed_rate{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\"})", "legendFormat": "failed", "refId": "A" }],
+      "targets": [{ "expr": "avg(k6_http_req_failed_rate{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\",endpoint=~\"$endpoint\"})", "legendFormat": "failed", "refId": "A" }],
       "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
     },
@@ -59,7 +72,7 @@
       "title": "HTTP duration percentiles",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "k6_http_req_duration_p95{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\"}", "legendFormat": "p95", "refId": "A" }, { "expr": "k6_http_req_duration_p99{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\"}", "legendFormat": "p99", "refId": "B" }],
+      "targets": [{ "expr": "k6_http_req_duration_p95{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\",endpoint=~\"$endpoint\"}", "legendFormat": "p95", "refId": "A" }, { "expr": "k6_http_req_duration_p99{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\",endpoint=~\"$endpoint\"}", "legendFormat": "p99", "refId": "B" }],
       "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
     },
@@ -68,7 +81,7 @@
       "title": "Check success rate",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "avg(k6_checks_rate{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\"})", "legendFormat": "checks", "refId": "A" }],
+      "targets": [{ "expr": "avg(k6_checks_rate{source=\"k6\",test_type=~\"$test_type\",testid=~\"$testid\",endpoint=~\"$endpoint\"})", "legendFormat": "checks", "refId": "A" }],
       "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
     },
@@ -82,10 +95,10 @@
     },
     {
       "id": 6,
-      "title": "Gateway request rate by traffic source",
+      "title": "Gateway ticket requests by method and traffic source",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum by (traffic_source) (rate(ticketing_app_http_server_requests_total{environment=\"local\",service=\"api-gateway\",route=\"/api/tickets\"}[$__rate_interval]))", "legendFormat": "{{traffic_source}}", "refId": "A" }],
+      "targets": [{ "expr": "sum by (method, traffic_source) (rate(ticketing_app_http_server_requests_total{environment=\"local\",service=\"api-gateway\",route=\"/api/tickets\"}[$__rate_interval]))", "legendFormat": "{{method}} {{traffic_source}}", "refId": "A" }],
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
     },
     {
