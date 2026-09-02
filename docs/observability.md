@@ -109,6 +109,11 @@ describes the same counter and histogram structure.
 | `ticketing_app_grpc_server_requests_total`, `ticketing_app_grpc_server_request_duration_seconds`   | Tickets, Orders, Payments, Identity   | `method`, `code`                       | gRPC request rate, errors, and latency.                                          |
 | `ticketing_app_background_operations_total`, `ticketing_app_background_operation_duration_seconds` | Tickets, Orders, Payments, Expiration | `component`, `operation`, `outcome`    | JetStream consumer, outbox, payment processor, and BullMQ outcomes and duration. |
 
+The **Ticketing / k6 Load Tests** dashboard includes per-service application
+CPU usage derived from `process_cpu_seconds_total`. It is CPU time as a
+percentage of one core, not CPU usage relative to a container limit; a
+multithreaded process can exceed 100%.
+
 Useful PromQL examples:
 
 ```promql
