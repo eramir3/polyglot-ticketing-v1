@@ -36,14 +36,14 @@ profile and tags it as `tickets-list-smoke`, `tickets-list-load`, or
 `tickets-list-stress`. The dashboard includes the `k6_dropped_iterations_total`
 rate, which identifies whether the k6 executor could not start scheduled work.
 Profile descriptions, scenarios, thresholds, and think time are defined in
-[`tests/performance/k6/tickets-list-configs.json`](../tests/performance/k6/tickets-list-configs.json).
+[`tests/performance/k6/tickets/list-configs.json`](../tests/performance/k6/tickets/list-configs.json).
 `make prepare-k6-tickets-create` starts a fresh local stack without a ticket
 seed, and `make k6-tickets-create K6_PROFILE=smoke|load|stress` creates,
 verifies through Mailpit, and signs in one disposable user during setup before
 measuring `POST /api/tickets`. Its setup requests are tagged
 `tickets_create_auth_setup`; measured ticket requests are tagged
 `tickets_create` and use profiles in
-[`tests/performance/k6/tickets-create-configs.json`](../tests/performance/k6/tickets-create-configs.json).
+[`tests/performance/k6/tickets/create-configs.json`](../tests/performance/k6/tickets/create-configs.json).
 Ticket-create runs leave their generated tickets in the local database until
 the next reset.
 

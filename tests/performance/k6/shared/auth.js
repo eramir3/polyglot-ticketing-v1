@@ -1,43 +1,39 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import { sleep } from 'k6';
 
-const baseUrl = __ENV.K6_BASE_URL || 'http://api-gateway:3000';
-const mailpitUrl = __ENV.K6_MAILPIT_URL || 'http://mailpit:8025';
-const testConfigs = JSON.parse(open('./tickets-create-configs.json'));
-const profileName = readProfileName();
-const profile = testConfigs[profileName];
-const loadTestToken = __ENV.LOAD_TEST_METRICS_TOKEN;
+const password = 'performance-ticket-password';
 
-export const options = {
-  scenarios: {
-    [`tickets_create_${profileName}`]: profile.scenario,
-  },
-  ...(Object.keys(profile.thresholds).length === 0
-    ? {}
-    : { thresholds: profile.thresholds }),
-};
-
-export function setup() {
-  const password = 'performance-ticket-password';
-  const email = `tickets-create-${runSuffix().toLowerCase()}@example.com`;
-  const name = 'Ticket Create Performance User';
+export function createVerifiedPerformanceUser({
+  baseUrl,
+  loadTestToken,
+  mailpitUrl,
+  setupEndpoint,
+  userName,
+  userPrefix,
+}) {
+  const email = `${userPrefix}-${runSuffix().toLowerCase()}@example.com`;
 
   assertSuccessfulResponse(
     http.post(
       `${baseUrl}/api/auth/signup`,
-      JSON.stringify({ email, name, password }),
-      requestParameters('tickets_create_auth_setup'),
+      JSON.stringify({ email, name: userName, password }),
+      requestParameters(loadTestToken, setupEndpoint),
     ),
     201,
     'sign up the performance user',
   );
 
-  const verificationEmail = waitForVerificationEmail(email);
+  const verificationEmail = waitForVerificationEmail({
+    loadTestToken,
+    mailpitUrl,
+    recipient: email,
+    setupEndpoint,
+  });
   const verificationToken = verificationTokenFrom(verificationEmail);
   assertSuccessfulResponse(
     http.get(
       `${baseUrl}/api/auth/verify-email?token=${encodeURIComponent(verificationToken)}`,
-      requestParameters('tickets_create_auth_setup'),
+      requestParameters(loadTestToken, setupEndpoint),
     ),
     200,
     'verify the performance user email',
@@ -46,7 +42,7 @@ export function setup() {
   const signInResponse = http.post(
     `${baseUrl}/api/auth/signin`,
     JSON.stringify({ email, password }),
-    requestParameters('tickets_create_auth_setup'),
+    requestParameters(loadTestToken, setupEndpoint),
   );
   assertSuccessfulResponse(signInResponse, 201, 'sign in the performance user');
 
@@ -63,37 +59,6 @@ export function setup() {
   return { sessionCookie, userId: signInBody.user.id };
 }
 
-export default function (performanceUser) {
-  const title = `Performance ticket ${runSuffix()}-${__VU}-${__ITER}`;
-  const price = 10_000;
-  const response = http.post(
-    `${baseUrl}/api/tickets`,
-    JSON.stringify({ price, title }),
-    {
-      headers: {
-        Cookie: performanceUser.sessionCookie,
-        'Content-Type': 'application/json',
-        'X-Ticketing-Load-Test-Token': loadTestToken,
-      },
-      tags: { endpoint: 'tickets_create' },
-    },
-  );
-
-  check(
-    response,
-    {
-      'returns HTTP 201': (result) => result.status === 201,
-      'returns the created ticket': (result) =>
-        hasCreatedTicket(result, title, price, performanceUser.userId),
-    },
-    { endpoint: 'tickets_create' },
-  );
-
-  if (profile.thinkTimeSeconds > 0) {
-    sleep(profile.thinkTimeSeconds);
-  }
-}
-
 function assertSuccessfulResponse(response, expectedStatus, action) {
   if (response.status !== expectedStatus) {
     throw new Error(
@@ -102,42 +67,7 @@ function assertSuccessfulResponse(response, expectedStatus, action) {
   }
 }
 
-function hasCreatedTicket(
-  response,
-  expectedTitle,
-  expectedPrice,
-  expectedUserId,
-) {
-  if (response.status !== 201) {
-    return false;
-  }
-
-  try {
-    const body = response.json();
-    return (
-      typeof body?.id === 'string' &&
-      body.id.length > 0 &&
-      body.title === expectedTitle &&
-      body.price === expectedPrice &&
-      body.userId === expectedUserId
-    );
-  } catch {
-    return false;
-  }
-}
-
-function readProfileName() {
-  const value = __ENV.K6_PROFILE || 'smoke';
-  if (!Object.prototype.hasOwnProperty.call(testConfigs, value)) {
-    throw new Error(
-      `K6_PROFILE must be one of: ${Object.keys(testConfigs).join(', ')}`,
-    );
-  }
-
-  return value;
-}
-
-function requestParameters(endpoint) {
+function requestParameters(loadTestToken, endpoint) {
   return {
     headers: {
       'Content-Type': 'application/json',
@@ -164,8 +94,8 @@ function sessionCookieFrom(response) {
   return `better-auth.session_token=${session.value}`;
 }
 
-function verificationTokenFrom(emailBody) {
-  const match = emailBody.match(/\/api\/auth\/verify-email\?token=([^\s<"]+)/);
+function verificationTokenFrom(emailText) {
+  const match = emailText.match(/\/api\/auth\/verify-email\?token=([^\s<"]+)/);
   if (!match) {
     throw new Error('Unable to find the email-verification token in Mailpit.');
   }
@@ -173,12 +103,17 @@ function verificationTokenFrom(emailBody) {
   return decodeURIComponent(match[1]);
 }
 
-function waitForVerificationEmail(recipient) {
+function waitForVerificationEmail({
+  loadTestToken,
+  mailpitUrl,
+  recipient,
+  setupEndpoint,
+}) {
   const timeoutAt = Date.now() + 10_000;
   while (Date.now() < timeoutAt) {
     const messagesResponse = http.get(
       `${mailpitUrl}/api/v1/messages`,
-      requestParameters('tickets_create_auth_setup'),
+      requestParameters(loadTestToken, setupEndpoint),
     );
     assertSuccessfulResponse(
       messagesResponse,
@@ -193,7 +128,7 @@ function waitForVerificationEmail(recipient) {
     if (message) {
       const detailResponse = http.get(
         `${mailpitUrl}/api/v1/message/${message.ID}`,
-        requestParameters('tickets_create_auth_setup'),
+        requestParameters(loadTestToken, setupEndpoint),
       );
       assertSuccessfulResponse(
         detailResponse,
