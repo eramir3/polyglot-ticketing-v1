@@ -102,6 +102,23 @@ services:
     volumes:
       - ./tests/performance/k6:/scripts:ro
 
+  tickets-performance-seed:
+    image: postgres:17-alpine
+    profiles: ['performance']
+    depends_on:
+      tickets-db:
+        condition: service_healthy
+      tickets-migrate:
+        condition: service_completed_successfully
+    environment:
+      PGDATABASE: tickets-db
+      PGHOST: tickets-db
+      PGPASSWORD: ${TICKETS_DB_PASSWORD:?TICKETS_DB_PASSWORD must be set}
+      PGUSER: tickets
+    command: ['psql', '-v', 'ON_ERROR_STOP=1', '-f', '/seed/tickets.sql']
+    volumes:
+      - ./tests/performance/seed/tickets.sql:/seed/tickets.sql:ro
+
   nui:
     build:
       context: .

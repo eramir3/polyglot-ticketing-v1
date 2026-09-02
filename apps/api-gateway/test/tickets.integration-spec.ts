@@ -97,6 +97,15 @@ describe('tickets endpoints', () => {
     await identityDatabase?.stop();
   });
 
+  describe('read tickets', () => {
+    it('returns an empty array when no tickets exist', async () => {
+      const response = await getJson('/api/tickets');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([]);
+    });
+  });
+
   describe('create tickets', () => {
     it('has a route handler listening to /api/tickets for POST requests', async () => {
       const response = await postTicket({ price: 10_000, title: 'Metallica' });

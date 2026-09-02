@@ -49,7 +49,7 @@ export class TicketsService implements OnModuleInit {
       const response = await firstValueFrom(
         this.ticketsService.listTickets({}),
       );
-      return response.tickets;
+      return response.tickets ?? [];
     } catch (error: unknown) {
       throwGatewayGrpcError(error);
     }

@@ -61,27 +61,41 @@ For local payment stress testing, set
 then resolves each payment with an independent 10% failure probability;
 otherwise `PAYMENT_PROCESSOR_OUTCOME` controls a deterministic result.
 
-Run the initial ticket-list performance baseline after starting the stack:
+Run the ticket-list performance comparison from a fresh local database:
 
 ```bash
-make k6-tickets-list
+make k6-tickets-list-comparison
 ```
 
-This uses a Dockerized k6 runner on the Compose network, ramps from one to
-five virtual users, and exercises the public `GET /api/tickets` route. It
-requires successful responses and checks, an HTTP error rate below 1%, and a
-p95 request duration below one second. To target another reachable gateway,
-set `K6_BASE_URL`, for example:
+This command requires `LOAD_TEST_METRICS_TOKEN` and removes local application
+and observability data before recreating the databases and running migrations.
+It captures an empty-list baseline that expects zero tickets, inserts exactly
+100 deterministic read-only ticket records, then captures the matching seeded
+run. The seed refuses to run if `tickets-db` is not empty.
+
+The individual commands remain available when you need to run a single stage:
 
 ```bash
-K6_BASE_URL=http://api-gateway:3000 make k6-tickets-list
+make docker-reset
+make docker-up-tools
+make k6-tickets-list
+make seed-performance-tickets
+make k6-tickets-list-seeded
+```
+
+Both tests use a Dockerized k6 runner on the Compose network and exercise the
+public `GET /api/tickets` route. They require successful responses and checks,
+an HTTP error rate below 1%, and a p95 request duration below one second. To
+target another reachable gateway, set `K6_BASE_URL`, for example:
+
+```bash
+K6_BASE_URL=http://api-gateway:3000 make k6-tickets-list-seeded
 ```
 
 Set a random `LOAD_TEST_METRICS_TOKEN` in `.env` before running the test. k6
-uses that token only to mark its gateway requests in local metrics. Start the
-observability tools first with `make docker-up-tools`; Grafana's **Ticketing /
-k6 Load Tests** dashboard then separates a selected test run from normal
-gateway traffic.
+uses that token only to mark its gateway requests in local metrics. Grafana's
+**Ticketing / k6 Load Tests** dashboard compares the empty and seeded test
+types, selected runs, and normal gateway traffic.
 
 ## Public API
 

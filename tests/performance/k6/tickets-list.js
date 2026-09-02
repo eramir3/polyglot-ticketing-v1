@@ -2,6 +2,7 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 const baseUrl = __ENV.K6_BASE_URL || 'http://api-gateway:3000';
+const expectedTicketCount = readExpectedTicketCount();
 
 export const options = {
   scenarios: {
@@ -29,6 +30,24 @@ function hasJsonArrayBody(response) {
   }
 }
 
+function hasExpectedTicketCount(response) {
+  if (!hasJsonArrayBody(response)) {
+    return false;
+  }
+
+  return response.json().length === expectedTicketCount;
+}
+
+function readExpectedTicketCount() {
+  const value = __ENV.K6_EXPECT_TICKET_COUNT || '0';
+  const count = Number(value);
+  if (!Number.isSafeInteger(count) || count < 0) {
+    throw new Error('K6_EXPECT_TICKET_COUNT must be a non-negative integer');
+  }
+
+  return count;
+}
+
 export default function () {
   const response = http.get(`${baseUrl}/api/tickets`, {
     headers: {
@@ -40,6 +59,7 @@ export default function () {
   check(response, {
     'returns HTTP 200': (result) => result.status === 200,
     'returns a JSON array': hasJsonArrayBody,
+    'returns the expected ticket count': hasExpectedTicketCount,
   });
 
   sleep(1);
