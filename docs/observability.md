@@ -25,6 +25,12 @@ Prometheus scrapes the private `:9090/metrics` endpoint of `api-gateway`,
 network. Those endpoints have no host-port mapping and are not public API
 routes. Prometheus itself retains local data for seven days.
 
+k6 sends its short-lived load-test metrics to Prometheus's private remote-write
+receiver. These are separate `k6_*` series, tagged with `source="k6"`,
+`test_type`, and a unique `testid`; they are not application metrics. The
+provisioned Grafana **Ticketing / k6 Load Tests** dashboard filters them by
+`testid`.
+
 Every scraped series has the fixed `service` and `environment="local"` target
 labels. Ticket, order, payment, event, and user identifiers must never be
 metric labels.
@@ -46,12 +52,16 @@ ticketing_app_http_server_requests_total{
   service="api-gateway",
   method="POST",
   route="/api/tickets",
-  status="201"
+  status="201",
+  traffic_source="other"
 } 42
 ```
 
 `environment` and `service` are added by Prometheus when it scrapes each
-target; the application provides the request labels.
+target; the application provides the request labels. API gateway request
+metrics also include `traffic_source`: it is `k6` only when the private
+`X-Ticketing-Load-Test-Token` header matches `LOAD_TEST_METRICS_TOKEN`, and
+`other` for every other request.
 
 Counters are cumulative and conventionally end in `_total`:
 
@@ -91,7 +101,8 @@ describes the same counter and histogram structure.
 | -------------------------------------------------------------------------------------------------- | ------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------- |
 | `go_*`, `process_*`                                                                                | Tickets, Orders, Payments             | Client-defined runtime labels only     | Go runtime and process health.                                                   |
 | `nodejs_*`, `process_*`                                                                            | API Gateway, Identity, Expiration     | Client-defined runtime labels only     | Node.js runtime and process health.                                              |
-| `ticketing_app_http_server_requests_total`, `ticketing_app_http_server_request_duration_seconds`   | API Gateway                           | `method`, normalized `route`, `status` | HTTP request rate, errors, and latency.                                          |
+| `ticketing_app_http_server_requests_total`, `ticketing_app_http_server_request_duration_seconds`   | API Gateway                           | `method`, normalized `route`, `status`, `traffic_source` | HTTP request rate, errors, and latency, split into verified k6 and other traffic. |
+| `k6_*`                                                                                              | k6 load tests                         | `source`, `test_type`, `testid`, endpoint-specific tags | Load-test request rate, failures, checks, latency, and virtual users. |
 | `ticketing_app_grpc_server_requests_total`, `ticketing_app_grpc_server_request_duration_seconds`   | Tickets, Orders, Payments, Identity   | `method`, `code`                       | gRPC request rate, errors, and latency.                                          |
 | `ticketing_app_background_operations_total`, `ticketing_app_background_operation_duration_seconds` | Tickets, Orders, Payments, Expiration | `component`, `operation`, `outcome`    | JetStream consumer, outbox, payment processor, and BullMQ outcomes and duration. |
 
@@ -186,5 +197,5 @@ Loki retains local data for seven days.
 
 The catalog intentionally excludes normal validation, authorization, and
 expected domain responses; success and broad request logging; generic startup
-or reconnect messages; business lifecycle metrics; tracing and Tempo;
-dashboards; alerts; and production observability configuration.
+or reconnect messages; business lifecycle metrics; tracing and Tempo; alerts;
+and production observability configuration.

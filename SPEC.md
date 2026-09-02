@@ -611,10 +611,14 @@ provisions Loki and Prometheus datasources; the Prometheus UI is available at
 `identity`, `tickets`, `orders`, `payments`, and `expiration`; each Loki stream
 is labeled with its `service` and `environment="local"`. Prometheus scrapes a
 private `:9090/metrics` endpoint from the same six services and applies the
-same fixed labels. Loki and Prometheus retain local data for seven days. The
-intentional, high-signal log and metrics catalog, including ready-to-paste
-LogQL and PromQL queries, is in
+same fixed labels. It also accepts labeled k6 results through its Compose-network
+remote-write receiver. `make k6-tickets-list` requires
+`LOAD_TEST_METRICS_TOKEN`; Grafana's provisioned Ticketing / k6 Load Tests
+dashboard filters those `k6_*` series by run and correlates them with verified
+`traffic_source="k6"` gateway metrics. Loki and Prometheus retain local data
+for seven days. The intentional, high-signal log and metrics catalog,
+including ready-to-paste LogQL and PromQL queries, is in
 [`docs/observability.md`](docs/observability.md). Ordinary validation and
 authentication failures, business lifecycle metrics, tracing and Tempo,
-dashboards, alerts, broad request or domain-success logging, and production
-observability configuration are not part of this increment.
+alerts, broad request or domain-success logging, and production observability
+configuration are not part of this increment.

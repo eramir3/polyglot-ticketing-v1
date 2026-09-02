@@ -104,7 +104,10 @@ expiration jobs.
   available at `localhost:3002` and provisions Loki, Prometheus, and Tempo. Loki
   contains logs from the six application services, and Prometheus scrapes their
   private Compose-network `:9090/metrics` endpoints; both use `service` and
-  `environment=local` labels.
+  `environment=local` labels. Set `LOAD_TEST_METRICS_TOKEN` and run
+  `make k6-tickets-list` to write labeled k6 results to Prometheus; Grafana's
+  Ticketing / k6 Load Tests dashboard separates a selected run from normal
+  gateway traffic.
 - The gateway is published on `localhost:3000`; identity gRPC is internal to
   the Compose network on `identity:50051`; Postgres is published on
   `localhost:5432` for local database tooling. Tickets gRPC is internal on

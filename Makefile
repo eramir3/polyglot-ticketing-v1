@@ -1,6 +1,8 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install generate-proto build build-api-gateway build-identity build-tickets build-orders build-payments build-expiration test test-api-gateway test-tickets test-orders test-payments test-expiration serve-api-gateway serve-identity serve-tickets serve-orders serve-payments serve-expiration stress-tickets replay-orders-dlq replay-tickets-dlq replay-payments-dlq replay-expiration-dlq docker-build docker-up docker-up-tools docker-down docker-reset docker-logs docker-ps
+.PHONY: help install generate-proto build build-api-gateway build-identity build-tickets build-orders build-payments build-expiration test test-api-gateway test-tickets test-orders test-payments test-expiration serve-api-gateway serve-identity serve-tickets serve-orders serve-payments serve-expiration stress-tickets k6-tickets-list replay-orders-dlq replay-tickets-dlq replay-payments-dlq replay-expiration-dlq docker-build docker-up docker-up-tools docker-down docker-reset docker-logs docker-ps
+
+K6_TEST_ID ?= tickets-list-$(shell date -u +%Y%m%dT%H%M%SZ)
 
 help: ## Show available commands.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-22s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -69,6 +71,10 @@ serve-expiration: ## Run the expiration service locally.
 stress-tickets: ## Run sequential ticket create/update stress cycles (requires STRESS_COOKIE).
 	node scripts/stress/tickets.js
 
+k6-tickets-list: ## Run the k6 GET /api/tickets smoke and small-ramp test (requires docker-up-tools).
+	@test -n "$${LOAD_TEST_METRICS_TOKEN:-$$(sed -n 's/^LOAD_TEST_METRICS_TOKEN=//p' .env 2>/dev/null | tail -n 1)}" || (echo "LOAD_TEST_METRICS_TOKEN is required in .env or the shell environment"; exit 1)
+	docker compose --profile performance --profile tools run --rm -e K6_TEST_ID=$(K6_TEST_ID) k6 run -o experimental-prometheus-rw --tag source=k6 --tag test_type=tickets-list --tag environment=local --tag testid=$(K6_TEST_ID) /scripts/tickets-list.js
+
 replay-orders-dlq: ## Replay one Orders DLQ message (requires DLQ_SEQUENCE).
 	@test -n "$(DLQ_SEQUENCE)" || (echo "DLQ_SEQUENCE is required"; exit 1)
 	DLQ_SEQUENCE=$(DLQ_SEQUENCE) go run ./apps/orders/cmd/orders-ticket-dlq-replay
@@ -98,8 +104,8 @@ docker-up-tools: ## Start optional local development tools, including NUI, Redis
 docker-down: ## Stop and remove the local Docker Compose stack.
 	docker compose down
 
-docker-reset: ## Delete all local Compose data, then rebuild and start a fresh stack.
-	docker compose down --volumes
+docker-reset: ## Delete all application and optional-tool Compose data, then rebuild a fresh stack.
+	docker compose --profile tools down --volumes --remove-orphans
 	docker compose up -d --build
 
 docker-logs: ## Follow logs for the local Docker Compose stack.

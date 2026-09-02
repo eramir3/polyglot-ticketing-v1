@@ -3,12 +3,14 @@ import { startTracing } from '../../../libs/observability/src/index.js';
 import {
   ApiGatewayMetrics,
   startMetricsServer,
+  trafficSourceFor,
 } from './observability/prometheus';
 
 async function bootstrap() {
   const shutdownTracing = startTracing('api-gateway');
   const { createApiGatewayApplication } = await import('./app/app.bootstrap.js');
   const metrics = new ApiGatewayMetrics();
+  const loadTestMetricsToken = process.env.LOAD_TEST_METRICS_TOKEN ?? '';
   const metricsServer = startMetricsServer(metrics);
   const app = await createApiGatewayApplication();
   app.enableShutdownHooks();
@@ -24,6 +26,10 @@ async function bootstrap() {
         route,
         response.statusCode,
         (performance.now() - started) / 1_000,
+        trafficSourceFor(
+          request.headers['x-ticketing-load-test-token'],
+          loadTestMetricsToken,
+        ),
       );
     });
     next();

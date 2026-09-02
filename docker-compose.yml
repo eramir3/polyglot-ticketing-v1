@@ -12,6 +12,7 @@ services:
       ORDERS_GRPC_URL: orders:50053
       PAYMENTS_GRPC_URL: payments:50054
       TICKETS_GRPC_URL: tickets:50052
+      LOAD_TEST_METRICS_TOKEN: ${LOAD_TEST_METRICS_TOKEN:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: alloy:4318
       TICKETING_USER_APP_ORIGIN: ${TICKETING_USER_APP_ORIGIN:-http://localhost:3001}
     ports:
@@ -84,6 +85,22 @@ services:
         condition: service_healthy
     expose:
       - '9090'
+
+  k6:
+    image: grafana/k6:2.2.0
+    profiles: ['performance']
+    depends_on:
+      api-gateway:
+        condition: service_started
+      prometheus:
+        condition: service_started
+    environment:
+      K6_BASE_URL: ${K6_BASE_URL:-http://api-gateway:3000}
+      K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
+      K6_PROMETHEUS_RW_TREND_STATS: p(95),p(99),avg,min,max
+      LOAD_TEST_METRICS_TOKEN: ${LOAD_TEST_METRICS_TOKEN:-}
+    volumes:
+      - ./tests/performance/k6:/scripts:ro
 
   nui:
     build:
@@ -158,6 +175,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-remote-write-receiver'
     ports:
       - '127.0.0.1:9090:9090'
     volumes:
