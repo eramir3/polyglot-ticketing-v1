@@ -113,7 +113,25 @@ The generated tickets remain in the local database until the next reset.
 Profile definitions are in
 [`tests/performance/k6/tickets/create-configs.json`](tests/performance/k6/tickets/create-configs.json).
 
-Set a random `LOAD_TEST_METRICS_TOKEN` in `.env` before running either test. k6
+Ticket create-and-update measures the complete owner lifecycle from
+[`scripts/stress/tickets.js`](scripts/stress/tickets.js): create a ticket at
+price `5`, update it to `10`, update it to `15`, then retrieve and verify its
+final state. Every k6 iteration owns and immediately verifies its own ticket,
+which keeps assertions correct under concurrent load:
+
+```bash
+make prepare-k6-tickets-create-update
+make k6-tickets-create-update K6_PROFILE=smoke
+make k6-tickets-create-update K6_PROFILE=load
+make k6-tickets-create-update K6_PROFILE=stress
+```
+
+Its load profile starts two lifecycle cycles per second for five minutes. The
+stress profile holds 2, 5, 10, and 20 cycles per second for one minute each;
+each cycle has three writes and one read. Profile definitions are in
+[`tests/performance/k6/tickets/create-update-configs.json`](tests/performance/k6/tickets/create-update-configs.json).
+
+Set a random `LOAD_TEST_METRICS_TOKEN` in `.env` before running these tests. k6
 uses that token only to mark its gateway requests in local metrics. Grafana's
 **Tickets API Performance** dashboard filters smoke, load, and stress runs by
 profile, run ID, and endpoint, and shows their dropped-iteration rate alongside

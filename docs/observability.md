@@ -37,6 +37,9 @@ profile and tags it as `tickets-list-smoke`, `tickets-list-load`, or
 rate, which identifies whether the k6 executor could not start scheduled work.
 Profile descriptions, scenarios, thresholds, and think time are defined in
 [`tests/performance/k6/tickets/list-configs.json`](../tests/performance/k6/tickets/list-configs.json).
+k6 excludes its default dynamic `url` system tag and supplies a stable request
+`name` matching the endpoint tag, so ticket IDs and verification tokens never
+become Prometheus labels.
 `make prepare-k6-tickets-create` starts a fresh local stack without a ticket
 seed, and `make k6-tickets-create K6_PROFILE=smoke|load|stress` creates,
 verifies through Mailpit, and signs in one disposable user during setup before
@@ -46,6 +49,17 @@ measuring `POST /api/tickets`. Its setup requests are tagged
 [`tests/performance/k6/tickets/create-configs.json`](../tests/performance/k6/tickets/create-configs.json).
 Ticket-create runs leave their generated tickets in the local database until
 the next reset.
+
+`make prepare-k6-tickets-create-update` starts the same fresh local stack for
+the ticket lifecycle test, and `make k6-tickets-create-update
+K6_PROFILE=smoke|load|stress` measures create, first update, final update, and
+final retrieval as one iteration. It creates and verifies one disposable user
+during setup, then verifies the final state of each ticket before that
+iteration completes. The measured request tags are
+`tickets_create_update_create`, `tickets_create_update_first_update`,
+`tickets_create_update_final_update`, and `tickets_create_update_get`; setup
+requests use `tickets_create_update_auth_setup`. Profiles are defined in
+[`tests/performance/k6/tickets/create-update-configs.json`](../tests/performance/k6/tickets/create-update-configs.json).
 
 Every scraped series has the fixed `service` and `environment="local"` target
 labels. Ticket, order, payment, event, and user identifiers must never be

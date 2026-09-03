@@ -11,7 +11,7 @@ export function createVerifiedPerformanceUser({
   userName,
   userPrefix,
 }) {
-  const email = `${userPrefix}-${runSuffix().toLowerCase()}@example.com`;
+  const email = performanceUserEmail(userPrefix);
 
   assertSuccessfulResponse(
     http.post(
@@ -61,8 +61,9 @@ export function createVerifiedPerformanceUser({
 
 function assertSuccessfulResponse(response, expectedStatus, action) {
   if (response.status !== expectedStatus) {
+    const responseBody = response.body ? ` Response: ${response.body}` : '';
     throw new Error(
-      `Unable to ${action}: expected HTTP ${expectedStatus}, received ${response.status}.`,
+      `Unable to ${action}: expected HTTP ${expectedStatus}, received ${response.status}.${responseBody}`,
     );
   }
 }
@@ -73,7 +74,7 @@ function requestParameters(loadTestToken, endpoint) {
       'Content-Type': 'application/json',
       'X-Ticketing-Load-Test-Token': loadTestToken,
     },
-    tags: { endpoint },
+    tags: { endpoint, name: endpoint },
   };
 }
 
@@ -83,6 +84,11 @@ function runSuffix() {
     '-',
   );
   return `${runId}-${Math.floor(Math.random() * 1_000_000)}`;
+}
+
+function performanceUserEmail(userPrefix) {
+  const localPart = `${userPrefix}-${runSuffix().toLowerCase()}`;
+  return `${localPart.slice(-64)}@example.com`;
 }
 
 function sessionCookieFrom(response) {

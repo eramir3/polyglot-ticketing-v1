@@ -1,6 +1,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { createVerifiedPerformanceUser } from '../shared/auth.js';
+import { metricSystemTags } from '../shared/metrics.js';
 
 const baseUrl = __ENV.K6_BASE_URL || 'http://api-gateway:3000';
 const mailpitUrl = __ENV.K6_MAILPIT_URL || 'http://mailpit:8025';
@@ -10,6 +11,7 @@ const profile = testConfigs[profileName];
 const loadTestToken = __ENV.LOAD_TEST_METRICS_TOKEN;
 
 export const options = {
+  systemTags: metricSystemTags,
   scenarios: {
     [`tickets_create_${profileName}`]: profile.scenario,
   },
@@ -41,7 +43,7 @@ export default function (performanceUser) {
         'Content-Type': 'application/json',
         'X-Ticketing-Load-Test-Token': loadTestToken,
       },
-      tags: { endpoint: 'tickets_create' },
+      tags: { endpoint: 'tickets_create', name: 'tickets_create' },
     },
   );
 
