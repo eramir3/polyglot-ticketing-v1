@@ -22,6 +22,14 @@ const (
 	reconnectInterval = time.Second
 )
 
+var ticketVersionGapRetryDelays = [...]time.Duration{
+	time.Second,
+	2 * time.Second,
+	4 * time.Second,
+	8 * time.Second,
+	16 * time.Second,
+}
+
 type TicketConsumer struct {
 	handler     *projection.TicketHandler
 	deadLetters ordersDeadLetterer
@@ -126,11 +134,32 @@ func (consumer *TicketConsumer) handleDelivery(ctx context.Context, event orders
 		return
 	}
 
+	if failureClass == "version_gap" {
+		delay := ticketVersionGapRetryDelay(event.deliveryCount)
+		consumer.logger.Warn("ticket projection version gap; event will be retried", "subject", event.subject, "delivery_count", event.deliveryCount, "retry_delay", delay, "error", err)
+		if nakErr := event.delivery.NakWithDelay(delay); nakErr != nil {
+			consumer.logger.Warn("failed to negatively acknowledge ticket event with delay", "error", nakErr)
+		}
+		consumer.observe("retry", started)
+		return
+	}
+
 	consumer.logger.Warn("ticket projection failed; event will be retried", "subject", event.subject, "error", err)
 	if nakErr := event.delivery.Nak(); nakErr != nil {
 		consumer.logger.Warn("failed to negatively acknowledge ticket event", "error", nakErr)
 	}
 	consumer.observe("retry", started)
+}
+
+func ticketVersionGapRetryDelay(deliveryCount uint64) time.Duration {
+	if deliveryCount == 0 {
+		return ticketVersionGapRetryDelays[0]
+	}
+	index := deliveryCount - 1
+	if index >= uint64(len(ticketVersionGapRetryDelays)) {
+		return ticketVersionGapRetryDelays[len(ticketVersionGapRetryDelays)-1]
+	}
+	return ticketVersionGapRetryDelays[index]
 }
 
 func (consumer *TicketConsumer) park(ctx context.Context, event ordersDelivery, failureClass string, failure error) bool {

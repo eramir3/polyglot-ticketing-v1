@@ -287,7 +287,7 @@ func TestTicketConsumerNegativeAcknowledgesRetryableEvent(t *testing.T) {
 	assertTicketDelivery(t, delivery, 0, 1, 0)
 }
 
-func TestTicketConsumerDoesNotAcknowledgeSkippedTicketVersion(t *testing.T) {
+func TestTicketConsumerDelaysSkippedTicketVersion(t *testing.T) {
 	delivery := &fakeTicketEventDelivery{}
 	consumer := NewTicketConsumer(
 		&fakeTicketProjectionRepository{err: order.ErrTicketEventVersionGap},
@@ -306,7 +306,65 @@ func TestTicketConsumerDoesNotAcknowledgeSkippedTicketVersion(t *testing.T) {
 		1,
 	))
 
-	assertTicketDelivery(t, delivery, 0, 1, 0)
+	assertTicketDelivery(t, delivery, 0, 0, 0)
+	assertTicketDelayedNak(t, delivery, time.Second)
+}
+
+func TestTicketConsumerExponentiallyDelaysTicketVersionGapRetries(t *testing.T) {
+	for attempt, expectedDelay := range ticketVersionGapRetryDelays {
+		t.Run(expectedDelay.String(), func(t *testing.T) {
+			delivery := &fakeTicketEventDelivery{}
+			consumer := NewTicketConsumer(
+				&fakeTicketProjectionRepository{err: order.ErrTicketEventVersionGap},
+				"",
+				testLogger(),
+			)
+
+			consumer.handleDelivery(context.Background(), ticketDeliveryFor(
+				delivery,
+				ticketevents.TicketUpdatedSubject,
+				marshalTicketEvent(t, &ticketsv1.TicketUpdated{
+					EventId:          "version-gap-event",
+					AggregateVersion: 2,
+					Ticket:           validTicket(),
+				}),
+				uint64(attempt+1),
+			))
+
+			assertTicketDelivery(t, delivery, 0, 0, 0)
+			assertTicketDelayedNak(t, delivery, expectedDelay)
+		})
+	}
+}
+
+func TestTicketConsumerParksTicketVersionGapAfterDelayedRetries(t *testing.T) {
+	delivery := &fakeTicketEventDelivery{}
+	consumer := NewTicketConsumer(
+		&fakeTicketProjectionRepository{err: order.ErrTicketEventVersionGap},
+		"",
+		testLogger(),
+	)
+	deadLetters := &fakeTicketDeadLetterer{}
+	consumer.deadLetters = deadLetters
+
+	consumer.handleDelivery(context.Background(), ticketDeliveryFor(
+		delivery,
+		ticketevents.TicketUpdatedSubject,
+		marshalTicketEvent(t, &ticketsv1.TicketUpdated{
+			EventId:          "persistent-version-gap-event",
+			AggregateVersion: 6,
+			Ticket:           validTicket(),
+		}),
+		orderEventMaxRetries+1,
+	))
+
+	assertTicketDelivery(t, delivery, 1, 0, 0)
+	if len(delivery.delayedNakDurations) != 0 {
+		t.Fatalf("expected no delayed negative acknowledgement after retry limit, got %v", delivery.delayedNakDurations)
+	}
+	if len(deadLetters.events) != 1 || deadLetters.events[0].FailureClass != "version_gap" {
+		t.Fatalf("expected version gap event to be parked, got %+v", deadLetters.events)
+	}
 }
 
 func TestTicketConsumerParksInvalidEvent(t *testing.T) {
@@ -597,6 +655,13 @@ func assertTicketDelivery(t *testing.T, delivery *fakeTicketEventDelivery, ackno
 	}
 }
 
+func assertTicketDelayedNak(t *testing.T, delivery *fakeTicketEventDelivery, expectedDelay time.Duration) {
+	t.Helper()
+	if len(delivery.delayedNakDurations) != 1 || delivery.delayedNakDurations[0] != expectedDelay {
+		t.Fatalf("expected one delayed negative acknowledgement of %s, got %v", expectedDelay, delivery.delayedNakDurations)
+	}
+}
+
 func ticketDeliveryFor(delivery ordersEventDelivery, subject string, payload []byte, deliveryCount uint64) ordersDelivery {
 	return ordersDelivery{
 		delivery:          delivery,
@@ -625,6 +690,7 @@ func (repository *fakeTicketProjectionRepository) UpsertTicketFromEvent(
 type fakeTicketEventDelivery struct {
 	acknowledged           int
 	negativelyAcknowledged int
+	delayedNakDurations    []time.Duration
 	terminated             int
 }
 
@@ -648,6 +714,11 @@ func (delivery *fakeTicketEventDelivery) Ack(...nats.AckOpt) error {
 
 func (delivery *fakeTicketEventDelivery) Nak(...nats.AckOpt) error {
 	delivery.negativelyAcknowledged++
+	return nil
+}
+
+func (delivery *fakeTicketEventDelivery) NakWithDelay(delay time.Duration, _ ...nats.AckOpt) error {
+	delivery.delayedNakDurations = append(delivery.delayedNakDurations, delay)
 	return nil
 }
 

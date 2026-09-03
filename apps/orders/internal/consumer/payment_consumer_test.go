@@ -171,6 +171,10 @@ func (delivery *fakePaymentEventDelivery) Nak(...nats.AckOpt) error {
 	delivery.negativelyAcknowledged++
 	return nil
 }
+
+func (delivery *fakePaymentEventDelivery) NakWithDelay(time.Duration, ...nats.AckOpt) error {
+	return nil
+}
 func (delivery *fakePaymentEventDelivery) Term(...nats.AckOpt) error {
 	delivery.terminated++
 	return nil

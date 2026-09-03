@@ -29,20 +29,25 @@ func (repository *PostgresRepository) ClaimPending(
 
 	rows, err := tx.Query(ctx, `
 		WITH pending AS (
-			SELECT event_id
+			SELECT event_id, sequence
 			FROM outbox_events
 			WHERE published_at IS NULL
 			  AND (locked_until IS NULL OR locked_until < NOW())
 			  AND (next_attempt_at IS NULL OR next_attempt_at <= NOW())
-			ORDER BY created_at ASC
+			ORDER BY sequence ASC
 			LIMIT $1
 			FOR UPDATE SKIP LOCKED
+		), claimed AS (
+			UPDATE outbox_events
+			SET locked_until = NOW() + $2::interval
+			FROM pending
+			WHERE outbox_events.event_id = pending.event_id
+			RETURNING outbox_events.event_id::text, outbox_events.subject, outbox_events.payload,
+				outbox_events.traceparent, outbox_events.tracestate, pending.sequence
 		)
-		UPDATE outbox_events
-		SET locked_until = NOW() + $2::interval
-		FROM pending
-		WHERE outbox_events.event_id = pending.event_id
-		RETURNING outbox_events.event_id::text, outbox_events.subject, outbox_events.payload, outbox_events.traceparent, outbox_events.tracestate`,
+		SELECT event_id, subject, payload, traceparent, tracestate
+		FROM claimed
+		ORDER BY sequence ASC`,
 		limit,
 		leaseDuration.String(),
 	)

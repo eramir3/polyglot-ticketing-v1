@@ -163,6 +163,7 @@ func newOrdersDelivery(message *nats.Msg, deadLetterSubject string) (ordersDeliv
 type ordersEventDelivery interface {
 	Ack(...nats.AckOpt) error
 	Nak(...nats.AckOpt) error
+	NakWithDelay(time.Duration, ...nats.AckOpt) error
 }
 
 type ordersDelivery struct {

@@ -130,6 +130,38 @@ func TestPublisherPublishesPaymentFailedEvent(t *testing.T) {
 	}
 }
 
+func TestPublisherPublishesClaimedBatchInOrder(t *testing.T) {
+	url, js, shutdown := startPublisherJetStream(t)
+	defer shutdown()
+
+	repository := &fakePublisherRepository{events: []Event{
+		{EventID: "event-1", Subject: "tickets.ticket.created.v1", Payload: []byte("first")},
+		{EventID: "event-2", Subject: "tickets.ticket.updated.v1", Payload: []byte("second")},
+		{EventID: "event-3", Subject: "tickets.ticket.updated.v1", Payload: []byte("third")},
+	}}
+	publisher := NewPublisher(
+		repository,
+		Config{StreamName: "TICKETS_EVENTS", Subjects: []string{"tickets.>"}},
+		url,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
+	defer publisher.close()
+
+	if err := publisher.publishPending(context.Background()); err != nil {
+		t.Fatalf("publish pending events: %v", err)
+	}
+
+	for sequence, expected := range []string{"first", "second", "third"} {
+		message, err := js.GetMsg("TICKETS_EVENTS", uint64(sequence+1))
+		if err != nil {
+			t.Fatalf("get message %d: %v", sequence+1, err)
+		}
+		if got := string(message.Data); got != expected {
+			t.Fatalf("expected message %d payload %q, got %q", sequence+1, expected, got)
+		}
+	}
+}
+
 func TestPublisherLogsEventDispatchFailure(t *testing.T) {
 	var logs bytes.Buffer
 	publisher := NewPublisher(

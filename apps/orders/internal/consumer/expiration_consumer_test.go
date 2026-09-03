@@ -217,6 +217,10 @@ func (delivery *fakeExpirationEventDelivery) Nak(...nats.AckOpt) error {
 	return nil
 }
 
+func (delivery *fakeExpirationEventDelivery) NakWithDelay(time.Duration, ...nats.AckOpt) error {
+	return nil
+}
+
 func (delivery *fakeExpirationEventDelivery) Term(...nats.AckOpt) error {
 	delivery.terminated++
 	return nil
