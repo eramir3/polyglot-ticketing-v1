@@ -309,6 +309,7 @@ Required values are listed in `.env.example`:
 - `SMTP_FROM`
 - `TICKETS_DB_PASSWORD`
 - `ORDERS_DB_PASSWORD`
+- `CONCERT_ASSISTANT_DB_PASSWORD`
 - `NATS_URL` (defaults to `nats://localhost:4222` when running tickets locally)
 - `REDIS_URL` (defaults to `redis://localhost:6379` when running expiration locally)
 
@@ -343,6 +344,7 @@ Local ports:
 | Orders Postgres   | `localhost:5434`                     |
 | Payments gRPC     | `payments:50054` within Compose only |
 | Payments Postgres | `localhost:5435`                     |
+| Concert Assistant Postgres | `localhost:5436`               |
 | NATS JetStream    | `nats://localhost:4222`              |
 | NATS monitoring   | `http://localhost:8222`              |
 | Redis             | `localhost:6379`                     |
@@ -370,7 +372,7 @@ the Compose network with Redis. Their configurations persist in the local
 | orders            | Go                | `orders-db`            |
 | payments          | Go                | `payments-db`          |
 | expiration        | NestJS and BullMQ | Redis                  |
-| concert-assistant | Python, uv, Gradio | Not configured yet     |
+| concert-assistant | Python, uv, Gradio | `concert-assistant-db` |
 
 Tickets publishes `tickets.ticket.created.v1` and `tickets.ticket.updated.v1`
 events to the `TICKETS_EVENTS` JetStream stream. Ticket creation, owner

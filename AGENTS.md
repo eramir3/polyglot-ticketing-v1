@@ -118,6 +118,9 @@ expiration jobs.
   `tickets:50052`; its Postgres database is published on `localhost:5433`.
   Orders and Payments gRPC are internal on `orders:50053` and `payments:50054`;
   their Postgres databases are published on `localhost:5434` and `localhost:5435`.
+  Concert Assistant Postgres is published on `localhost:5436`; run
+  `make restore-concerts` to explicitly replace its local concert dataset from
+  `concerts.dump`.
 
 ## Services And Persistence
 
@@ -127,7 +130,7 @@ expiration jobs.
 - `expiration` (NestJS/BullMQ) uses Redis exclusively for delayed jobs; it
   owns no Postgres database.
 - `identity` (NestJS/Better Auth) owns `identity-db`.
-- `concert-assistant` (Python/uv/Gradio) has no persistence configured yet.
+- `concert-assistant` (Python/uv/Gradio) owns `concert-assistant-db`.
 
 ## Engineering Guidelines
 

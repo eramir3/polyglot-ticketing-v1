@@ -20,6 +20,7 @@ service's database or Redis data.
 | `orders` | Go | Ticket reservation, order lifecycle, and ticket projection | `orders-db` |
 | `payments` | Go | Order projection, payment creation, and simulated processing | `payments-db` |
 | `expiration` | TypeScript / NestJS | Schedules 15-minute order expirations and emits completion events | Redis / BullMQ |
+| `concert-assistant` | Python / Gradio | Future AI chat and concert-data retrieval | `concert-assistant-db` |
 
 Shared protobuf contracts live in [`proto/`](proto/). Generated TypeScript and
 Go bindings are produced through Buf.
@@ -51,7 +52,13 @@ make serve-payments
 make serve-expiration
 make docker-logs           # Follow Compose logs
 make docker-down           # Stop the stack
+make restore-concerts      # Load the local Concert Assistant concert dataset
 ```
+
+`make restore-concerts` starts `concert-assistant-db` on `localhost:5436` and
+replaces its `concerts` table with the data in `concerts.dump`. It is manual by
+design, so normal `make docker-up` never overwrites local Concert Assistant
+data.
 
 Gateway integration tests and the Orders and Payments integration tests use
 Testcontainers, so they require a working Docker container runtime.

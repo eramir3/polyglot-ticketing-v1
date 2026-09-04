@@ -443,6 +443,25 @@ services:
     volumes:
       - identity-db-data:/var/lib/postgresql/data
 
+  concert-assistant-db:
+    image: postgres:17-alpine
+    container_name: concert-assistant-db
+    environment:
+      POSTGRES_DB: concert-assistant-db
+      POSTGRES_PASSWORD: ${CONCERT_ASSISTANT_DB_PASSWORD:?CONCERT_ASSISTANT_DB_PASSWORD must be set}
+      POSTGRES_USER: concert-assistant
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U concert-assistant -d concert-assistant-db']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - '5436:5432'
+    volumes:
+      - concert-assistant-db-data:/var/lib/postgresql/data
+      - ./concerts.dump:/restore/concerts.dump:ro
+      - ./apps/concert-assistant/scripts/restore-concerts.sh:/restore/restore-concerts.sh:ro
+
   mailpit:
     image: axllent/mailpit:v1.28
     container_name: mailpit
@@ -456,6 +475,7 @@ volumes:
   tickets-db-data:
   orders-db-data:
   payments-db-data:
+  concert-assistant-db-data:
   nats-data:
   expiration-redis-data:
   nui-data:
