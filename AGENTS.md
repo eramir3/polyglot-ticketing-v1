@@ -31,6 +31,8 @@ Implemented foundations:
   JetStream, schedules 15-minute expiry jobs in BullMQ/Redis, and publishes
   `ExpirationComplete` events. Orders consumes those events to cancel `Created`
   reservations. Expiration has no Postgres database or HTTP/gRPC API.
+- `concert-assistant`: Python/uv service scaffold with Gradio installed for a
+  future AI chat UI. It has no provider, persistence, API, or UI behavior yet.
 - Shared protobuf contracts in `proto/`, generated with Buf and Protobuf-ES.
 - Protovalidate request validation for identity gRPC requests.
 - Standardized errors across the gateway and identity service.
@@ -42,8 +44,8 @@ Implemented foundations:
   inbox is available on `localhost:8025`, Grafana on `localhost:3002`, and the
   Prometheus UI on `localhost:9090`.
 
-Planned but not implemented: concert-assistant, Kubernetes manifests, GraphQL,
-and a Kubernetes Gateway API controller.
+Planned but not implemented: Kubernetes manifests, GraphQL, and a Kubernetes
+Gateway API controller.
 
 Deferred, low-priority work: replace the Payments simulated outcome worker with
 a real provider; publish an `OrderCompleted` event or expose payment status
@@ -125,7 +127,7 @@ expiration jobs.
 - `expiration` (NestJS/BullMQ) uses Redis exclusively for delayed jobs; it
   owns no Postgres database.
 - `identity` (NestJS/Better Auth) owns `identity-db`.
-- `concert-assistant` (Python RAG) owns `concert-assistant-db`.
+- `concert-assistant` (Python/uv/Gradio) has no persistence configured yet.
 
 ## Engineering Guidelines
 

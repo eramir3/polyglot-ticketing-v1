@@ -370,7 +370,7 @@ the Compose network with Redis. Their configurations persist in the local
 | orders            | Go                | `orders-db`            |
 | payments          | Go                | `payments-db`          |
 | expiration        | NestJS and BullMQ | Redis                  |
-| concert-assistant | Python RAG        | `concert-assistant-db` |
+| concert-assistant | Python, uv, Gradio | Not configured yet     |
 
 Tickets publishes `tickets.ticket.created.v1` and `tickets.ticket.updated.v1`
 events to the `TICKETS_EVENTS` JetStream stream. Ticket creation, owner
