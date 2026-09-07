@@ -6,6 +6,19 @@ When run with `uv run concert-assistant`, it loads the repository root `.env`;
 explicit shell variables still take precedence. Docker Compose forwards the same
 provider settings explicitly to the container.
 
+## Query types
+
+Concert Assistant is organized around three query types:
+
+| Type | Example | Status |
+| --- | --- | --- |
+| SQL | “How many concerts did Taylor Swift play?” | Implemented. Generates validated read-only SQL over `public.concerts`. |
+| Vector search | “Artists similar to Radiohead” | Implemented for named artists. Finds similar recorded touring profiles, not musical genre or style. |
+| SQL + RAG | “Tell me about the concert history of Coldplay” | Planned. It will combine SQL facts with retrieved descriptive context once a richer text corpus exists. |
+
+Broad semantic venue search remains unavailable because the current dataset has
+no descriptive concert text to retrieve.
+
 The default provider is OpenAI. For native local Ollama testing:
 
 ```bash
