@@ -17,13 +17,20 @@ class ConcertPlanner(Protocol):
 
     def synthesize(self, question: str, sql: str, rows: list[dict[str, object]]) -> str: ...
 
+    def synthesize_similarity(
+        self, question: str, artist_name: str, matches: list[dict[str, object]]
+    ) -> str: ...
+
 
 PLANNING_INSTRUCTIONS = (
     "You are Concert Assistant's analytical query planner. "
     "Return kind='analytical' only when the question can be answered from the structured "
     "concerts relation. Produce PostgreSQL SELECT SQL using only the supplied schema. "
     "Return kind='unsupported' for semantic or fuzzy requests requiring venue descriptions, "
-    "embeddings, external knowledge, or unavailable data. Never write, modify, or inspect "
+    "embeddings, external knowledge, or unavailable data. Return kind='artist_similarity' only "
+    "for a request to find artists similar to one named artist; set artist_name to that artist and "
+    "do not include SQL. Artist similarity is based only on concert touring history, never musical "
+    "genre or style. Never write, modify, or inspect "
     "database metadata.\n\n"
     f"{schema_prompt()}"
 )
@@ -31,6 +38,12 @@ PLANNING_INSTRUCTIONS = (
 SYNTHESIS_INSTRUCTIONS = (
     "Answer the user's concert-data question using only the supplied PostgreSQL result rows. "
     "Be concise, state when no rows matched, and do not invent facts."
+)
+
+SIMILARITY_SYNTHESIS_INSTRUCTIONS = (
+    "Answer the user's artist-similarity question using only the supplied touring-profile matches. "
+    "Be concise and list the retrieved artists. Describe results as similarity in recorded touring "
+    "history only; never infer genre, musical style, biography, or other external facts."
 )
 
 
@@ -46,7 +59,6 @@ class OpenAIConcertPlanner:
             input=json.dumps({"history": history, "question": question}),
             text_format=QueryPlan,
         )
-        print("response!!!", response)
         for output in response.output:
             for content in output.content:
                 parsed = getattr(content, "parsed", None)
@@ -63,6 +75,19 @@ class OpenAIConcertPlanner:
         answer = response.output_text.strip()
         if not answer:
             raise RuntimeError("OpenAI returned an empty answer.")
+        return answer
+
+    def synthesize_similarity(
+        self, question: str, artist_name: str, matches: list[dict[str, object]]
+    ) -> str:
+        response = self._client.responses.create(
+            model=self._model,
+            instructions=SIMILARITY_SYNTHESIS_INSTRUCTIONS,
+            input=json.dumps({"question": question, "artist": artist_name, "matches": matches}, default=str),
+        )
+        answer = response.output_text.strip()
+        if not answer:
+            raise RuntimeError("OpenAI returned an empty similarity answer.")
         return answer
 
 
@@ -106,4 +131,26 @@ class OllamaConcertPlanner:
         answer = response.message.content.strip()
         if not answer:
             raise RuntimeError("Ollama returned an empty answer.")
+        return answer
+
+    def synthesize_similarity(
+        self, question: str, artist_name: str, matches: list[dict[str, object]]
+    ) -> str:
+        response = self._client.chat(
+            model=self._model,
+            messages=[
+                {"role": "system", "content": SIMILARITY_SYNTHESIS_INSTRUCTIONS},
+                {
+                    "role": "user",
+                    "content": json.dumps(
+                        {"question": question, "artist": artist_name, "matches": matches}, default=str
+                    ),
+                },
+            ],
+            stream=False,
+            think=False,
+        )
+        answer = response.message.content.strip()
+        if not answer:
+            raise RuntimeError("Ollama returned an empty similarity answer.")
         return answer

@@ -444,7 +444,7 @@ services:
       - identity-db-data:/var/lib/postgresql/data
 
   concert-assistant-db:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17-bookworm
     container_name: concert-assistant-db
     environment:
       POSTGRES_DB: concert-assistant-db

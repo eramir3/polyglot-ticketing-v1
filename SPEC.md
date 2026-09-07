@@ -312,11 +312,13 @@ Required values are listed in `.env.example`:
 - `CONCERT_ASSISTANT_DB_PASSWORD`
 - `CONCERT_ASSISTANT_READER_DB_PASSWORD`
 - `CONCERT_ASSISTANT_DATABASE_URL` (for local uv execution; defaults in `.env.example` to the host-published database)
+- `CONCERT_ASSISTANT_ADMIN_DATABASE_URL` (for the one-off artist vector indexer)
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
 - `LLM_PROVIDER` (defaults to `openai`; `ollama` is supported for local testing)
 - `OLLAMA_BASE_URL` (defaults to `http://127.0.0.1:11434`)
 - `OLLAMA_MODEL` (defaults to `qwen3:1.7b`)
+- `OLLAMA_EMBEDDING_MODEL` (defaults to `nomic-embed-text`)
 - `NATS_URL` (defaults to `nats://localhost:4222` when running tickets locally)
 - `REDIS_URL` (defaults to `redis://localhost:6379` when running expiration locally)
 
@@ -332,6 +334,7 @@ make serve-payments
 make serve-expiration
 make serve-concert-assistant
 make concert-assistant-up
+make index-concert-artists
 make docker-up
 make docker-up-tools
 ```
@@ -387,14 +390,19 @@ the Compose network with Redis. Their configurations persist in the local
 | orders            | Go                | `orders-db`            |
 | payments          | Go                | `payments-db`          |
 | expiration        | NestJS and BullMQ | Redis                  |
-| concert-assistant | Python, uv, Gradio | `concert-assistant-db` |
+| concert-assistant | Python, uv, Gradio, pgvector | `concert-assistant-db` |
 
 Concert Assistant is a public, unauthenticated Gradio service on port `7860`.
 It uses OpenAI by default, or native Ollama for local testing, to generate
-analytical `SELECT` queries for `public.concerts`, validates them against an allowlist, executes them through the
-`concert_assistant_reader` role, and synthesizes an answer. It supports only
-the structured dataset; pgvector, embeddings, and semantic venue search are
-deferred until descriptive source data exists.
+analytical `SELECT` queries for `public.concerts`, validates them against an
+allowlist, executes them through the `concert_assistant_reader` role, and
+synthesizes an answer. It also supports `Artists similar to <artist>` through
+the owner-managed `artist_profiles` pgvector projection: each artist has one
+768-dimension `nomic-embed-text` embedding generated from deterministic touring
+history. Results describe touring-profile similarity only, never musical genre
+or style. `make index-concert-artists` refreshes this projection after a restore.
+Broader semantic venue search and SQL + RAG remain deferred until descriptive
+source data exists.
 
 Tickets publishes `tickets.ticket.created.v1` and `tickets.ticket.updated.v1`
 events to the `TICKETS_EVENTS` JetStream stream. Ticket creation, owner

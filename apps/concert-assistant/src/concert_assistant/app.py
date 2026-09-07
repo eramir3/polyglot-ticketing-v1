@@ -11,6 +11,7 @@ from concert_assistant.config import Settings
 from concert_assistant.repository import ConcertRepository
 from concert_assistant.service import ConcertAssistantService
 from concert_assistant.sql_validation import SQLValidator
+from concert_assistant.vector_repository import ArtistProfileRepository
 
 
 def create_planner(settings: Settings) -> ConcertPlanner | None:
@@ -28,10 +29,15 @@ def create_service(settings: Settings) -> ConcertAssistantService:
         if settings.database_url
         else None
     )
-    print("repository!!!!!", repository)
+    artist_profiles = (
+        ArtistProfileRepository(settings.database_url, settings.statement_timeout_ms)
+        if settings.database_url
+        else None
+    )
     return ConcertAssistantService(
         planner=planner,
         repository=repository,
+        artist_profiles=artist_profiles,
         validator=SQLValidator(max_result_rows=settings.max_result_rows),
         history_messages=settings.history_messages,
     )
@@ -47,17 +53,22 @@ def create_demo(service: ConcertAssistantService) -> gr.Blocks:
             {"role": "user", "content": message},
             {"role": "assistant", "content": response.answer},
         ]
-        return "", updated_history, response.sql or ""
+        return "", updated_history, response.details or ""
 
     with gr.Blocks(title="Concert Assistant") as demo:
         gr.Markdown(
             "# Concert Assistant\n"
             "Ask analytical questions about the imported concert dataset. "
-            "Semantic venue search is not available yet."
+            "Ask analytical questions or compare artists by recorded touring history."
         )
         chatbot = gr.Chatbot(label="Concert Assistant")
-        with gr.Accordion("Validated SQL", open=False):
-            sql = gr.Code(language="sql", label="Read-only query")
+        with gr.Accordion("Query details", open=False):
+            details = gr.Textbox(
+                label="Read-only query or retrieval context",
+                lines=3,
+                max_lines=10,
+                interactive=False,
+            )
         message = gr.Textbox(label="Question", placeholder="How many concerts did Radiohead play in France?")
         gr.Examples(
             examples=[
@@ -65,10 +76,11 @@ def create_demo(service: ConcertAssistantService) -> gr.Blocks:
                 "Which artist played the most concerts in Germany?",
                 "Show me artists who performed more than 100 concerts between 2015 and 2020.",
                 "What was the longest gap between concerts for Incubus?",
+                "Artists similar to Radiohead",
             ],
             inputs=message,
         )
-        message.submit(respond, inputs=[message, chatbot], outputs=[message, chatbot, sql])
+        message.submit(respond, inputs=[message, chatbot], outputs=[message, chatbot, details])
     return demo
 
 

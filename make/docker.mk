@@ -1,4 +1,4 @@
-.PHONY: docker-build docker-up docker-up-tools docker-down docker-reset docker-logs docker-ps restore-concerts concert-assistant-up
+.PHONY: docker-build docker-up docker-up-tools docker-down docker-reset docker-logs docker-ps restore-concerts concert-assistant-up index-concert-artists
 
 docker-build: ## Build all Docker Compose service images.
 	docker compose build
@@ -22,6 +22,9 @@ restore-concerts: ## Replace the local Concert Assistant concert dataset from co
 
 concert-assistant-up: ## Start only Concert Assistant and its database dependency.
 	docker compose up -d --build --wait concert-assistant
+
+index-concert-artists: ## Build or refresh the local artist touring-profile vector index.
+	cd apps/concert-assistant && uv run index-concert-artists
 
 docker-logs: ## Follow logs for the local Docker Compose stack.
 	docker compose logs -f

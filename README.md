@@ -55,6 +55,7 @@ make concert-assistant-up # Start only Concert Assistant and its database
 make docker-logs           # Follow Compose logs
 make docker-down           # Stop the stack
 make restore-concerts      # Load the local Concert Assistant concert dataset
+make index-concert-artists # Build artist touring-profile vectors after restore
 ```
 
 `make restore-concerts` starts `concert-assistant-db` on `localhost:5436` and
@@ -69,11 +70,15 @@ does not start the rest of the application stack. Run `make restore-concerts`
 before asking questions so its read-only database role can access the imported
 dataset. v1 supports structured analytical questions,
 such as concert counts, date ranges, and artist rankings. It does not yet
-support semantic venue search: the dataset has no descriptive concert text or
-embeddings. `LLM_PROVIDER` defaults to `openai`; configure `OPENAI_API_KEY` and
-optionally `OPENAI_MODEL` for that provider. For local Ollama testing, install
-Ollama, run `ollama pull qwen3:1.7b`, and start the app with
-`LLM_PROVIDER=ollama` and `OLLAMA_MODEL=qwen3:1.7b`. Ollama is expected at
+supports artist-to-artist similarity based on recorded touring history. Run
+`make index-concert-artists` after each restore to build its local pgvector
+projection with `nomic-embed-text`. Similarity results are not claims about
+genre or musical style. Broad semantic venue search remains unavailable because
+the dataset has no descriptive concert text. `LLM_PROVIDER` defaults to
+`openai`; configure `OPENAI_API_KEY` and optionally `OPENAI_MODEL` for that
+provider. For local Ollama testing, install Ollama, run
+`ollama pull qwen3:1.7b` and `ollama pull nomic-embed-text`, then start the app
+with `LLM_PROVIDER=ollama` and `OLLAMA_MODEL=qwen3:1.7b`. Ollama is expected at
 `http://127.0.0.1:11434` by default; override it with `OLLAMA_BASE_URL`.
 When running `uv run concert-assistant`, the repository root `.env` is loaded
 without overriding explicitly exported shell variables. Docker Compose forwards

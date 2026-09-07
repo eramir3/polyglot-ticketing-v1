@@ -69,3 +69,17 @@ def test_ollama_rejects_empty_response(monkeypatch) -> None:
 
     with pytest.raises(RuntimeError, match="empty query plan"):
         OllamaConcertPlanner("http://127.0.0.1:11434", "qwen3:1.7b").plan("Question", [])
+
+
+def test_ollama_parses_an_artist_similarity_plan(monkeypatch) -> None:
+    fake_client = FakeOllamaClient(
+        ['{"kind":"artist_similarity","artist_name":"Radiohead","explanation":"Compare touring profiles."}']
+    )
+    monkeypatch.setattr("concert_assistant.agent.Client", lambda **_kwargs: fake_client)
+
+    plan = OllamaConcertPlanner("http://127.0.0.1:11434", "qwen3:1.7b").plan(
+        "Artists similar to Radiohead", []
+    )
+
+    assert plan.kind == "artist_similarity"
+    assert plan.artist_name == "Radiohead"

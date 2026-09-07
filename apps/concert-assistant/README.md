@@ -10,8 +10,10 @@ The default provider is OpenAI. For native local Ollama testing:
 
 ```bash
 ollama pull qwen3:1.7b
+ollama pull nomic-embed-text
 
 make restore-concerts
+make index-concert-artists
 # Set LLM_PROVIDER=ollama and the Concert Assistant database values in root .env.
 
 uv run concert-assistant
@@ -21,3 +23,10 @@ Ollama must be running at `http://127.0.0.1:11434`, unless `OLLAMA_BASE_URL`
 is set. The imported database is required; `CONCERT_ASSISTANT_DATABASE_URL` in
 `.env.example` targets its host-published local port. Compose overrides that
 value with its internal database URL.
+
+`make index-concert-artists` uses `CONCERT_ASSISTANT_ADMIN_DATABASE_URL` to
+create and refresh `public.artist_profiles`, a pgvector projection of one
+deterministic touring-history profile per artist. The running Gradio service
+continues to use the read-only `concert_assistant_reader` role. Ask questions
+such as `Artists similar to Radiohead`; results describe similar recorded
+touring profiles, not musical genre or style.

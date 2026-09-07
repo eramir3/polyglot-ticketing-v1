@@ -33,7 +33,8 @@ Implemented foundations:
   reservations. Expiration has no Postgres database or HTTP/gRPC API.
 - `concert-assistant`: Python/uv/Gradio service that uses OpenAI for public,
   read-only analytical questions over its Postgres-owned concert dataset. It
-  can instead use native Ollama for local testing.
+  can instead use native Ollama for local testing. It supports SQL analytical
+  queries plus artist similarity over a pgvector touring-profile projection.
 - Shared protobuf contracts in `proto/`, generated with Buf and Protobuf-ES.
 - Protovalidate request validation for identity gRPC requests.
 - Standardized errors across the gateway and identity service.
@@ -131,6 +132,9 @@ expiration jobs.
   explicitly supplied environment variables. `CONCERT_ASSISTANT_DATABASE_URL`
   targets the host-published database for local uv execution; Compose overrides
   it with its internal database address.
+  Run `make index-concert-artists` after restoring the dataset; the one-off
+  indexer uses `CONCERT_ASSISTANT_ADMIN_DATABASE_URL` and local
+  `nomic-embed-text`, while the runtime continues using the reader role.
 
 ## Services And Persistence
 
@@ -141,7 +145,9 @@ expiration jobs.
   owns no Postgres database.
 - `identity` (NestJS/Better Auth) owns `identity-db`.
 - `concert-assistant` (Python/uv/Gradio) owns `concert-assistant-db`.
-  It uses the `concert_assistant_reader` role for `SELECT` access only.
+  It uses the `concert_assistant_reader` role for `SELECT` access only. Its
+  owner-managed `artist_profiles` pgvector projection stores one 768-dimension
+  touring-history embedding per artist.
 
 ## Engineering Guidelines
 
