@@ -20,7 +20,7 @@ service's database or Redis data.
 | `orders` | Go | Ticket reservation, order lifecycle, and ticket projection | `orders-db` |
 | `payments` | Go | Order projection, payment creation, and simulated processing | `payments-db` |
 | `expiration` | TypeScript / NestJS | Schedules 15-minute order expirations and emits completion events | Redis / BullMQ |
-| `concert-assistant` | Python / Gradio | Future AI chat and concert-data retrieval | `concert-assistant-db` |
+| `concert-assistant` | Python / Gradio | Public analytical concert-data chat | `concert-assistant-db` |
 
 Shared protobuf contracts live in [`proto/`](proto/). Generated TypeScript and
 Go bindings are produced through Buf.
@@ -50,6 +50,8 @@ make generate-proto        # Regenerate protobuf bindings
 make serve-tickets         # Run one service locally
 make serve-payments
 make serve-expiration
+make serve-concert-assistant
+make concert-assistant-up # Start only Concert Assistant and its database
 make docker-logs           # Follow Compose logs
 make docker-down           # Stop the stack
 make restore-concerts      # Load the local Concert Assistant concert dataset
@@ -59,6 +61,24 @@ make restore-concerts      # Load the local Concert Assistant concert dataset
 replaces its `concerts` table with the data in `concerts.dump`. It is manual by
 design, so normal `make docker-up` never overwrites local Concert Assistant
 data.
+
+Concert Assistant is intentionally public and unauthenticated at
+`http://localhost:7860`, independently of the API gateway. Run
+`make concert-assistant-up` to start only it and its Postgres dependency; it
+does not start the rest of the application stack. Run `make restore-concerts`
+before asking questions so its read-only database role can access the imported
+dataset. v1 supports structured analytical questions,
+such as concert counts, date ranges, and artist rankings. It does not yet
+support semantic venue search: the dataset has no descriptive concert text or
+embeddings. `LLM_PROVIDER` defaults to `openai`; configure `OPENAI_API_KEY` and
+optionally `OPENAI_MODEL` for that provider. For local Ollama testing, install
+Ollama, run `ollama pull qwen3:1.7b`, and start the app with
+`LLM_PROVIDER=ollama` and `OLLAMA_MODEL=qwen3:1.7b`. Ollama is expected at
+`http://127.0.0.1:11434` by default; override it with `OLLAMA_BASE_URL`.
+When running `uv run concert-assistant`, the repository root `.env` is loaded
+without overriding explicitly exported shell variables. Docker Compose forwards
+the LLM provider settings to its container and overrides
+`CONCERT_ASSISTANT_DATABASE_URL` with its internal database address.
 
 Gateway integration tests and the Orders and Payments integration tests use
 Testcontainers, so they require a working Docker container runtime.

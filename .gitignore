@@ -10,6 +10,9 @@ proto-deps
 # dependencies
 node_modules
 .pnpm-store
+.venv
+__pycache__/
+*.py[cod]
 
 # local environment configuration
 .env

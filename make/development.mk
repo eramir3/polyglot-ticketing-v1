@@ -1,4 +1,4 @@
-.PHONY: install generate-proto build build-api-gateway build-identity build-tickets build-orders build-payments build-expiration test test-api-gateway test-tickets test-orders test-payments test-expiration serve-api-gateway serve-identity serve-tickets serve-orders serve-payments serve-expiration
+.PHONY: install generate-proto build build-api-gateway build-identity build-tickets build-orders build-payments build-expiration build-concert-assistant test test-api-gateway test-tickets test-orders test-payments test-expiration test-concert-assistant serve-api-gateway serve-identity serve-tickets serve-orders serve-payments serve-expiration serve-concert-assistant
 
 install: ## Install workspace dependencies.
 	pnpm install --frozen-lockfile
@@ -6,7 +6,7 @@ install: ## Install workspace dependencies.
 generate-proto: ## Generate TypeScript and Go protobuf bindings.
 	pnpm proto:generate
 
-build: build-api-gateway build-identity build-tickets build-orders build-payments build-expiration ## Build every service.
+build: build-api-gateway build-identity build-tickets build-orders build-payments build-expiration build-concert-assistant ## Build every service.
 
 build-api-gateway: ## Build the API gateway.
 	pnpm nx build api-gateway
@@ -26,7 +26,10 @@ build-payments: ## Build the payments service.
 build-expiration: ## Build the expiration service.
 	pnpm nx build expiration
 
-test: test-api-gateway test-tickets test-orders test-payments test-expiration ## Run all executable tests.
+build-concert-assistant: ## Build the Concert Assistant Python package.
+	cd apps/concert-assistant && uv build
+
+test: test-api-gateway test-tickets test-orders test-payments test-expiration test-concert-assistant ## Run all executable tests.
 
 test-api-gateway: ## Run API gateway integration tests (requires Docker for Testcontainers).
 	pnpm nx run api-gateway:integration
@@ -42,6 +45,9 @@ test-payments: ## Run Payments Go tests (requires Docker for PostgreSQL Testcont
 
 test-expiration: ## Run expiration service tests.
 	pnpm nx test expiration
+
+test-concert-assistant: ## Run Concert Assistant Python tests.
+	cd apps/concert-assistant && uv run pytest
 
 serve-api-gateway: ## Run the API gateway locally.
 	pnpm nx serve api-gateway
@@ -60,3 +66,6 @@ serve-payments: ## Run the payments service locally.
 
 serve-expiration: ## Run the expiration service locally.
 	pnpm nx serve expiration
+
+serve-concert-assistant: ## Run Concert Assistant through Docker Compose.
+	docker compose up --build concert-assistant

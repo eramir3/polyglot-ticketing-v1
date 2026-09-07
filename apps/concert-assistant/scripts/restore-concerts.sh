@@ -20,3 +20,5 @@ pg_restore \
   --single-transaction \
   --dbname="$PGDATABASE" \
   /restore/concerts.dump
+
+sh /restore/provision-reader.sh

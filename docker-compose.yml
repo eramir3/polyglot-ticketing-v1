@@ -450,6 +450,7 @@ services:
       POSTGRES_DB: concert-assistant-db
       POSTGRES_PASSWORD: ${CONCERT_ASSISTANT_DB_PASSWORD:?CONCERT_ASSISTANT_DB_PASSWORD must be set}
       POSTGRES_USER: concert-assistant
+      CONCERT_ASSISTANT_READER_DB_PASSWORD: ${CONCERT_ASSISTANT_READER_DB_PASSWORD:?CONCERT_ASSISTANT_READER_DB_PASSWORD must be set}
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U concert-assistant -d concert-assistant-db']
       interval: 5s
@@ -461,6 +462,28 @@ services:
       - concert-assistant-db-data:/var/lib/postgresql/data
       - ./concerts.dump:/restore/concerts.dump:ro
       - ./apps/concert-assistant/scripts/restore-concerts.sh:/restore/restore-concerts.sh:ro
+      - ./apps/concert-assistant/scripts/provision-reader.sh:/restore/provision-reader.sh:ro
+
+  concert-assistant:
+    build:
+      context: .
+      dockerfile: apps/concert-assistant/Dockerfile.dev
+    image: concert-assistant:dev
+    container_name: concert-assistant
+    environment:
+      CONCERT_ASSISTANT_DATABASE_URL: postgresql://concert_assistant_reader:${CONCERT_ASSISTANT_READER_DB_PASSWORD:?CONCERT_ASSISTANT_READER_DB_PASSWORD must be set}@concert-assistant-db:5432/concert-assistant-db?sslmode=disable
+      CONCERT_ASSISTANT_HOST: 0.0.0.0
+      CONCERT_ASSISTANT_PORT: 7860
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://127.0.0.1:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:1.7b}
+    depends_on:
+      concert-assistant-db:
+        condition: service_healthy
+    ports:
+      - '7860:7860'
 
   mailpit:
     image: axllent/mailpit:v1.28

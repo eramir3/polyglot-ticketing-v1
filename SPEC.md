@@ -310,6 +310,13 @@ Required values are listed in `.env.example`:
 - `TICKETS_DB_PASSWORD`
 - `ORDERS_DB_PASSWORD`
 - `CONCERT_ASSISTANT_DB_PASSWORD`
+- `CONCERT_ASSISTANT_READER_DB_PASSWORD`
+- `CONCERT_ASSISTANT_DATABASE_URL` (for local uv execution; defaults in `.env.example` to the host-published database)
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+- `LLM_PROVIDER` (defaults to `openai`; `ollama` is supported for local testing)
+- `OLLAMA_BASE_URL` (defaults to `http://127.0.0.1:11434`)
+- `OLLAMA_MODEL` (defaults to `qwen3:1.7b`)
 - `NATS_URL` (defaults to `nats://localhost:4222` when running tickets locally)
 - `REDIS_URL` (defaults to `redis://localhost:6379` when running expiration locally)
 
@@ -323,6 +330,8 @@ make generate-proto
 make serve-tickets
 make serve-payments
 make serve-expiration
+make serve-concert-assistant
+make concert-assistant-up
 make docker-up
 make docker-up-tools
 ```
@@ -331,6 +340,11 @@ The Makefile delegates to the existing Nx, Go, Buf, and Docker Compose
 commands. Gateway integration tests plus the Orders and Payments PostgreSQL
 integration tests use Testcontainers and require a working Docker container
 runtime.
+
+Concert Assistant's local uv entry point loads the repository root `.env`
+without overriding values explicitly supplied in the shell. Docker Compose
+forwards its LLM provider settings explicitly to the container and provides its
+own internal `CONCERT_ASSISTANT_DATABASE_URL`.
 
 Local ports:
 
@@ -345,6 +359,7 @@ Local ports:
 | Payments gRPC     | `payments:50054` within Compose only |
 | Payments Postgres | `localhost:5435`                     |
 | Concert Assistant Postgres | `localhost:5436`               |
+| Concert Assistant | `http://localhost:7860`               |
 | NATS JetStream    | `nats://localhost:4222`              |
 | NATS monitoring   | `http://localhost:8222`              |
 | Redis             | `localhost:6379`                     |
@@ -373,6 +388,13 @@ the Compose network with Redis. Their configurations persist in the local
 | payments          | Go                | `payments-db`          |
 | expiration        | NestJS and BullMQ | Redis                  |
 | concert-assistant | Python, uv, Gradio | `concert-assistant-db` |
+
+Concert Assistant is a public, unauthenticated Gradio service on port `7860`.
+It uses OpenAI by default, or native Ollama for local testing, to generate
+analytical `SELECT` queries for `public.concerts`, validates them against an allowlist, executes them through the
+`concert_assistant_reader` role, and synthesizes an answer. It supports only
+the structured dataset; pgvector, embeddings, and semantic venue search are
+deferred until descriptive source data exists.
 
 Tickets publishes `tickets.ticket.created.v1` and `tickets.ticket.updated.v1`
 events to the `TICKETS_EVENTS` JetStream stream. Ticket creation, owner

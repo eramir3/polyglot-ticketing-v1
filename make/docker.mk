@@ -1,4 +1,4 @@
-.PHONY: docker-build docker-up docker-up-tools docker-down docker-reset docker-logs docker-ps restore-concerts
+.PHONY: docker-build docker-up docker-up-tools docker-down docker-reset docker-logs docker-ps restore-concerts concert-assistant-up
 
 docker-build: ## Build all Docker Compose service images.
 	docker compose build
@@ -19,6 +19,9 @@ docker-reset: ## Delete all application and optional-tool Compose data, then reb
 restore-concerts: ## Replace the local Concert Assistant concert dataset from concerts.dump.
 	docker compose up -d --wait concert-assistant-db
 	docker compose exec -T concert-assistant-db sh /restore/restore-concerts.sh
+
+concert-assistant-up: ## Start only Concert Assistant and its database dependency.
+	docker compose up -d --build --wait concert-assistant
 
 docker-logs: ## Follow logs for the local Docker Compose stack.
 	docker compose logs -f

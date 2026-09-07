@@ -31,8 +31,9 @@ Implemented foundations:
   JetStream, schedules 15-minute expiry jobs in BullMQ/Redis, and publishes
   `ExpirationComplete` events. Orders consumes those events to cancel `Created`
   reservations. Expiration has no Postgres database or HTTP/gRPC API.
-- `concert-assistant`: Python/uv service scaffold with Gradio installed for a
-  future AI chat UI. It has no provider, persistence, API, or UI behavior yet.
+- `concert-assistant`: Python/uv/Gradio service that uses OpenAI for public,
+  read-only analytical questions over its Postgres-owned concert dataset. It
+  can instead use native Ollama for local testing.
 - Shared protobuf contracts in `proto/`, generated with Buf and Protobuf-ES.
 - Protovalidate request validation for identity gRPC requests.
 - Standardized errors across the gateway and identity service.
@@ -56,6 +57,8 @@ expiration jobs.
 
 - UI clients communicate with the API gateway through REST and, when added,
   GraphQL.
+- Concert Assistant is an explicit exception: its unauthenticated Gradio UI is
+  directly published on port `7860`, not routed through the API gateway.
 - The API gateway communicates with backend services synchronously through
   gRPC.
 - Backend services will communicate asynchronously through NATS JetStream.
@@ -119,8 +122,15 @@ expiration jobs.
   Orders and Payments gRPC are internal on `orders:50053` and `payments:50054`;
   their Postgres databases are published on `localhost:5434` and `localhost:5435`.
   Concert Assistant Postgres is published on `localhost:5436`; run
+  `make concert-assistant-up` to start only it and its database dependency, and
   `make restore-concerts` to explicitly replace its local concert dataset from
-  `concerts.dump`.
+  `concerts.dump`. Its public Gradio UI is at `http://localhost:7860` and
+  requires `OPENAI_API_KEY` for the default provider. Set `LLM_PROVIDER=ollama`
+  with a running local Ollama instance to test without an OpenAI key.
+  Its local uv entry point loads the repository root `.env` without overriding
+  explicitly supplied environment variables. `CONCERT_ASSISTANT_DATABASE_URL`
+  targets the host-published database for local uv execution; Compose overrides
+  it with its internal database address.
 
 ## Services And Persistence
 
@@ -131,6 +141,7 @@ expiration jobs.
   owns no Postgres database.
 - `identity` (NestJS/Better Auth) owns `identity-db`.
 - `concert-assistant` (Python/uv/Gradio) owns `concert-assistant-db`.
+  It uses the `concert_assistant_reader` role for `SELECT` access only.
 
 ## Engineering Guidelines
 

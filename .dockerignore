@@ -5,6 +5,8 @@
 .vscode
 dist
 node_modules
+.venv
+__pycache__
 proto/gen
 proto-deps
 tmp
